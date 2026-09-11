@@ -29,6 +29,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/industrial", get(industrial))
         .route("/api/v1/industrial/can", get(industrial_can))
         .route("/api/v1/industrial/serial", get(industrial_serial))
+        .route("/api/v1/can/capture", get(can_capture_status))
+        .route("/api/v1/can/frames/recent", get(can_frames_recent))
+        .route("/api/v1/can/frames/stream", get(can_frames_stream))
         .route("/api/v1/thermal", get(thermal))
         .route("/api/v1/integrations", get(integrations))
         .route("/api/v1/integrations/fleet/inventory", get(fleet_inventory))
@@ -94,6 +97,39 @@ async fn industrial_serial(
     State(state): State<Arc<AppState>>,
 ) -> Json<Vec<crate::model::SerialPortInfo>> {
     Json(state.inventory_snapshot().await.industrial.serial)
+}
+
+async fn can_capture_status(
+    State(state): State<Arc<AppState>>,
+) -> Json<crate::model::CanCaptureStatus> {
+    Json(state.can_capture_status())
+}
+
+async fn can_frames_recent(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<crate::model::CanFrame>> {
+    Json(state.recent_can_frames())
+}
+
+async fn can_frames_stream(
+    State(state): State<Arc<AppState>>,
+) -> Sse<impl Stream<Item = Result<SseEvent, Infallible>>> {
+    let stream = BroadcastStream::new(state.subscribe_can_frames()).filter_map(|message| {
+        let Ok(frame) = message else {
+            return None;
+        };
+        let data = serde_json::to_string(&frame).unwrap_or_else(|_| "{}".into());
+        Some(Ok(SseEvent::default()
+            .event("can.frame")
+            .id(frame.sequence.to_string())
+            .data(data)))
+    });
+
+    Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keep-alive"),
+    )
 }
 
 async fn thermal(State(state): State<Arc<AppState>>) -> Json<Vec<crate::model::ThermalZone>> {
@@ -230,6 +266,12 @@ zyvor_device_agent_sensor_sample_failures_total {}\n\
 # HELP zyvor_device_agent_sensors_ok Sensors with a latest successful sample.\n\
 # TYPE zyvor_device_agent_sensors_ok gauge\n\
 zyvor_device_agent_sensors_ok {sensor_ok}\n\
+# HELP zyvor_device_agent_can_capture_frames_total Read-only SocketCAN frames accepted by the capture path.\n\
+# TYPE zyvor_device_agent_can_capture_frames_total counter\n\
+zyvor_device_agent_can_capture_frames_total {}\n\
+# HELP zyvor_device_agent_can_capture_dropped_total Frames dropped by the configured capture rate limit.\n\
+# TYPE zyvor_device_agent_can_capture_dropped_total counter\n\
+zyvor_device_agent_can_capture_dropped_total {}\n\
 # HELP zyvor_device_agent_nodra_connected Nodra MQTT connection state.\n\
 # TYPE zyvor_device_agent_nodra_connected gauge\n\
 zyvor_device_agent_nodra_connected {}\n\
@@ -242,6 +284,8 @@ zyvor_device_agent_fleet_projection_ready {}\n",
         current.buses.i2c.len(),
         status.sensor_samples_total,
         status.sensor_sample_failures,
+        status.can_capture_frames_total,
+        status.can_capture_dropped_total,
         u8::from(state.nodra_connected()),
         u8::from(state.config.fleet.enabled && state.config.fleet.mode == "projection"),
     );

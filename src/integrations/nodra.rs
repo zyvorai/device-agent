@@ -30,6 +30,7 @@ pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut published_samples: BTreeMap<String, u64> = BTreeMap::new();
     let mut event_rx = state.subscribe_events();
+    let mut can_rx = state.subscribe_can_frames();
 
     loop {
         tokio::select! {
@@ -49,6 +50,15 @@ pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
                     let topic = format!("{prefix}/events/{}", topic_segment(&event.kind));
                     let payload = serde_json::to_vec(&event)?;
                     publish(&client, topic, false, payload, &state).await;
+                }
+            }
+            frame = can_rx.recv(), if state.config.industrial.can_capture.publish_to_nodra => {
+                if let Ok(frame) = frame {
+                    let topic = format!(
+                        "{prefix}/industrial/can/{}/frames",
+                        topic_segment(&frame.interface)
+                    );
+                    publish(&client, topic, false, serde_json::to_vec(&frame)?, &state).await;
                 }
             }
             _ = ticker.tick() => {

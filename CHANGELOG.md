@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3-dev — 2026-09-11
+
+- Add disabled-by-default, RX-only SocketCAN frame capture with explicit interface allowlists.
+- Preserve classic CAN, 29-bit extended IDs and CAN-FD BRS/ESI metadata without protocol decoding.
+- Add bounded frame history, accepted-frame rate limiting and capture health/error counters.
+- Add `/api/v1/can/capture`, `/can/frames/recent` and SSE `/can/frames/stream`.
+- Publish raw frames to per-interface Nodra topics when explicitly enabled.
+- Add live CAN frame view to the Apple-style Industrial cockpit.
+- Add Nodra J1939 hand-off contract; PGN/source/destination semantics stay out of Device Agent.
+
 ## 0.1.2-dev — 2026-09-11
 
 - Add industrial bus inventory without turning Device Agent into a protocol gateway.

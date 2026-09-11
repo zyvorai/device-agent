@@ -17,6 +17,19 @@
 - Nodra retained inventory/status, per-sensor and event topics
 - live sensor/event UX
 
+## v0.1.2 — Industrial bus health
+
+- SocketCAN controller state, bitrate, CAN-FD mode and error telemetry
+- passive RS485 declarations from config/device tree
+- BUS-OFF doctor checks and Fleet/Nodra industrial status projection
+
+## v0.1.3 — Industrial capture
+
+- bounded RX-only SocketCAN capture on explicit interfaces
+- raw CAN/CAN-FD SSE stream and Nodra hand-off
+- no transmit API and no automatic bus reconfiguration
+- J1939 semantics remain a Nodra connector
+
 ## v0.2 — Production device identity
 
 - mTLS device certificates

@@ -77,3 +77,10 @@ header { display: flex; justify-content: space-between; align-items: end; margin
 .serial-detail { display:flex; flex-direction:column; gap:4px; text-align:right; white-space:nowrap; }
 @media (max-width:980px) { .industrial-hero,.industrial-grid { grid-template-columns:1fr; } .industrial-stats { grid-template-columns:repeat(3,1fr); } }
 @media (max-width:700px) { .industrial-stats { grid-template-columns:1fr; } .serial-row { align-items:flex-start; } .serial-detail { white-space:normal; } }
+
+.can-frame-list { margin-top: 18px; border-top: 1px solid var(--line); }
+.can-frame-row { display: grid; grid-template-columns: 80px 120px minmax(180px,1fr) 150px; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.can-frame-row code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--orange); }
+.can-frame-row b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.can-frame-row small { color: var(--muted); text-align: right; }
+@media (max-width: 900px) { .can-frame-row { grid-template-columns: 64px 100px 1fr; } .can-frame-row small { display: none; } }

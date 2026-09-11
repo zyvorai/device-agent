@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentStatus, DoctorReport, IntegrationStatus, Inventory, SensorSample } from './types';
+import type { AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample } from './types';
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path);
@@ -28,6 +28,14 @@ export function getRecentEvents(): Promise<AgentEvent[]> {
 
 export function getStatus(): Promise<AgentStatus> {
   return getJson('/api/v1/status');
+}
+
+export function getCanCaptureStatus(): Promise<CanCaptureStatus> {
+  return getJson('/api/v1/can/capture');
+}
+
+export function getRecentCanFrames(): Promise<CanFrame[]> {
+  return getJson('/api/v1/can/frames/recent');
 }
 
 export function bytes(value: number | null | undefined): string {

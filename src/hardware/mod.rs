@@ -55,6 +55,9 @@ pub async fn collect_inventory(cfg: &Config) -> Inventory {
     if !buses.watchdog.is_empty() {
         capabilities.push("watchdog".into());
     }
+    if cfg.industrial.can_capture.enabled {
+        capabilities.push("can-capture-readonly".into());
+    }
 
     Inventory {
         device,
@@ -164,6 +167,36 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
                 })
                 .unwrap_or_else(|| format!("configured RS485 port {declared} is not present")),
         });
+    }
+
+    if cfg.industrial.can_capture.enabled {
+        if cfg.industrial.can_capture.interfaces.is_empty() {
+            checks.push(DoctorCheck {
+                name: "can.capture.config".into(),
+                ok: false,
+                detail: "capture is enabled but no interfaces are allowlisted".into(),
+            });
+        }
+        for interface in &cfg.industrial.can_capture.interfaces {
+            let found = inventory
+                .industrial
+                .can
+                .iter()
+                .find(|can| can.name == *interface);
+            checks.push(DoctorCheck {
+                name: format!("can.capture.{interface}"),
+                ok: found.is_some(),
+                detail: found
+                    .map(|can| {
+                        format!(
+                            "read-only · state={} · max={} fps",
+                            can.can_state.as_deref().unwrap_or(&can.operstate),
+                            cfg.industrial.can_capture.max_frames_per_second.max(1)
+                        )
+                    })
+                    .unwrap_or_else(|| "allowlisted interface is not present".into()),
+            });
+        }
     }
 
     for plugin in crate::plugins::statuses(cfg) {

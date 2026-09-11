@@ -65,6 +65,33 @@ export type IndustrialInventory = {
   serial: SerialPortInfo[];
 };
 
+export type CanFrame = {
+  sequence: number;
+  interface: string;
+  captured_at_unix_ms: number;
+  can_id: number;
+  extended: boolean;
+  remote: boolean;
+  error: boolean;
+  fd: boolean;
+  bitrate_switch: boolean;
+  error_state_indicator: boolean;
+  dlc: number;
+  data: number[];
+  data_hex: string;
+};
+
+export type CanCaptureStatus = {
+  enabled: boolean;
+  interfaces: string[];
+  frames_total: number;
+  dropped_total: number;
+  decode_errors_total: number;
+  history_len: number;
+  subscribers: number;
+  last_error?: string | null;
+};
+
 export type Inventory = {
   device: { serial: string; vendor: string; model: string; hostname: string; machine_id: string };
   system: { arch: string; kernel: string; os: string; cpu_model: string; cpu_cores: number; memory_bytes: number; storage_bytes: number | null; uptime_seconds: number };
@@ -122,4 +149,6 @@ export type AgentStatus = {
   sensor_samples_total: number;
   sensor_sample_failures: number;
   event_subscribers: number;
+  can_capture_frames_total: number;
+  can_capture_dropped_total: number;
 };

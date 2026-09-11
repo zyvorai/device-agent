@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod api;
+mod can_capture;
 mod config;
 mod hardware;
 mod integrations;
@@ -130,6 +131,7 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
 
     spawn_inventory_refresh(state.clone());
     spawn_plugin_scheduler(state.clone());
+    can_capture::spawn(state.clone());
 
     if cfg.nodra.enabled {
         let state = state.clone();

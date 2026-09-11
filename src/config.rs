@@ -44,6 +44,19 @@ pub struct IndustrialConfig {
     pub rs485_ports: Vec<String>,
     /// Publish industrial inventory snapshots into the Nodra MQTT namespace.
     pub publish_to_nodra: bool,
+    /// Optional read-only SocketCAN frame capture. Disabled by default.
+    pub can_capture: CanCaptureConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CanCaptureConfig {
+    pub enabled: bool,
+    pub interfaces: Vec<String>,
+    pub history_limit: usize,
+    pub max_frames_per_second: u32,
+    pub include_error_frames: bool,
+    pub publish_to_nodra: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,6 +118,20 @@ impl Default for IndustrialConfig {
         Self {
             can_ip_command: "ip".into(),
             rs485_ports: Vec::new(),
+            publish_to_nodra: true,
+            can_capture: CanCaptureConfig::default(),
+        }
+    }
+}
+
+impl Default for CanCaptureConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            interfaces: Vec::new(),
+            history_limit: 512,
+            max_frames_per_second: 200,
+            include_error_frames: false,
             publish_to_nodra: true,
         }
     }

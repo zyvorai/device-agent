@@ -5,11 +5,11 @@ import {
   Settings2, Thermometer, Usb, Wifi, Workflow
 } from 'lucide-react';
 import {
-  age, bitrate, bytes, duration, getDoctor, getIntegrations, getInventory,
-  getRecentEvents, getSensors, getStatus
+  age, bitrate, bytes, duration, getCanCaptureStatus, getDoctor, getIntegrations, getInventory,
+  getRecentCanFrames, getRecentEvents, getSensors, getStatus
 } from './api';
 import type {
-  AgentEvent, AgentStatus, DoctorReport, IntegrationStatus, Inventory, SensorSample
+  AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample
 } from './types';
 import './styles.css';
 
@@ -48,7 +48,12 @@ const demoDoctor: DoctorReport = { ok: true, checks: [
   { name: 'machine-id', ok: true, detail: 'demo' }, { name: 'network-up', ok: true, detail: 'eth0, can0' },
   { name: 'profile.i2c', ok: true, detail: 'minimum 1, found 2' }, { name: 'profile.can', ok: true, detail: 'minimum 1, found 2' }
 ] };
-const demoStatus: AgentStatus = { version: '0.1.2', inventory_generation: 12, last_inventory_refresh_unix_ms: Date.now() - 900, sensor_samples_total: 4210, sensor_sample_failures: 2, event_subscribers: 1 };
+const demoStatus: AgentStatus = { version: '0.1.3', inventory_generation: 12, last_inventory_refresh_unix_ms: Date.now() - 900, sensor_samples_total: 4210, sensor_sample_failures: 2, event_subscribers: 1, can_capture_frames_total: 18420, can_capture_dropped_total: 0 };
+const demoCapture: CanCaptureStatus = { enabled: true, interfaces: ['can0'], frames_total: 18420, dropped_total: 0, decode_errors_total: 0, history_len: 6, subscribers: 1, last_error: null };
+const demoFrames: CanFrame[] = [
+  { sequence: 18420, interface: 'can0', captured_at_unix_ms: Date.now() - 150, can_id: 0x18ff50e5, extended: true, remote: false, error: false, fd: false, bitrate_switch: false, error_state_indicator: false, dlc: 8, data: [0,82,0,0,0,0,0,0], data_hex: '0052000000000000' },
+  { sequence: 18419, interface: 'can0', captured_at_unix_ms: Date.now() - 420, can_id: 0x0cf00400, extended: true, remote: false, error: false, fd: false, bitrate_switch: false, error_state_indicator: false, dlc: 8, data: [255,125,80,0,0,0,0,0], data_hex: 'FF7D500000000000' }
+];
 
 
 type Page = 'Overview' | 'Hardware' | 'Interfaces' | 'Industrial' | 'Sensors' | 'Integrations' | 'Diagnostics' | 'Settings';
@@ -84,6 +89,8 @@ function App() {
   const [doctor, setDoctor] = React.useState<DoctorReport>(demoDoctor);
   const [status, setStatus] = React.useState<AgentStatus>(demoStatus);
   const [events, setEvents] = React.useState<AgentEvent[]>([]);
+  const [capture, setCapture] = React.useState<CanCaptureStatus>(demoCapture);
+  const [canFrames, setCanFrames] = React.useState<CanFrame[]>(demoFrames);
   const [live, setLive] = React.useState(false);
   const [streamLive, setStreamLive] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -91,10 +98,10 @@ function App() {
   const refresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const [inv, ints, samples, checks, agent, recent] = await Promise.all([
-        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents()
+      const [inv, ints, samples, checks, agent, recent, captureStatus, frames] = await Promise.all([
+        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents(), getCanCaptureStatus(), getRecentCanFrames()
       ]);
-      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setLive(true);
+      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setLive(true);
     } catch { setLive(false); }
     finally { setRefreshing(false); }
   }, []);
@@ -118,6 +125,18 @@ function App() {
     };
     return () => source.close();
   }, [refresh]);
+
+  React.useEffect(() => {
+    if (!capture.enabled) return;
+    const source = new EventSource('/api/v1/can/frames/stream');
+    source.addEventListener('can.frame', (message) => {
+      try {
+        const frame = JSON.parse((message as MessageEvent).data) as CanFrame;
+        setCanFrames(current => [...current.slice(-31), frame]);
+      } catch { /* ignore malformed frame */ }
+    });
+    return () => source.close();
+  }, [capture.enabled]);
 
   const temp = inventory.thermal.map(z => z.celsius).filter((v): v is number => v != null).sort((a, b) => b - a)[0];
   const busCount = inventory.buses.gpio_chips.length + inventory.buses.i2c.length + inventory.buses.spi.length + inventory.buses.uart.length + inventory.buses.can.length;
@@ -146,6 +165,7 @@ function App() {
       {page === 'Industrial' && <section className="industrial-layout">
         <div className="card wide industrial-hero"><div><span className="eyebrow">INDUSTRIAL I/O</span><h2>CAN health. RS485 awareness.</h2><p className="muted">Device Agent exposes physical bus state without interpreting machine protocols. J1939, Modbus RTU registers and device semantics remain in Nodra.</p></div><div className="industrial-stats"><Metric label="CAN" value={`${inventory.industrial.can.length}`} hint={`${inventory.industrial.can.filter(item => item.operstate === 'up').length} up`}/><Metric label="RS485" value={`${inventory.industrial.serial.filter(item => item.rs485).length}`} hint="declared ports"/><Metric label="Serial" value={`${inventory.industrial.serial.length}`} hint="UART / USB serial"/></div></div>
         <div className="industrial-grid wide">{inventory.industrial.can.length ? inventory.industrial.can.map(can => { const state = can.can_state || can.operstate; const busOff = state.toLowerCase() === 'bus-off'; return <article className="card industrial-card" key={can.name}><div className="section-head"><div><span className="eyebrow">SOCKETCAN · {can.kind.toUpperCase()}</span><h3>{can.name}</h3></div><StatusPill ok={!busOff && can.operstate === 'up'}>{state}</StatusPill></div><div className="industrial-rate">{bitrate(can.bitrate)}</div><div className="io-line"><span>Data bitrate</span><b>{bitrate(can.data_bitrate)}</b></div><div className="io-line"><span>Driver</span><b>{can.driver || 'unknown'}</b></div><div className="io-line"><span>Controller errors</span><b>RX {can.rx_error_counter ?? 0} · TX {can.tx_error_counter ?? 0}</b></div><div className="io-line"><span>Netdevice errors</span><b>RX {can.rx_errors ?? 0} · TX {can.tx_errors ?? 0}</b></div><div className="io-line"><span>Traffic</span><b>RX {bytes(can.rx_bytes)} · TX {bytes(can.tx_bytes)}</b></div><div className="chips">{can.controller_modes.length ? can.controller_modes.map(mode => <span key={mode}>{mode}</span>) : <em>{can.details_source}</em>}</div></article> }) : <article className="card industrial-card"><span className="eyebrow">SOCKETCAN</span><h3>No CAN interface detected</h3><p className="muted">Bring up a kernel CAN netdevice and it will appear here automatically.</p></article>}</div>
+        <div className="card wide"><div className="section-head"><div><span className="eyebrow">READ-ONLY CAN CAPTURE</span><h3>{capture.enabled ? `${capture.interfaces.join(', ') || 'Configured'} · live frames` : 'Disabled by default'}</h3></div><StatusPill ok={capture.enabled && !capture.last_error}>{capture.enabled ? 'RX only' : 'off'}</StatusPill></div><p className="muted">Capture never transmits, never changes bitrate, and only binds explicitly allowlisted SocketCAN interfaces. Raw 29-bit identifiers are preserved for Nodra/J1939 processing.</p><div className="spec-grid"><Metric label="Frames" value={capture.frames_total.toLocaleString()}/><Metric label="Rate drops" value={capture.dropped_total.toLocaleString()}/><Metric label="Decode errors" value={capture.decode_errors_total.toLocaleString()}/><Metric label="History" value={`${capture.history_len}`}/></div>{capture.last_error && <p className="sensor-error-text">{capture.last_error}</p>}<div className="can-frame-list">{canFrames.slice(-8).reverse().map(frame => <div className="can-frame-row" key={`${frame.interface}-${frame.sequence}`}><span>{frame.interface}</span><code>{frame.extended ? frame.can_id.toString(16).padStart(8, '0').toUpperCase() : frame.can_id.toString(16).padStart(3, '0').toUpperCase()}</code><b>{frame.data_hex || '—'}</b><small>{frame.fd ? 'CAN-FD' : 'CAN'} · {age(frame.captured_at_unix_ms)}</small></div>)}</div></div>
         <div className="card wide"><div className="section-head"><div><span className="eyebrow">SERIAL / RS485</span><h3>Passive port inventory</h3></div><Cable/></div><p className="muted">RS485 is shown only when explicitly declared in configuration or described by the Linux device tree. The agent never transmits probe bytes.</p>{inventory.industrial.serial.map(port => <div className="serial-row" key={port.name}><div><StatusPill ok={Boolean(port.rs485)}>{port.rs485 ? 'RS485' : 'serial'}</StatusPill><div><b>{port.name}</b><span>{port.path} · {port.transport} · {port.driver || 'driver unknown'}</span></div></div><div className="serial-detail">{port.rs485 ? <><b>{port.rs485.source}</b><span>{port.rs485.enabled_at_boot ? 'enabled at boot' : 'runtime/config declared'}</span></> : <span>no RS485 declaration</span>}</div></div>)}</div>
       </section>}
 

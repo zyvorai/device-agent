@@ -115,6 +115,36 @@ pub struct Rs485Info {
     pub delay_after_send_ms: Option<u32>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CanFrame {
+    pub sequence: u64,
+    pub interface: String,
+    pub captured_at_unix_ms: u64,
+    pub can_id: u32,
+    pub extended: bool,
+    pub remote: bool,
+    pub error: bool,
+    pub fd: bool,
+    pub bitrate_switch: bool,
+    pub error_state_indicator: bool,
+    pub dlc: u8,
+    #[serde(default)]
+    pub data: Vec<u8>,
+    pub data_hex: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CanCaptureStatus {
+    pub enabled: bool,
+    pub interfaces: Vec<String>,
+    pub frames_total: u64,
+    pub dropped_total: u64,
+    pub decode_errors_total: u64,
+    pub history_len: usize,
+    pub subscribers: usize,
+    pub last_error: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsbDevice {
     pub path: String,
@@ -195,4 +225,6 @@ pub struct AgentStatus {
     pub sensor_samples_total: u64,
     pub sensor_sample_failures: u64,
     pub event_subscribers: usize,
+    pub can_capture_frames_total: u64,
+    pub can_capture_dropped_total: u64,
 }

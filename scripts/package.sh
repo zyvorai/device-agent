@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-VERSION="${VERSION:-0.1.0}"
+VERSION="${VERSION:-0.1.1}"
 ARCH="${ARCH:-$(uname -m)}"
 OUT="dist/zyvor-device-agent-${VERSION}-${ARCH}"
 rm -rf "$OUT"
-mkdir -p "$OUT/bin" "$OUT/config" "$OUT/systemd" "$OUT/dashboard" "$OUT/profiles"
+mkdir -p "$OUT/bin" "$OUT/config" "$OUT/systemd" "$OUT/dashboard" "$OUT/profiles" "$OUT/plugins" "$OUT/plugins.d"
 cp target/release/zyvor-device-agent "$OUT/bin/"
 cp config/device-agent.example.toml "$OUT/config/device-agent.toml"
 cp packaging/systemd/zyvor-device-agent.service "$OUT/systemd/"
 cp profiles/*.toml "$OUT/profiles/"
+cp examples/i2c_temperature.py "$OUT/plugins/"
+cp examples/plugins.d/i2c-temperature.json "$OUT/plugins.d/"
 cp -r web/dashboard/dist/. "$OUT/dashboard/"
 tar -C dist -czf "${OUT}.tar.gz" "$(basename "$OUT")"
 echo "Created ${OUT}.tar.gz"

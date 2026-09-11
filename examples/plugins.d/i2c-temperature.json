@@ -1,0 +1,12 @@
+{
+  "name": "i2c-temperature",
+  "version": "0.1.1",
+  "command": "/usr/lib/zyvor-device-agent/plugins/i2c_temperature.py",
+  "args": ["--bus", "/dev/i2c-1", "--address", "0x48", "--sensor", "lm75", "--sensor-id", "cabinet-temperature"],
+  "capabilities": ["temperature", "i2c"],
+  "sensor_id": "cabinet-temperature",
+  "description": "Explicit LM75/TMP102 temperature read; no I2C bus scanning.",
+  "enabled": false,
+  "poll_interval_seconds": 5,
+  "publish_to_nodra": true
+}

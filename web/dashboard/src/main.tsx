@@ -1,20 +1,25 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {
-  Activity, Box, Cable, CheckCircle2, Cpu, Gauge, HardDrive, Network,
-  Radio, RefreshCw, Settings2, Thermometer, Usb, Wifi, Workflow
+  Activity, Box, Cable, Cpu, Gauge, Network, Radio, RefreshCw,
+  Settings2, Thermometer, Usb, Wifi, Workflow
 } from 'lucide-react';
-import { bytes, duration, getIntegrations, getInventory } from './api';
-import type { IntegrationStatus, Inventory } from './types';
+import {
+  age, bytes, duration, getDoctor, getIntegrations, getInventory,
+  getRecentEvents, getSensors, getStatus
+} from './api';
+import type {
+  AgentEvent, AgentStatus, DoctorReport, IntegrationStatus, Inventory, SensorSample
+} from './types';
 import './styles.css';
 
 const demoInventory: Inventory = {
   device: { serial: 'ZY-MW-0001', vendor: 'Minewing', model: 'ARM64 Edge Gateway', hostname: 'edge-gateway-01', machine_id: 'demo' },
   system: { arch: 'aarch64', kernel: '6.8.0-edge', os: 'Ubuntu 24.04 LTS', cpu_model: '8-core ARM64', cpu_cores: 8, memory_bytes: 8 * 1024 ** 3, storage_bytes: 64 * 1024 ** 3, uptime_seconds: 238401 },
   network: [
-    { name: 'eth0', kind: 'ethernet', operstate: 'up', mac: '02:42:ac:11:00:02', mtu: 1500 },
-    { name: 'wlan0', kind: 'wifi', operstate: 'down', mac: '02:42:ac:11:00:03', mtu: 1500 },
-    { name: 'can0', kind: 'can', operstate: 'up', mtu: 16 }
+    { name: 'eth0', kind: 'ethernet', operstate: 'up', mac: '02:42:ac:11:00:02', mtu: 1500, addresses: ['192.168.10.24/24'], rx_bytes: 123456789, tx_bytes: 38765432 },
+    { name: 'wlan0', kind: 'wifi', operstate: 'down', mac: '02:42:ac:11:00:03', mtu: 1500, addresses: [] },
+    { name: 'can0', kind: 'can', operstate: 'up', mtu: 16, addresses: [], rx_bytes: 1048576, tx_bytes: 983040, rx_errors: 0, tx_errors: 0 }
   ],
   buses: { gpio_chips: ['gpiochip0', 'gpiochip1'], i2c: ['i2c-0', 'i2c-1'], spi: ['spidev0.0'], uart: ['ttyS0', 'ttyS1', 'ttyUSB0'], can: ['can0', 'can1'], watchdog: ['watchdog0'] },
   usb: [{ path: '1-1', vendor_id: '1a86', product_id: '7523', manufacturer: 'QinHeng', product: 'USB Serial' }],
@@ -23,6 +28,17 @@ const demoInventory: Inventory = {
 };
 
 const demoIntegrations: IntegrationStatus = { nodra_enabled: true, nodra_connected: true, fleet_enabled: true, fleet_projection_ready: true };
+const demoSensors: SensorSample[] = [{
+  sensor_id: 'cabinet-temperature', plugin: 'i2c-temperature', collected_at_unix_ms: Date.now() - 1800,
+  ok: true, quality: 'good', publish_to_nodra: true, readings: [{ name: 'cabinet-temperature', kind: 'temperature', value: 31.5, unit: 'celsius' }],
+  labels: { bus: '/dev/i2c-1', address: '0x48', sensor_family: 'lm75' }, raw: {}
+}];
+const demoDoctor: DoctorReport = { ok: true, checks: [
+  { name: 'machine-id', ok: true, detail: 'demo' }, { name: 'network-up', ok: true, detail: 'eth0, can0' },
+  { name: 'profile.i2c', ok: true, detail: 'minimum 1, found 2' }, { name: 'profile.can', ok: true, detail: 'minimum 1, found 2' }
+] };
+const demoStatus: AgentStatus = { version: '0.1.1', inventory_generation: 12, last_inventory_refresh_unix_ms: Date.now() - 900, sensor_samples_total: 4210, sensor_sample_failures: 2, event_subscribers: 1 };
+
 
 type Page = 'Overview' | 'Hardware' | 'Interfaces' | 'Sensors' | 'Integrations' | 'Diagnostics' | 'Settings';
 const pages: Array<[Page, React.ReactNode]> = [
@@ -40,56 +56,89 @@ function StatusPill({ ok, children }: { ok: boolean; children: React.ReactNode }
 function BusCard({ title, icon, values }: { title: string; icon: React.ReactNode; values: string[] }) {
   return <div className="card bus-card"><div className="card-title">{icon}<span>{title}</span><b>{values.length}</b></div><div className="chips">{values.length ? values.map(v => <span key={v}>{v}</span>) : <em>Not detected</em>}</div></div>;
 }
+function ReadingValue({ sample }: { sample: SensorSample }) {
+  const reading = sample.readings[0];
+  if (!sample.ok) return <strong className="sensor-value sensor-error">Error</strong>;
+  if (!reading) return <strong className="sensor-value">Sampled</strong>;
+  const rounded = Number.isInteger(reading.value) ? reading.value.toString() : reading.value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  const unit = reading.unit === 'celsius' ? '°C' : reading.unit === 'percent' ? '%' : reading.unit;
+  return <strong className="sensor-value">{rounded}{unit ? ` ${unit}` : ''}</strong>;
+}
 
 function App() {
   const [page, setPage] = React.useState<Page>('Overview');
   const [inventory, setInventory] = React.useState<Inventory>(demoInventory);
   const [integrations, setIntegrations] = React.useState<IntegrationStatus>(demoIntegrations);
+  const [sensors, setSensors] = React.useState<SensorSample[]>(demoSensors);
+  const [doctor, setDoctor] = React.useState<DoctorReport>(demoDoctor);
+  const [status, setStatus] = React.useState<AgentStatus>(demoStatus);
+  const [events, setEvents] = React.useState<AgentEvent[]>([]);
   const [live, setLive] = React.useState(false);
+  const [streamLive, setStreamLive] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const [inv, ints] = await Promise.all([getInventory(), getIntegrations()]);
-      setInventory(inv); setIntegrations(ints); setLive(true);
+      const [inv, ints, samples, checks, agent, recent] = await Promise.all([
+        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents()
+      ]);
+      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setLive(true);
     } catch { setLive(false); }
     finally { setRefreshing(false); }
   }, []);
 
-  React.useEffect(() => { refresh(); const timer = window.setInterval(refresh, 10000); return () => window.clearInterval(timer); }, [refresh]);
+  React.useEffect(() => {
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
-  const temp = inventory.thermal.find(z => z.celsius != null)?.celsius;
+  React.useEffect(() => {
+    const source = new EventSource('/api/v1/events');
+    source.onopen = () => setStreamLive(true);
+    source.onerror = () => setStreamLive(false);
+    source.onmessage = (message) => {
+      try {
+        const event = JSON.parse(message.data) as AgentEvent;
+        setEvents(current => [...current.slice(-39), event]);
+        if (event.kind === 'inventory.changed' || event.kind === 'sensor.sample' || event.kind.startsWith('nodra.')) refresh();
+      } catch { /* ignore malformed event */ }
+    };
+    return () => source.close();
+  }, [refresh]);
+
+  const temp = inventory.thermal.map(z => z.celsius).filter((v): v is number => v != null).sort((a, b) => b - a)[0];
   const busCount = inventory.buses.gpio_chips.length + inventory.buses.i2c.length + inventory.buses.spi.length + inventory.buses.uart.length + inventory.buses.can.length;
 
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark">Z</div><div><strong>Device Agent</strong><span>Zyvor Edge</span></div></div>
       <nav>{pages.map(([name, icon]) => <button key={name} className={page === name ? 'active' : ''} onClick={() => setPage(name)}>{icon}<span>{name}</span></button>)}</nav>
-      <div className="side-foot"><StatusPill ok={live}>{live ? 'Live device' : 'Preview mode'}</StatusPill><span>v0.1.0 · Apache-2.0</span></div>
+      <div className="side-foot"><StatusPill ok={live && streamLive}>{live ? (streamLive ? 'Live device' : 'API live') : 'Preview mode'}</StatusPill><span>v{status.version} · Apache-2.0</span></div>
     </aside>
 
     <main>
       <header><div><span className="eyebrow">{inventory.device.vendor} · {inventory.system.arch}</span><h1>{page}</h1></div><div className="header-actions"><span className="serial">{inventory.device.serial}</span><button className="refresh" onClick={refresh} aria-label="Refresh"><RefreshCw size={17} className={refreshing ? 'spin' : ''}/></button></div></header>
 
       {page === 'Overview' && <>
-        <section className="hero card"><div><span className="eyebrow">EDGE NODE</span><h2>{inventory.device.model}</h2><p>{inventory.device.hostname} is healthy and ready for local hardware workloads.</p><div className="hero-pills"><StatusPill ok={integrations.nodra_connected}>Nodra</StatusPill><StatusPill ok={integrations.fleet_projection_ready}>Fleet</StatusPill><StatusPill ok={inventory.network.some(n => n.operstate === 'up')}>Network</StatusPill></div></div><div className="orb"><Cpu size={44}/><span>{inventory.system.cpu_cores} core</span></div></section>
-        <section className="metrics-grid"><Metric label="CPU" value={`${inventory.system.cpu_cores} cores`} hint={inventory.system.cpu_model}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)} hint={inventory.system.os}/><Metric label="Temperature" value={temp == null ? '—' : `${temp.toFixed(1)}°C`} hint={inventory.thermal[0]?.kind || 'No thermal zone'}/><Metric label="Uptime" value={duration(inventory.system.uptime_seconds)} hint={inventory.system.kernel}/></section>
+        <section className="hero card"><div><span className="eyebrow">EDGE NODE · GENERATION {status.inventory_generation}</span><h2>{inventory.device.model}</h2><p>{inventory.device.hostname} continuously watches Linux hardware, samples local sensors and exposes a stable edge contract.</p><div className="hero-pills"><StatusPill ok={integrations.nodra_connected}>Nodra</StatusPill><StatusPill ok={integrations.fleet_projection_ready}>Fleet</StatusPill><StatusPill ok={streamLive}>Events</StatusPill><StatusPill ok={doctor.ok}>Doctor</StatusPill></div></div><div className="orb"><Cpu size={44}/><span>{inventory.system.cpu_cores} core</span></div></section>
+        <section className="metrics-grid"><Metric label="CPU" value={`${inventory.system.cpu_cores} cores`} hint={inventory.system.cpu_model}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)} hint={inventory.system.os}/><Metric label="Temperature" value={temp == null ? '—' : `${temp.toFixed(1)}°C`} hint={inventory.thermal[0]?.kind || 'No thermal zone'}/><Metric label="Sensors" value={`${sensors.filter(s => s.ok).length}/${sensors.length || 0}`} hint={`${status.sensor_samples_total} samples`}/></section>
         <section className="two-col"><div className="card"><div className="section-head"><div><span className="eyebrow">PHYSICAL I/O</span><h3>{busCount} detected interfaces</h3></div><Cable/></div><div className="io-line"><span>GPIO</span><b>{inventory.buses.gpio_chips.length}</b></div><div className="io-line"><span>I²C</span><b>{inventory.buses.i2c.length}</b></div><div className="io-line"><span>SPI</span><b>{inventory.buses.spi.length}</b></div><div className="io-line"><span>UART</span><b>{inventory.buses.uart.length}</b></div><div className="io-line"><span>CAN</span><b>{inventory.buses.can.length}</b></div></div>
-          <div className="card dark-card"><span className="eyebrow">DATA PATH</span><h3>Hardware → Nodra → Fleet</h3><div className="flow"><span>Sensor</span><i>→</i><span>Agent</span><i>→</i><span>Nodra</span><i>→</i><span>Fleet</span></div><p>The agent discovers and exposes hardware. Nodra owns protocol meaning, local routing and offline delivery.</p></div></section>
+          <div className="card dark-card"><span className="eyebrow">LIVE DATA PATH</span><h3>Hardware → Agent → Nodra → Fleet</h3><div className="flow"><span>Sensor</span><i>→</i><span>Agent</span><i>→</i><span>Nodra</span><i>→</i><span>Fleet</span></div><p>Inventory and status are retained in Nodra; sensor samples publish on per-sensor topics. Fleet consumes the hardware projection without duplicating its agent.</p></div></section>
       </>}
 
-      {page === 'Hardware' && <section className="content-grid"><div className="card wide"><span className="eyebrow">COMPUTE</span><h2>{inventory.system.cpu_model}</h2><div className="spec-grid"><Metric label="Architecture" value={inventory.system.arch}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)}/><Metric label="Storage" value={bytes(inventory.system.storage_bytes)}/><Metric label="Kernel" value={inventory.system.kernel}/></div></div><div className="card"><span className="eyebrow">IDENTITY</span><h3>{inventory.device.serial}</h3><p className="muted">{inventory.device.vendor} · {inventory.device.model}</p><div className="mono">{inventory.device.machine_id}</div></div><div className="card"><span className="eyebrow">THERMAL</span><h3>{temp == null ? 'No sensor' : `${temp.toFixed(1)}°C`}</h3><p className="muted">Read from Linux thermal zones.</p></div></section>}
+      {page === 'Hardware' && <section className="content-grid"><div className="card wide"><span className="eyebrow">COMPUTE</span><h2>{inventory.system.cpu_model}</h2><div className="spec-grid"><Metric label="Architecture" value={inventory.system.arch}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)}/><Metric label="Storage" value={bytes(inventory.system.storage_bytes)}/><Metric label="Uptime" value={duration(inventory.system.uptime_seconds)}/></div></div><div className="card"><span className="eyebrow">IDENTITY</span><h3>{inventory.device.serial}</h3><p className="muted">{inventory.device.vendor} · {inventory.device.model}</p><div className="mono">{inventory.device.machine_id}</div></div><div className="card"><span className="eyebrow">THERMAL</span><h3>{temp == null ? 'No sensor' : `${temp.toFixed(1)}°C`}</h3><p className="muted">Highest detected Linux thermal zone. Kernel {inventory.system.kernel}.</p></div></section>}
 
-      {page === 'Interfaces' && <section className="content-grid"><BusCard title="GPIO" icon={<Radio size={18}/>} values={inventory.buses.gpio_chips}/><BusCard title="I²C" icon={<Cable size={18}/>} values={inventory.buses.i2c}/><BusCard title="SPI" icon={<Cable size={18}/>} values={inventory.buses.spi}/><BusCard title="UART / Serial" icon={<Cable size={18}/>} values={inventory.buses.uart}/><BusCard title="CAN" icon={<Network size={18}/>} values={inventory.buses.can}/><BusCard title="USB" icon={<Usb size={18}/>} values={inventory.usb.map(u => `${u.product || 'USB device'} · ${u.path}`)}/><div className="card wide"><div className="section-head"><div><span className="eyebrow">NETWORK</span><h3>Linux interfaces</h3></div><Wifi/></div>{inventory.network.map(n => <div className="network-row" key={n.name}><div><Dot on={n.operstate === 'up'}/><b>{n.name}</b><span>{n.kind}</span></div><div><span>{n.mac || '—'}</span><b>{n.operstate}</b></div></div>)}</div></section>}
+      {page === 'Interfaces' && <section className="content-grid"><BusCard title="GPIO" icon={<Radio size={18}/>} values={inventory.buses.gpio_chips}/><BusCard title="I²C" icon={<Cable size={18}/>} values={inventory.buses.i2c}/><BusCard title="SPI" icon={<Cable size={18}/>} values={inventory.buses.spi}/><BusCard title="UART / Serial" icon={<Cable size={18}/>} values={inventory.buses.uart}/><BusCard title="CAN" icon={<Network size={18}/>} values={inventory.buses.can}/><BusCard title="USB" icon={<Usb size={18}/>} values={inventory.usb.map(u => `${u.product || 'USB device'} · ${u.path}`)}/><div className="card wide"><div className="section-head"><div><span className="eyebrow">NETWORK</span><h3>Interfaces, addresses and counters</h3></div><Wifi/></div>{inventory.network.map(n => <div className="network-row network-rich" key={n.name}><div><Dot on={n.operstate === 'up'}/><b>{n.name}</b><span>{n.kind}</span><span>{n.addresses?.join(' · ') || 'no address'}</span></div><div><span>RX {bytes(n.rx_bytes)}</span><span>TX {bytes(n.tx_bytes)}</span><b>{n.operstate}</b></div></div>)}</div></section>}
 
-      {page === 'Sensors' && <section className="empty-state card"><Thermometer size={32}/><span className="eyebrow">PLUGIN API</span><h2>Drivers stay small. Protocol meaning stays in Nodra.</h2><p>Sensor plugins emit typed JSON samples over the Device Agent plugin contract. v0.1 includes the manifest format and sample command runner; I²C/serial reference plugins are the next implementation step.</p><button>Open plugin contract</button></section>}
+      {page === 'Sensors' && <section className="sensor-grid">{sensors.length ? sensors.map(sample => <article className="card sensor-card" key={sample.sensor_id}><div className="section-head"><div><span className="eyebrow">{sample.plugin}</span><h3>{sample.sensor_id}</h3></div><StatusPill ok={sample.ok}>{sample.ok ? sample.quality : 'failed'}</StatusPill></div><ReadingValue sample={sample}/><div className="sensor-meta"><span>{age(sample.collected_at_unix_ms)}</span><span>{Object.entries(sample.labels).map(([k,v]) => `${k}=${v}`).join(' · ') || 'no labels'}</span></div>{sample.error && <p className="sensor-error-text">{sample.error}</p>}{sample.readings.slice(1).map(reading => <div className="io-line" key={reading.name}><span>{reading.name}</span><b>{reading.value} {reading.unit}</b></div>)}</article>) : <section className="empty-state card wide"><Thermometer size={32}/><span className="eyebrow">SENSOR SCHEDULER</span><h2>No samples yet.</h2><p>Install a plugin manifest under the configured plugins directory. The included LM75/TMP102 reference plugin reads an explicit I²C bus/address without scanning the bus.</p></section>}</section>}
 
-      {page === 'Integrations' && <section className="integration-grid"><div className="card integration"><div className="integration-icon"><Radio/></div><span className="eyebrow">DATA PLANE</span><h2>Nodra</h2><p>MQTT publishing, protocol adapters, local processing and disconnected WAL.</p><StatusPill ok={integrations.nodra_connected}>{integrations.nodra_connected ? 'Connected' : integrations.nodra_enabled ? 'Configured · offline' : 'Disabled'}</StatusPill></div><div className="card integration"><div className="integration-icon"><Box/></div><span className="eyebrow">CONTROL PLANE</span><h2>Fleet</h2><p>Registration, desired state, rollout, application lifecycle and health.</p><StatusPill ok={integrations.fleet_projection_ready}>{integrations.fleet_projection_ready ? 'Inventory bridge ready' : 'Disabled'}</StatusPill></div></section>}
+      {page === 'Integrations' && <section className="integration-grid"><div className="card integration"><div className="integration-icon"><Radio/></div><span className="eyebrow">DATA PLANE</span><h2>Nodra</h2><p>Retained inventory/status, legacy telemetry and new per-sensor MQTT topics. Nodra continues to own WAL, protocol semantics and disconnected delivery.</p><StatusPill ok={integrations.nodra_connected}>{integrations.nodra_connected ? 'Connected' : integrations.nodra_enabled ? 'Configured · offline' : 'Disabled'}</StatusPill></div><div className="card integration"><div className="integration-icon"><Box/></div><span className="eyebrow">CONTROL PLANE</span><h2>Fleet</h2><p>Device Agent projects IP addresses, hardware counts, capabilities and identity into the existing Fleet inventory contract.</p><StatusPill ok={integrations.fleet_projection_ready}>{integrations.fleet_projection_ready ? 'Inventory bridge ready' : 'Disabled'}</StatusPill></div></section>}
 
-      {page === 'Diagnostics' && <section className="terminal card"><div className="terminal-head"><div className="lights"><i/><i/><i/></div><span>zyvor-device-agent doctor</span></div><pre>{`$ zyvor-device-agent doctor\n\n✓ machine-id        ${inventory.device.machine_id.slice(0, 18)}…\n✓ network           ${inventory.network.length} interfaces detected\n✓ buses             ${busCount} physical interfaces\n✓ thermal           ${inventory.thermal.length} thermal zone(s)\n${integrations.nodra_connected ? '✓' : '○'} nodra             ${integrations.nodra_connected ? 'connected' : 'not connected'}\n${integrations.fleet_projection_ready ? '✓' : '○'} fleet bridge      ${integrations.fleet_projection_ready ? 'inventory projection ready' : 'disabled'}\n\n${live ? 'All local checks passed.' : 'Dashboard is showing preview data; API is not reachable.'}`}</pre></section>}
+      {page === 'Diagnostics' && <section className="diagnostic-layout"><div className="terminal card"><div className="terminal-head"><div className="lights"><i/><i/><i/></div><span>zyvor-device-agent doctor</span></div><pre>{doctor.checks.map(check => `${check.ok ? '✓' : '✕'} ${check.name.padEnd(22)} ${check.detail}`).join('\n') || 'No diagnostic checks returned.'}</pre></div><div className="card event-card"><div className="section-head"><div><span className="eyebrow">EVENT STREAM</span><h3>{streamLive ? 'Streaming' : 'Disconnected'}</h3></div><Activity/></div><div className="event-list">{events.slice().reverse().map(event => <div className="event-row" key={`${event.id}-${event.at_unix_ms}`}><Dot on={!event.kind.includes('disconnected')}/><div><b>{event.kind}</b><span>{age(event.at_unix_ms)}</span></div></div>)}</div></div></section>}
 
-      {page === 'Settings' && <section className="content-grid"><div className="card wide"><span className="eyebrow">DEVICE PROFILE</span><h2>Minewing reference ARM64</h2><p className="muted">Profiles describe expected physical interfaces and board-specific aliases without hard-coding protocol semantics into the daemon.</p><div className="settings-line"><span>REST API</span><code>:9188</code></div><div className="settings-line"><span>Inventory refresh</span><code>10s</code></div><div className="settings-line"><span>Runtime</span><code>systemd · Linux</code></div></div></section>}
+      {page === 'Settings' && <section className="content-grid"><div className="card wide"><span className="eyebrow">RUNTIME</span><h2>Minewing reference ARM64</h2><p className="muted">The agent now refreshes hardware continuously and samples plugins independently from browser/API traffic. Industrial protocol decoding still stays outside this daemon.</p><div className="settings-line"><span>REST API</span><code>:9188</code></div><div className="settings-line"><span>Inventory generation</span><code>{status.inventory_generation}</code></div><div className="settings-line"><span>Last refresh</span><code>{age(status.last_inventory_refresh_unix_ms)}</code></div><div className="settings-line"><span>Sensor failures</span><code>{status.sensor_sample_failures}</code></div><div className="settings-line"><span>Event subscribers</span><code>{status.event_subscribers}</code></div></div></section>}
     </main>
   </div>;
 }

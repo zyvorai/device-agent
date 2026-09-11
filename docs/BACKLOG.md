@@ -1,41 +1,48 @@
-# v0.1 Engineering Backlog
+# Engineering Backlog
 
-## P0 — Milestone acceptance
+## v0.1.1 — Live hardware increment
 
-- [x] Repository skeleton, Apache-2.0, NOTICE, security policy
-- [x] ARM64-first Rust daemon architecture
-- [x] Linux identity / CPU / RAM / root-storage / OS / kernel / uptime discovery
-- [x] thermal-zone discovery
-- [x] Ethernet / Wi-Fi / CAN network discovery
-- [x] GPIO / I2C / SPI / UART / CAN / USB / watchdog enumeration
-- [x] REST API and Prometheus endpoint
-- [x] external sensor-plugin manifest/process contract
-- [x] Nodra MQTT telemetry publisher
-- [x] Fleet-compatible local inventory projection
-- [x] systemd unit and multi-stage OCI Dockerfile
-- [x] Apple-inspired React/Vite local hardware cockpit
-- [x] Minewing ARM64 board profile and profile-aware `doctor`
-- [ ] Select exact Minewing SKU and freeze expected device-tree nodes
-- [ ] Implement first real I2C temperature sensor plugin
-- [ ] Implement first RS485/Modbus RTU Nodra adapter in `zyvorai/nodra`
-- [ ] Teach existing `fleet-agent` to merge `/api/v1/integrations/fleet/inventory`
-- [ ] Hardware-in-loop test on the physical Minewing unit
-- [ ] WAN-loss/reconnect demo with Nodra WAL replay
+- [x] background inventory refresh + cache
+- [x] material hardware-change event stream (SSE)
+- [x] bounded recent event history
+- [x] actual IP-address discovery through `ip -j address`
+- [x] RX/TX/error counters from sysfs
+- [x] scheduled sensor sampling
+- [x] canonical typed sensor sample envelope
+- [x] per-plugin poll interval + Nodra publish flag
+- [x] plugin absolute-path/executable/world-writable validation
+- [x] plugin timeout + stdout size limit
+- [x] real LM75/TMP102 I2C temperature reference plugin
+- [x] retained Nodra inventory/status topics
+- [x] per-sensor + event MQTT topics
+- [x] Fleet address projection
+- [x] expanded Prometheus metrics
+- [x] live Sensors + event Diagnostics UX
+- [x] install script scaffold
 
-## P1 — Before v0.1.0 release
+## P0 — Physical Minewing acceptance
 
-- [ ] local bearer/mTLS protection when binding beyond loopback
-- [ ] Unix-domain-socket API mode
-- [ ] Linux capability/udev policy documentation per bus
-- [ ] structured event stream for hot-plug and health transitions
-- [ ] actual IP-address inventory (not just interface inventory)
-- [ ] sensor sampling scheduler + typed sample envelope
-- [ ] per-plugin allowlist, executable ownership/mode validation and resource limits
-- [ ] dashboard Sensors page backed by live plugin samples
-- [ ] signed release artifacts, SBOM, provenance and cosign workflow
-- [ ] Debian/RPM packages and install/uninstall scripts
-- [ ] ARM64 smoke test under QEMU in CI
+- [ ] Select exact Minewing SKU and freeze expected device-tree nodes.
+- [ ] Install the reference plugin on the physical unit and confirm the real I2C bus/address.
+- [ ] Add the first RS485/Modbus RTU adapter in `zyvorai/nodra` (not Device Agent).
+- [ ] Teach the existing `fleet-agent` to merge `/api/v1/integrations/fleet/inventory`.
+- [ ] Hardware-in-loop test on the physical Minewing unit.
+- [ ] WAN-loss/reconnect demo with Nodra WAL replay.
 
-## Explicitly out of v0.1
+## P1 — Production hardening
 
-Kubernetes dependency, OTA partition writing, bootloader logic, EdgeAI inference, generic remote shell, industrial protocol semantics inside Device Agent, or replacing Fleet/Nodra agents.
+- [ ] Local bearer/mTLS protection when binding beyond loopback.
+- [ ] Unix-domain-socket API mode.
+- [ ] Linux capability/udev policy documentation per bus.
+- [ ] Plugin executable owner allowlist and process resource limits.
+- [ ] Signed release artifacts, SBOM, provenance and cosign workflow.
+- [ ] Debian/RPM packages and clean uninstall path.
+- [ ] ARM64 smoke test under QEMU in CI.
+- [ ] Optional Linux udev/netlink event source to complement polling.
+- [ ] Configurable thermal/counter health thresholds and alert events.
+
+## Explicitly outside Device Agent v0.x
+
+Kubernetes dependency, industrial protocol meaning, Nodra WAL duplication, a
+second Fleet agent, arbitrary remote shell, bootloader/partition OTA logic or
+EdgeAI inference.

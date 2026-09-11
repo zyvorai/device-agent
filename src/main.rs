@@ -9,11 +9,14 @@ mod plugins;
 mod profile;
 mod state;
 
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    time::{interval, MissedTickBehavior},
+};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -47,6 +50,13 @@ enum Command {
     Doctor,
     /// Print the local inventory projection consumed by Zyvor Fleet agent.
     FleetInventory,
+    /// List configured sensor plugins and their validation state.
+    Plugins,
+    /// Execute one configured sensor plugin immediately.
+    Sample {
+        /// Plugin manifest name.
+        name: String,
+    },
 }
 
 #[tokio::main]
@@ -82,6 +92,27 @@ async fn main() -> anyhow::Result<()> {
             println!("{}", serde_json::to_string_pretty(&projection)?);
             Ok(())
         }
+        Command::Plugins => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&plugins::statuses(&cfg))?
+            );
+            Ok(())
+        }
+        Command::Sample { name } => {
+            let manifests = plugins::discover(&cfg);
+            let manifest = manifests
+                .iter()
+                .find(|plugin| plugin.name == name)
+                .with_context(|| format!("sensor plugin {name:?} not found"))?;
+            let sample = plugins::sample(&cfg, manifest).await;
+            println!("{}", serde_json::to_string_pretty(&sample)?);
+            if sample.ok {
+                Ok(())
+            } else {
+                anyhow::bail!("sensor sample failed")
+            }
+        }
         Command::Serve => serve(cfg).await,
     }
 }
@@ -90,10 +121,13 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
     let inventory = hardware::collect_inventory(&cfg).await;
     let state = Arc::new(AppState::new(cfg.clone(), inventory));
 
+    spawn_inventory_refresh(state.clone());
+    spawn_plugin_scheduler(state.clone());
+
     if cfg.nodra.enabled {
-        let s = state.clone();
+        let state = state.clone();
         tokio::spawn(async move {
-            if let Err(error) = integrations::nodra::publisher_loop(s).await {
+            if let Err(error) = integrations::nodra::publisher_loop(state).await {
                 warn!(?error, "Nodra publisher stopped");
             }
         });
@@ -105,4 +139,25 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+fn spawn_inventory_refresh(state: Arc<AppState>) {
+    tokio::spawn(async move {
+        let refresh_seconds = state.config.device.inventory_refresh_seconds.max(1);
+        let mut ticker = interval(Duration::from_secs(refresh_seconds));
+        ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        loop {
+            ticker.tick().await;
+            let inventory = hardware::collect_inventory(&state.config).await;
+            state.update_inventory(inventory).await;
+        }
+    });
+}
+
+fn spawn_plugin_scheduler(state: Arc<AppState>) {
+    tokio::spawn(async move {
+        if let Err(error) = plugins::scheduler_loop(state).await {
+            warn!(?error, "sensor plugin scheduler stopped");
+        }
+    });
 }

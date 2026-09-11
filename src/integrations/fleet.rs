@@ -78,7 +78,11 @@ pub fn project(inventory: &Inventory) -> FleetInventoryProjection {
         memory_bytes: inventory.system.memory_bytes,
         runtimes: vec![],
         capabilities: inventory.capabilities.clone(),
-        addresses: vec![],
+        addresses: inventory
+            .network
+            .iter()
+            .flat_map(|interface| interface.addresses.clone())
+            .collect(),
         metadata,
     }
 }

@@ -2,7 +2,7 @@
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
 
-**Status:** v0.1 development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
+**Status:** v0.1.1 live-hardware development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
 
 ```text
 Minewing / Linux edge hardware
@@ -33,11 +33,13 @@ It intentionally does **not** interpret Modbus registers, CAN/J1939 PGNs or OPC-
 - CPU / RAM / root storage / OS / kernel / uptime / temperature inventory
 - Ethernet / Wi-Fi / CAN network discovery
 - GPIO / I2C / SPI / UART / CAN / USB / watchdog discovery
-- sensor plugin process API
+- continuous cached inventory refresh + material hardware-change events
+- sensor plugin process API + scheduled sampling
+- real LM75/TMP102 I²C temperature reference plugin (explicit bus/address; no scanning)
 - REST API
 - Prometheus metrics endpoint
-- Nodra MQTT publishing
-- Fleet inventory bridge
+- Nodra MQTT publishing: retained inventory/status, per-sensor and event topics
+- Fleet inventory bridge with hardware metadata and IP addresses
 - systemd service
 - OCI image with `linux/amd64` + `linux/arm64` CI
 - local Apple-inspired dashboard using the same React/Vite family as Aether
@@ -50,6 +52,9 @@ cp config/device-agent.example.toml /tmp/device-agent.toml
 cargo run -- --config /tmp/device-agent.toml inventory
 cargo run -- --config /tmp/device-agent.toml doctor
 cargo run -- --config /tmp/device-agent.toml serve
+
+# Reference sensor decode test; does not touch hardware
+python3 examples/i2c_temperature.py --self-test
 ```
 
 Dashboard/API: `http://127.0.0.1:9188`
@@ -68,12 +73,18 @@ npm run build
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/v1/health` | daemon liveness and version |
-| `GET /api/v1/inventory` | full device inventory |
+| `GET /api/v1/status` | agent generation/sample counters |
+| `GET /api/v1/inventory` | cached full device inventory |
+| `POST /api/v1/inventory/refresh` | force an immediate Linux inventory refresh |
 | `GET /api/v1/interfaces` | network, buses and USB |
 | `GET /api/v1/thermal` | Linux thermal zones |
 | `GET /api/v1/integrations` | Nodra/Fleet connection state |
-| `GET /api/v1/plugins` | discovered sensor plugins |
+| `GET /api/v1/plugins` | plugin manifests + validation state |
 | `POST /api/v1/plugins/{name}/sample` | execute one plugin sample |
+| `GET /api/v1/sensors` | latest canonical samples |
+| `GET /api/v1/sensors/{sensor_id}` | latest sample for one sensor |
+| `GET /api/v1/events` | live Server-Sent Events stream |
+| `GET /api/v1/events/recent` | bounded recent event history |
 | `GET /api/v1/doctor` | field diagnostics |
 | `GET /metrics` | Prometheus text exposition |
 
@@ -115,7 +126,7 @@ docs/                    architecture, roadmap, Minewing profile
 
 A clean ARM64 Minewing unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
 
-See `docs/MINEWING_REFERENCE.md` and `docs/ROADMAP.md`.
+See `docs/MINEWING_REFERENCE.md`, `docs/V0.1.1_LIVE_HARDWARE.md` and `docs/ROADMAP.md`.
 
 ## License
 

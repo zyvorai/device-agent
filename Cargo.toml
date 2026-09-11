@@ -1,6 +1,6 @@
 [package]
 name = "zyvor-device-agent"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.82"
 description = "Linux hardware edge agent for Zyvor — inventory, physical buses, health, sensors, Nodra and Fleet integration."
@@ -23,6 +23,7 @@ rumqttc = "0.24"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.43", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
 toml = "0.8"
 tower-http = { version = "0.6", features = ["trace", "fs"] }
 tracing = "0.1"

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Inventory {
     pub device: DeviceIdentity,
     pub system: SystemInfo,
@@ -13,7 +15,7 @@ pub struct Inventory {
     pub capabilities: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeviceIdentity {
     pub serial: String,
     pub vendor: String,
@@ -22,7 +24,7 @@ pub struct DeviceIdentity {
     pub machine_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SystemInfo {
     pub arch: String,
     pub kernel: String,
@@ -34,16 +36,22 @@ pub struct SystemInfo {
     pub uptime_seconds: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NetworkInterface {
     pub name: String,
     pub kind: String,
     pub operstate: String,
     pub mac: Option<String>,
     pub mtu: Option<u32>,
+    #[serde(default)]
+    pub addresses: Vec<String>,
+    pub rx_bytes: Option<u64>,
+    pub tx_bytes: Option<u64>,
+    pub rx_errors: Option<u64>,
+    pub tx_errors: Option<u64>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct BusInventory {
     pub gpio_chips: Vec<String>,
     pub i2c: Vec<String>,
@@ -53,7 +61,7 @@ pub struct BusInventory {
     pub watchdog: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsbDevice {
     pub path: String,
     pub vendor_id: Option<String>,
@@ -62,7 +70,7 @@ pub struct UsbDevice {
     pub product: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalZone {
     pub name: String,
     pub kind: String,
@@ -88,4 +96,49 @@ pub struct IntegrationStatus {
     pub nodra_connected: bool,
     pub fleet_enabled: bool,
     pub fleet_projection_ready: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorReading {
+    pub name: String,
+    #[serde(default)]
+    pub kind: String,
+    pub value: f64,
+    #[serde(default)]
+    pub unit: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensorSample {
+    pub sensor_id: String,
+    pub plugin: String,
+    pub collected_at_unix_ms: u64,
+    pub ok: bool,
+    pub quality: String,
+    pub publish_to_nodra: bool,
+    #[serde(default)]
+    pub readings: Vec<SensorReading>,
+    #[serde(default)]
+    pub labels: BTreeMap<String, String>,
+    pub error: Option<String>,
+    #[serde(default)]
+    pub raw: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentEvent {
+    pub id: u64,
+    pub kind: String,
+    pub at_unix_ms: u64,
+    pub data: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentStatus {
+    pub version: String,
+    pub inventory_generation: u64,
+    pub last_inventory_refresh_unix_ms: u64,
+    pub sensor_samples_total: u64,
+    pub sensor_sample_failures: u64,
+    pub event_subscribers: usize,
 }

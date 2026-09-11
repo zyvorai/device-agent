@@ -161,8 +161,10 @@ fi
 # --- 5. install binary, config, profiles, dashboard --------------------------
 log "Installing binary and support files"
 run "$SUDO install -m755 '$REMOTE_DIR/target/release/${APP}' /usr/bin/${APP}"
-run "$SUDO mkdir -p /var/lib/${APP} /run/${APP} /etc/zyvor/device-agent/profiles /etc/zyvor/device-agent/plugins.d"
+run "$SUDO mkdir -p /var/lib/${APP} /run/${APP} /etc/zyvor/device-agent/profiles /etc/zyvor/device-agent/plugins.d /usr/lib/${APP}/plugins"
 run "$SUDO cp '$REMOTE_DIR'/profiles/*.toml /etc/zyvor/device-agent/profiles/"
+run "$SUDO install -m755 '$REMOTE_DIR/examples/i2c_temperature.py' /usr/lib/${APP}/plugins/i2c_temperature.py"
+run "$SUDO install -m644 '$REMOTE_DIR/examples/plugins.d/i2c-temperature.json' /etc/zyvor/device-agent/plugins.d/i2c-temperature.json"
 
 run "if [[ ! -f /etc/zyvor/device-agent.toml ]]; then \
   $SUDO cp '$REMOTE_DIR/config/device-agent.example.toml' /etc/zyvor/device-agent.toml && \

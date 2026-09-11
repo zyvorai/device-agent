@@ -13,7 +13,7 @@ COPY web/dashboard ./
 RUN npm run build
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates iproute2 && rm -rf /var/lib/apt/lists/*
 COPY --from=backend /src/target/release/zyvor-device-agent /usr/bin/zyvor-device-agent
 COPY --from=dashboard /src/web/dashboard/dist /usr/share/zyvor-device-agent/dashboard
 COPY config/device-agent.example.toml /etc/zyvor/device-agent.toml

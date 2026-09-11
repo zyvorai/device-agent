@@ -25,6 +25,9 @@ pub async fn collect_inventory(cfg: &Config) -> Inventory {
         "hardware-inventory".into(),
         "system-health".into(),
         "sensor-plugin-api".into(),
+        "sensor-scheduler".into(),
+        "hardware-events".into(),
+        "fleet-inventory-projection".into(),
     ];
     if !buses.gpio_chips.is_empty() {
         capabilities.push("gpio".into());
@@ -65,9 +68,25 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
         detail: inventory.device.machine_id.clone(),
     });
     checks.push(DoctorCheck {
+        name: "device-serial".into(),
+        ok: inventory.device.serial != "ZY-UNSET",
+        detail: inventory.device.serial.clone(),
+    });
+    checks.push(DoctorCheck {
         name: "network".into(),
         ok: !inventory.network.is_empty(),
         detail: format!("{} interfaces", inventory.network.len()),
+    });
+    checks.push(DoctorCheck {
+        name: "network-physical".into(),
+        ok: inventory.network.iter().any(|n| n.name != "lo"),
+        detail: inventory
+            .network
+            .iter()
+            .filter(|n| n.name != "lo")
+            .map(|n| format!("{}:{}", n.name, n.operstate))
+            .collect::<Vec<_>>()
+            .join(", "),
     });
     checks.push(DoctorCheck {
         name: "thermal".into(),
@@ -80,6 +99,20 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
         detail: cfg.plugins.directory.clone(),
     });
 
+    for plugin in crate::plugins::statuses(cfg) {
+        checks.push(DoctorCheck {
+            name: format!("plugin.{}", plugin.manifest.name),
+            ok: plugin.valid || !plugin.manifest.enabled,
+            detail: if !plugin.manifest.enabled {
+                "disabled".into()
+            } else if plugin.valid {
+                format!("{} ({})", plugin.manifest.command, plugin.manifest.version)
+            } else {
+                plugin.validation_errors.join("; ")
+            },
+        });
+    }
+
     match profile::load(cfg) {
         Ok(p) => {
             let ethernet = inventory
@@ -88,6 +121,16 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
                 .filter(|n| n.kind == "ethernet")
                 .count();
             let values = [
+                (
+                    "profile.name",
+                    cfg.device.profile == p.name,
+                    format!("expected {}, loaded {}", cfg.device.profile, p.name),
+                ),
+                (
+                    "profile.vendor",
+                    inventory.device.vendor == p.vendor,
+                    format!("expected {}, found {}", p.vendor, inventory.device.vendor),
+                ),
                 (
                     "profile.arch",
                     inventory.system.arch == p.arch,

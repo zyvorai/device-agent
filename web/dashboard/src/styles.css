@@ -40,3 +40,22 @@ header { display: flex; justify-content: space-between; align-items: end; margin
 .terminal { padding:0; overflow:hidden; background:#0e0e10; border-color:#0e0e10; color:#e8e8eb; }.terminal-head { display:flex; align-items:center; justify-content:center; position:relative; height:48px; border-bottom:1px solid rgba(255,255,255,.08); color:#86868d; font-size:11px; }.lights { position:absolute; left:18px; display:flex; gap:7px; }.lights i { width:10px;height:10px;border-radius:50%;background:#3a3a3f; }.lights i:first-child { background:#ff5f57; }.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}.terminal pre { margin:0; padding:28px; font-family:"SFMono-Regular",Consolas,monospace; font-size:12px; line-height:1.85; overflow:auto; color:#c7c7cd; }
 @media (max-width: 980px) { .app-shell { grid-template-columns:76px 1fr; }.brand>div:last-child,nav span,.side-foot { display:none; }.sidebar { padding:20px 12px; }.brand { justify-content:center;padding-left:0;padding-right:0; } nav button { justify-content:center; }.metrics-grid,.spec-grid { grid-template-columns:repeat(2,1fr); }.hero .orb { display:none; } }
 @media (max-width: 700px) { .app-shell { display:block; }.sidebar { position:fixed; z-index:10; bottom:0; top:auto; width:100%; height:auto; border-right:0;border-top:1px solid var(--line);padding:8px 12px; }.brand,.side-foot { display:none; } nav { display:flex;justify-content:space-around; } nav button { padding:9px; } nav button:nth-child(n+6) { display:none; } main { padding:28px 18px 92px; } h1{font-size:42px}.metrics-grid,.two-col,.content-grid,.integration-grid,.spec-grid { grid-template-columns:1fr; }.wide { grid-column:auto; }.hero { min-height:260px;padding:28px; }.hero-pills { flex-wrap:wrap; } header { align-items:center; }.serial { display:none; } }
+
+/* v0.1.1 live hardware additions */
+.sensor-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.sensor-card { min-height:240px; display:flex; flex-direction:column; }
+.sensor-value { display:block; margin:34px 0 20px; font-size:clamp(38px,6vw,64px); letter-spacing:-.055em; }
+.sensor-value.sensor-error { font-size:34px; color:#b3261e; }
+.sensor-meta { margin-top:auto; border-top:1px solid var(--line); padding-top:14px; display:flex; justify-content:space-between; gap:14px; color:var(--muted); font-size:11px; }
+.sensor-meta span:last-child { text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sensor-error-text { color:#b3261e; font-size:12px; line-height:1.5; }
+.network-rich > div:first-child { flex-wrap:wrap; }
+.network-rich > div:last-child { white-space:nowrap; }
+.diagnostic-layout { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr); gap:14px; }
+.event-card { min-height:420px; }
+.event-list { margin-top:18px; max-height:430px; overflow:auto; }
+.event-row { display:flex; gap:10px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--line); }
+.event-row > div { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.event-row b { font-size:12px; overflow:hidden; text-overflow:ellipsis; }
+.event-row span { color:var(--muted); font-size:10px; }
+@media (max-width:980px) { .sensor-grid,.diagnostic-layout { grid-template-columns:1fr; } }

@@ -1,15 +1,33 @@
-import type { IntegrationStatus, Inventory } from './types';
+import type { AgentEvent, AgentStatus, DoctorReport, IntegrationStatus, Inventory, SensorSample } from './types';
 
-export async function getInventory(): Promise<Inventory> {
-  const response = await fetch('/api/v1/inventory');
-  if (!response.ok) throw new Error(`inventory: ${response.status}`);
+async function getJson<T>(path: string): Promise<T> {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`${path}: ${response.status}`);
   return response.json();
 }
 
-export async function getIntegrations(): Promise<IntegrationStatus> {
-  const response = await fetch('/api/v1/integrations');
-  if (!response.ok) throw new Error(`integrations: ${response.status}`);
-  return response.json();
+export function getInventory(): Promise<Inventory> {
+  return getJson('/api/v1/inventory');
+}
+
+export function getIntegrations(): Promise<IntegrationStatus> {
+  return getJson('/api/v1/integrations');
+}
+
+export function getSensors(): Promise<SensorSample[]> {
+  return getJson('/api/v1/sensors');
+}
+
+export function getDoctor(): Promise<DoctorReport> {
+  return getJson('/api/v1/doctor');
+}
+
+export function getRecentEvents(): Promise<AgentEvent[]> {
+  return getJson('/api/v1/events/recent');
+}
+
+export function getStatus(): Promise<AgentStatus> {
+  return getJson('/api/v1/status');
 }
 
 export function bytes(value: number | null | undefined): string {
@@ -27,4 +45,11 @@ export function duration(seconds: number): string {
   if (days) return `${days}d ${hours}h`;
   const minutes = Math.floor((seconds % 3600) / 60);
   return `${hours}h ${minutes}m`;
+}
+
+export function age(unixMs: number): string {
+  const seconds = Math.max(0, Math.round((Date.now() - unixMs) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  return `${Math.floor(seconds / 3600)}h ago`;
 }

@@ -2,7 +2,11 @@
 /dist
 web/dashboard/node_modules
 web/dashboard/dist
+web/dashboard/*.tsbuildinfo
 .DS_Store
 .env
 *.log
+__pycache__/
+*.pyc
 .deploy-last
+.claude/

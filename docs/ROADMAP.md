@@ -2,17 +2,20 @@
 
 ## v0.1 — Hardware Edge MVP
 
-- ARM64 Linux first-class target; amd64 build for development
-- inventory: identity, CPU, RAM, root storage, kernel, OS, thermal
-- network: Ethernet/Wi-Fi/CAN discovery
-- physical buses: GPIO, I2C, SPI, UART, CAN, USB, watchdog
-- REST API + Prometheus endpoint
-- external sensor plugin protocol
-- Nodra MQTT publishing
-- Fleet inventory projection
-- systemd unit + OCI image
-- Apple-inspired local dashboard
-- Minewing reference profile and field acceptance test
+- Linux hardware identity/inventory, physical buses and thermal discovery
+- REST, Prometheus, external sensor-plugin process contract
+- Nodra MQTT publishing and Fleet inventory projection
+- systemd/OCI packaging, Minewing profile, local Apple-inspired dashboard
+
+## v0.1.1 — Live Hardware
+
+- background inventory refresh and material-change events
+- scheduled sensor sampling + canonical sample envelopes
+- real LM75/TMP102 I2C reference sensor
+- plugin validation and bounded execution
+- IP addresses + interface counters
+- Nodra retained inventory/status, per-sensor and event topics
+- live sensor/event UX
 
 ## v0.2 — Production device identity
 
@@ -21,7 +24,7 @@
 - TPM2 / secure-element identity when hardware provides it
 - Unix socket + local RBAC
 - privilege separation helper for GPIO/I2C/SPI/CAN
-- richer Prometheus collectors and event stream
+- richer health thresholds and event sources
 
 ## v0.3 — Nodra protocol packs
 

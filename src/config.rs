@@ -31,6 +31,7 @@ pub struct DeviceConfig {
     pub profile: String,
     pub profile_directory: String,
     pub telemetry_interval_seconds: u64,
+    pub inventory_refresh_seconds: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +44,7 @@ pub struct NodraConfig {
     pub topic_prefix: String,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub retain_inventory: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +59,10 @@ pub struct FleetConfig {
 pub struct PluginConfig {
     pub directory: String,
     pub timeout_seconds: u64,
+    pub sample_interval_seconds: u64,
+    pub require_absolute_command: bool,
+    pub reject_world_writable: bool,
+    pub max_output_bytes: usize,
 }
 
 impl Default for ServerConfig {
@@ -67,6 +73,7 @@ impl Default for ServerConfig {
         }
     }
 }
+
 impl Default for DeviceConfig {
     fn default() -> Self {
         Self {
@@ -76,9 +83,11 @@ impl Default for DeviceConfig {
             profile: "generic-linux-arm64".into(),
             profile_directory: "/etc/zyvor/device-agent/profiles".into(),
             telemetry_interval_seconds: 10,
+            inventory_refresh_seconds: 5,
         }
     }
 }
+
 impl Default for NodraConfig {
     fn default() -> Self {
         Self {
@@ -89,9 +98,11 @@ impl Default for NodraConfig {
             topic_prefix: "zyvor/device".into(),
             username: None,
             password: None,
+            retain_inventory: true,
         }
     }
 }
+
 impl Default for FleetConfig {
     fn default() -> Self {
         Self {
@@ -100,11 +111,16 @@ impl Default for FleetConfig {
         }
     }
 }
+
 impl Default for PluginConfig {
     fn default() -> Self {
         Self {
             directory: "/etc/zyvor/device-agent/plugins.d".into(),
             timeout_seconds: 3,
+            sample_interval_seconds: 5,
+            require_absolute_command: true,
+            reject_world_writable: true,
+            max_output_bytes: 262_144,
         }
     }
 }

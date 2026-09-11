@@ -23,11 +23,16 @@
 ./docs/MINEWING_REFERENCE.md
 ./docs/PLUGIN_PROTOCOL.md
 ./docs/ROADMAP.md
+./docs/V0.1.1_LIVE_HARDWARE.md
+./examples/i2c_temperature.py
+./examples/plugins.d/i2c-temperature.json
 ./examples/plugins.d/temperature.json
 ./examples/temperature-demo.sh
 ./packaging/systemd/zyvor-device-agent.service
 ./profiles/generic-linux-arm64.toml
 ./profiles/minewing-reference-arm64.toml
+./scripts/check-static.py
+./scripts/install.sh
 ./scripts/package.sh
 ./src/api.rs
 ./src/config.rs

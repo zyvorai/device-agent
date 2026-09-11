@@ -183,7 +183,10 @@ run "$SUDO install -m644 '$REMOTE_DIR/packaging/systemd/${APP}.service' /etc/sys
 run "$SUDO systemctl daemon-reload"
 
 if [[ "$NO_START" == 0 ]]; then
-  run "$SUDO systemctl enable --now ${APP}.service"
+  # enable --now only starts a not-yet-running unit; restart explicitly so a
+  # redeploy actually picks up the newly installed binary.
+  run "$SUDO systemctl enable ${APP}.service"
+  run "$SUDO systemctl restart ${APP}.service"
   run "sleep 2; $SUDO systemctl is-active ${APP}.service"
 fi
 

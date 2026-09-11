@@ -2,7 +2,7 @@
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
 
-**Status:** v0.1.3 industrial-capture development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
+**Status:** v0.1.4 production-hardening development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
 
 ```text
 Minewing / Linux edge hardware
@@ -129,6 +129,38 @@ publish_to_nodra = true
 
 Raw frames (classic, extended, and CAN-FD with BRS/ESI flags) are available over REST/SSE and, when enabled, published to per-interface Nodra topics. Device Agent does not decode J1939 PGNs — see `docs/CAN_CAPTURE.md` and `docs/NODRA_J1939_HANDOFF.md` for the hand-off to Nodra's `j1939-device-agent` connector.
 
+## API auth and Unix socket (v0.1.4)
+
+The API is unauthenticated by default (`auth.mode = "none"`), matching v0.1.0–v0.1.3. Set
+`auth.mode = "bearer"` to require `Authorization: Bearer <token>` on every route except
+`auth.exempt_paths` (`/api/v1/health` only, by default — note `/metrics` is **not** exempt).
+The daemon never stores the raw token, only its SHA-256 hash:
+
+```toml
+[auth]
+mode = "bearer"
+exempt_paths = ["/api/v1/health"]
+
+[auth.bearer]
+token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"
+```
+
+`./scripts/deploy-remote.sh HOST --auth-mode bearer` generates the token and installs the
+hash automatically (same pattern as `../fabric`'s admin-password bootstrap).
+
+A second, additive API listener over a Unix domain socket is available for same-host callers
+(Fleet, Nodra) that would rather use kernel peer-credential checks than carry a token:
+
+```toml
+[server.unix_socket]
+enabled = true
+path = "/run/zyvor-device-agent/api.sock"
+allow_uids = [1000]
+allow_gids = []
+```
+
+Empty `allow_uids`/`allow_gids` deny everyone — both must be explicitly populated.
+
 ## Product boundary
 
 ```text
@@ -167,7 +199,7 @@ docs/                    architecture, roadmap, Minewing profile
 
 A clean ARM64 Minewing unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
 
-See `docs/MINEWING_REFERENCE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`, `docs/INDUSTRIAL_BUSES.md`, `docs/MINEWING_INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`, `docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md` and `docs/ROADMAP.md`.
+See `docs/MINEWING_REFERENCE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`, `docs/INDUSTRIAL_BUSES.md`, `docs/MINEWING_INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`, `docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md`, `docs/HARDWARE_PERMISSIONS.md` and `docs/ROADMAP.md`.
 
 ## License
 

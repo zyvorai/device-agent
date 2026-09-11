@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.4-dev — 2026-09-12
+
+- Add bearer-token API auth (`auth.mode = "bearer"`); every route except
+  `/api/v1/health` is unauthenticated by default (`mode = "none"`) — same as before.
+- Add an additional Unix-domain-socket API listener with kernel peer-credential
+  (uid/gid) RBAC, alongside the existing TCP listener.
+- Add opt-in plugin privilege drop (`plugins.run_as_uid`/`run_as_gid`) so sensor
+  plugin subprocesses no longer have to inherit the daemon's root identity.
+- `scripts/deploy-remote.sh --auth-mode bearer` generates and installs a bearer
+  token the same way `../fabric` handles its admin password; refuses to bind a
+  non-loopback address with no auth configured.
+- Add `docs/HARDWARE_PERMISSIONS.md` covering GPIO/I2C/SPI/CAN device-node
+  permissions for dropped-privilege plugins.
+- CI: the `container` job now actually boots the built amd64 and arm64 (via QEMU)
+  images and checks `--version`/`doctor` run correctly, instead of only
+  cross-building them.
+- Release pipeline: generate CycloneDX SBOMs (Rust + dashboard), sign checksums
+  and SBOMs with keyless `cosign`, and attach a SLSA build-provenance attestation.
+
 ## 0.1.3-dev — 2026-09-11
 
 - Add disabled-by-default, RX-only SocketCAN frame capture with explicit interface allowlists.

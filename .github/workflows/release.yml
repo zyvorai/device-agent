@@ -5,6 +5,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -46,8 +48,35 @@ jobs:
           tar -C dist -czf "${OUT}.tar.gz" "$(basename "$OUT")"
       - name: Checksums
         run: sha256sum dist/*.tar.gz > dist/SHA256SUMS
+      - name: Generate Rust SBOM
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json
+          mv *.cdx.json dist/sbom-rust.cdx.json
+      - name: Generate dashboard SBOM
+        run: |
+          cd web/dashboard
+          npm sbom --sbom-format cyclonedx > ../../dist/sbom-dashboard.cdx.json
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign checksums and SBOMs (keyless, GitHub OIDC)
+        run: |
+          cosign sign-blob --yes dist/SHA256SUMS \
+            --output-signature dist/SHA256SUMS.sig --output-certificate dist/SHA256SUMS.pem
+          cosign sign-blob --yes dist/sbom-rust.cdx.json \
+            --output-signature dist/sbom-rust.cdx.json.sig --output-certificate dist/sbom-rust.cdx.json.pem
+          cosign sign-blob --yes dist/sbom-dashboard.cdx.json \
+            --output-signature dist/sbom-dashboard.cdx.json.sig --output-certificate dist/sbom-dashboard.cdx.json.pem
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'dist/*.tar.gz'
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.tar.gz
             dist/SHA256SUMS
+            dist/SHA256SUMS.sig
+            dist/SHA256SUMS.pem
+            dist/sbom-*.cdx.json
+            dist/sbom-*.cdx.json.sig
+            dist/sbom-*.cdx.json.pem

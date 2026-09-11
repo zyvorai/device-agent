@@ -170,7 +170,7 @@ impl Default for AuthConfig {
     fn default() -> Self {
         Self {
             mode: "none".into(),
-            exempt_paths: vec!["/api/v1/health".into()],
+            exempt_paths: vec!["/api/v1/health".into(), "/api/v1/ready".into()],
             bearer: BearerAuthConfig::default(),
         }
     }

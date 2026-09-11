@@ -14,6 +14,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 use crate::{model::CanFrame, state::AppState};
@@ -86,7 +87,7 @@ unsafe extern "C" {
     fn if_nametoindex(name: *const c_char) -> u32;
 }
 
-pub fn spawn(state: Arc<AppState>) {
+pub fn spawn(state: Arc<AppState>, shutdown: CancellationToken) {
     let cfg = state.config.industrial.can_capture.clone();
     if !cfg.enabled {
         return;
@@ -99,10 +100,11 @@ pub fn spawn(state: Arc<AppState>) {
     for interface in cfg.interfaces.clone() {
         let state = state.clone();
         let cfg = cfg.clone();
+        let shutdown = shutdown.clone();
         let thread_name = interface.clone();
         thread::Builder::new()
             .name(format!("can-capture-{interface}"))
-            .spawn(move || capture_loop(state, &interface, &cfg))
+            .spawn(move || capture_loop(state, &interface, &cfg, shutdown))
             .unwrap_or_else(|error| {
                 warn!(interface = %thread_name, ?error, "failed to start CAN capture thread");
                 panic!("failed to start CAN capture thread: {error}")
@@ -110,7 +112,12 @@ pub fn spawn(state: Arc<AppState>) {
     }
 }
 
-fn capture_loop(state: Arc<AppState>, interface: &str, cfg: &crate::config::CanCaptureConfig) {
+fn capture_loop(
+    state: Arc<AppState>,
+    interface: &str,
+    cfg: &crate::config::CanCaptureConfig,
+    shutdown: CancellationToken,
+) {
     let fd = match open_socket(interface, cfg.include_error_frames) {
         Ok(fd) => fd,
         Err(error) => {
@@ -127,7 +134,7 @@ fn capture_loop(state: Arc<AppState>, interface: &str, cfg: &crate::config::CanC
     let mut accepted_in_window = 0_u32;
     let max_fps = cfg.max_frames_per_second.max(1);
 
-    loop {
+    while !shutdown.is_cancelled() {
         let mut raw = [0_u8; mem::size_of::<CanFdFrame>()];
         let read = unsafe { recv(fd, raw.as_mut_ptr().cast(), raw.len(), 0) };
         if read <= 0 {
@@ -155,6 +162,8 @@ fn capture_loop(state: Arc<AppState>, interface: &str, cfg: &crate::config::CanC
         accepted_in_window += 1;
         state.record_can_frame(frame);
     }
+    info!(%interface, "CAN capture shutting down");
+    unsafe { close(fd) };
 }
 
 fn open_socket(interface: &str, include_error_frames: bool) -> Result<c_int, String> {

@@ -9,6 +9,10 @@ Type=simple
 ExecStart=/usr/bin/zyvor-device-agent --config /etc/zyvor/device-agent.toml serve
 Restart=always
 RestartSec=3
+# Give the daemon's graceful-shutdown path (drains in-flight HTTP/SSE
+# connections and background loops on SIGTERM before exiting) time to finish
+# before systemd escalates to SIGKILL.
+TimeoutStopSec=15
 User=root
 Group=root
 NoNewPrivileges=true

@@ -11,7 +11,7 @@ allow_gids = []
 
 [auth]
 mode = "none"
-exempt_paths = ["/api/v1/health"]
+exempt_paths = ["/api/v1/health", "/api/v1/ready"]
 
 [auth.bearer]
 token_hash_file = "/tmp/zyvor-device-agent-dev-bearer.sha256"

@@ -75,7 +75,8 @@ npm run build
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/v1/health` | daemon liveness and version |
+| `GET /api/v1/health` | daemon liveness — process is up, always 200 |
+| `GET /api/v1/ready` | readiness — 200 once the background inventory refresh loop is ticking, 503 if it has stalled |
 | `GET /api/v1/status` | agent generation/sample counters |
 | `GET /api/v1/inventory` | cached full device inventory |
 | `POST /api/v1/inventory/refresh` | force an immediate Linux inventory refresh |
@@ -133,7 +134,8 @@ Raw frames (classic, extended, and CAN-FD with BRS/ESI flags) are available over
 
 The API is unauthenticated by default (`auth.mode = "none"`), matching v0.1.0–v0.1.3. Set
 `auth.mode = "bearer"` to require `Authorization: Bearer <token>` on every `/api/*` route
-and on `/metrics`, except `auth.exempt_paths` (`/api/v1/health` only, by default — note
+and on `/metrics`, except `auth.exempt_paths` (`/api/v1/health` and `/api/v1/ready` by
+default, so probes never need a token — note
 `/metrics` is **not** exempt). The bundled dashboard's static shell (everything outside
 `/api/*`/`/metrics`) is always unauthenticated, regardless of `auth.mode` — it carries no
 device data, and needs to load before it can show its own token prompt. The daemon never
@@ -142,7 +144,7 @@ stores the raw token, only its SHA-256 hash:
 ```toml
 [auth]
 mode = "bearer"
-exempt_paths = ["/api/v1/health"]
+exempt_paths = ["/api/v1/health", "/api/v1/ready"]
 
 [auth.bearer]
 token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"

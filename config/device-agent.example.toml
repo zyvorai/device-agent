@@ -16,7 +16,7 @@ allow_gids = []
 # generates a token and populates auth.bearer.token_hash_file automatically
 # when deploying with --auth-mode bearer.
 mode = "none"
-exempt_paths = ["/api/v1/health"]
+exempt_paths = ["/api/v1/health", "/api/v1/ready"]
 
 [auth.bearer]
 token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"

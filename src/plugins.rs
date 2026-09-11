@@ -18,6 +18,7 @@ use tokio::{
     process::Command,
     time::{interval, timeout, Instant, MissedTickBehavior},
 };
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 use crate::{
@@ -332,13 +333,22 @@ pub async fn sample(cfg: &Config, manifest: &PluginManifest) -> SensorSample {
     }
 }
 
-pub async fn scheduler_loop(state: Arc<AppState>) -> anyhow::Result<()> {
+pub async fn scheduler_loop(
+    state: Arc<AppState>,
+    shutdown: CancellationToken,
+) -> anyhow::Result<()> {
     let mut ticker = interval(Duration::from_secs(1));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut last_sampled: HashMap<String, Instant> = HashMap::new();
 
     loop {
-        ticker.tick().await;
+        tokio::select! {
+            _ = shutdown.cancelled() => {
+                info!("sensor plugin scheduler shutting down");
+                break;
+            }
+            _ = ticker.tick() => {}
+        }
         for manifest in discover(&state.config) {
             if !manifest.enabled {
                 continue;
@@ -365,6 +375,7 @@ pub async fn scheduler_loop(state: Arc<AppState>) -> anyhow::Result<()> {
             last_sampled.insert(manifest.name.clone(), Instant::now());
         }
     }
+    Ok(())
 }
 
 fn normalize_sample(manifest: &PluginManifest, raw: serde_json::Value) -> SensorSample {

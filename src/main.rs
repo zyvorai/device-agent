@@ -19,6 +19,7 @@ use tokio::{
     net::TcpListener,
     time::{interval, MissedTickBehavior},
 };
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -129,36 +130,76 @@ async fn main() -> anyhow::Result<()> {
 async fn serve(cfg: Config) -> anyhow::Result<()> {
     let inventory = hardware::collect_inventory(&cfg).await;
     let state = Arc::new(AppState::new(cfg.clone(), inventory));
+    let shutdown = CancellationToken::new();
 
-    spawn_inventory_refresh(state.clone());
-    spawn_plugin_scheduler(state.clone());
-    can_capture::spawn(state.clone());
+    spawn_inventory_refresh(state.clone(), shutdown.clone());
+    spawn_plugin_scheduler(state.clone(), shutdown.clone());
+    can_capture::spawn(state.clone(), shutdown.clone());
 
     if cfg.nodra.enabled {
         let state = state.clone();
+        let shutdown = shutdown.clone();
         tokio::spawn(async move {
-            if let Err(error) = integrations::nodra::publisher_loop(state).await {
+            if let Err(error) = integrations::nodra::publisher_loop(state, shutdown).await {
                 warn!(?error, "Nodra publisher stopped");
             }
         });
     }
 
     if cfg.server.unix_socket.enabled {
-        spawn_uds_listener(&cfg, api::router(state.clone()), state.clone())?;
+        spawn_uds_listener(
+            &cfg,
+            api::router(state.clone()),
+            state.clone(),
+            shutdown.clone(),
+        )?;
     }
 
     let app = api::router(state);
     let addr: SocketAddr = cfg.server.listen.parse().context("invalid server.listen")?;
     let listener = TcpListener::bind(addr).await?;
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
+        .await?;
+    info!("shutdown complete");
     Ok(())
+}
+
+/// Resolves once SIGINT/SIGTERM is received, or the shared token is otherwise
+/// cancelled - and cancels the token itself, so callers only need to await
+/// either this future (for axum's `with_graceful_shutdown`) or
+/// `shutdown.cancelled()` (for background loops), whichever fires first.
+async fn shutdown_signal(shutdown: CancellationToken) {
+    let ctrl_c = async {
+        let _ = tokio::signal::ctrl_c().await;
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        let Ok(mut signal) =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        else {
+            std::future::pending::<()>().await;
+            return;
+        };
+        signal.recv().await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => info!("received SIGINT, shutting down gracefully"),
+        _ = terminate => info!("received SIGTERM, shutting down gracefully"),
+        _ = shutdown.cancelled() => {}
+    }
+    shutdown.cancel();
 }
 
 fn spawn_uds_listener(
     cfg: &Config,
     base_router: axum::Router,
     state: Arc<AppState>,
+    shutdown: CancellationToken,
 ) -> anyhow::Result<()> {
     let (listener, router) = auth::uds::bind(&cfg.server.unix_socket, base_router, state)?;
     let path = cfg.server.unix_socket.path.clone();
@@ -168,6 +209,7 @@ fn spawn_uds_listener(
             listener,
             router.into_make_service_with_connect_info::<auth::uds::PeerCred>(),
         )
+        .with_graceful_shutdown(async move { shutdown.cancelled().await })
         .await
         {
             warn!(?error, "Unix socket listener stopped");
@@ -176,22 +218,29 @@ fn spawn_uds_listener(
     Ok(())
 }
 
-fn spawn_inventory_refresh(state: Arc<AppState>) {
+fn spawn_inventory_refresh(state: Arc<AppState>, shutdown: CancellationToken) {
     tokio::spawn(async move {
         let refresh_seconds = state.config.device.inventory_refresh_seconds.max(1);
         let mut ticker = interval(Duration::from_secs(refresh_seconds));
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
-            ticker.tick().await;
-            let inventory = hardware::collect_inventory(&state.config).await;
-            state.update_inventory(inventory).await;
+            tokio::select! {
+                _ = shutdown.cancelled() => {
+                    info!("inventory refresh loop shutting down");
+                    break;
+                }
+                _ = ticker.tick() => {
+                    let inventory = hardware::collect_inventory(&state.config).await;
+                    state.update_inventory(inventory).await;
+                }
+            }
         }
     });
 }
 
-fn spawn_plugin_scheduler(state: Arc<AppState>) {
+fn spawn_plugin_scheduler(state: Arc<AppState>, shutdown: CancellationToken) {
     tokio::spawn(async move {
-        if let Err(error) = plugins::scheduler_loop(state).await {
+        if let Err(error) = plugins::scheduler_loop(state, shutdown).await {
             warn!(?error, "sensor plugin scheduler stopped");
         }
     });

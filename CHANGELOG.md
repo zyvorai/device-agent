@@ -28,6 +28,15 @@
   from bearer auth — it was previously gated along with the API, which meant
   the browser couldn't even load the app far enough to show the token prompt
   above. Only `/api/*` and `/metrics` require auth; the shell carries no data.
+- Add graceful shutdown: SIGINT/SIGTERM now drain in-flight HTTP/SSE
+  connections on both the TCP and Unix-socket listeners before exiting, and
+  stop the inventory-refresh, plugin-scheduler, CAN-capture and Nodra-publisher
+  background loops cleanly instead of just dropping them. systemd unit gains
+  `TimeoutStopSec=15` to give the drain time to finish before SIGKILL.
+- Add `GET /api/v1/ready`: readiness (is the background inventory refresh loop
+  still ticking?), distinct from `/api/v1/health` (pure liveness) and
+  `/api/v1/doctor` (deep hardware diagnostics). Exempt from auth by default,
+  alongside `/api/v1/health`, so probes never need a token.
 - `scripts/deploy-remote.sh --auth-mode bearer` now also prints a ready-to-paste
   Prometheus scrape-config snippet for `/metrics`, which requires the same
   bearer token.

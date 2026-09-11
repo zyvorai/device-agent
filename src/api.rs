@@ -22,6 +22,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     let dashboard_dir = state.config.server.dashboard_dir.clone();
     Router::new()
         .route("/api/v1/health", get(health))
+        .route("/api/v1/ready", get(ready))
         .route("/api/v1/status", get(status))
         .route("/api/v1/inventory", get(inventory))
         .route("/api/v1/inventory/refresh", post(refresh_inventory))
@@ -62,6 +63,34 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
         "uptime_seconds": current.system.uptime_seconds,
         "inventory_generation": state.status().inventory_generation
     }))
+}
+
+/// Liveness (`/api/v1/health`) only proves the process is up and answering.
+/// Readiness additionally checks that the background inventory refresh loop
+/// (`spawn_inventory_refresh` in main.rs) is still ticking, without doing any
+/// real hardware probing itself (that's `/api/v1/doctor`, which stays a
+/// separate, deliberately heavier diagnostic endpoint). A stale timestamp
+/// here means the refresh task has stalled or panicked.
+async fn ready(State(state): State<Arc<AppState>>) -> Response {
+    let status = state.status();
+    let refresh_interval_ms = state.config.device.inventory_refresh_seconds.max(1) * 1000;
+    // Allow generous slack over the configured interval before calling the
+    // agent unready - a single slow tick under load must not flip probes.
+    let staleness_budget_ms = (refresh_interval_ms.saturating_mul(3)).max(30_000);
+    let age_ms = crate::state::now_unix_ms().saturating_sub(status.last_inventory_refresh_unix_ms);
+    let ready = age_ms <= staleness_budget_ms;
+    let body = serde_json::json!({
+        "ready": ready,
+        "inventory_generation": status.inventory_generation,
+        "inventory_age_ms": age_ms,
+        "staleness_budget_ms": staleness_budget_ms,
+    });
+    let code = if ready {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+    (code, Json(body)).into_response()
 }
 
 async fn status(State(state): State<Arc<AppState>>) -> Json<crate::model::AgentStatus> {

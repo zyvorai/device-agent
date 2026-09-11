@@ -4,11 +4,15 @@ use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
 use tokio::time::{interval, sleep, MissedTickBehavior};
-use tracing::warn;
+use tokio_util::sync::CancellationToken;
+use tracing::{info, warn};
 
 use crate::state::AppState;
 
-pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
+pub async fn publisher_loop(
+    state: Arc<AppState>,
+    shutdown: CancellationToken,
+) -> anyhow::Result<()> {
     let cfg = &state.config.nodra;
     let initial = state.inventory_snapshot().await;
     let prefix = format!(
@@ -34,6 +38,10 @@ pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
 
     loop {
         tokio::select! {
+            _ = shutdown.cancelled() => {
+                info!("Nodra publisher loop shutting down");
+                break;
+            }
             event = eventloop.poll() => {
                 match event {
                     Ok(Event::Incoming(Packet::ConnAck(_))) => state.set_nodra_connected(true),
@@ -136,6 +144,7 @@ pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
             }
         }
     }
+    Ok(())
 }
 
 async fn publish(

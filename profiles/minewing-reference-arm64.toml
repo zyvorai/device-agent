@@ -1,0 +1,13 @@
+name = "minewing-reference-arm64"
+vendor = "Minewing"
+arch = "aarch64"
+
+[minimum]
+ethernet = 1
+gpio = 1
+i2c = 1
+spi = 0
+uart = 1
+can = 1
+usb = 1
+watchdog = 1

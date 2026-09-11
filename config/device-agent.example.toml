@@ -1,0 +1,28 @@
+[server]
+listen = "0.0.0.0:9188"
+dashboard_dir = "/usr/share/zyvor-device-agent/dashboard"
+
+[device]
+vendor = "Minewing"
+model = "Reference ARM64 Gateway"
+serial = "auto"
+profile = "minewing-reference-arm64"
+profile_directory = "profiles"
+telemetry_interval_seconds = 10
+
+[nodra]
+enabled = false
+broker = "127.0.0.1"
+port = 1883
+client_id = "zyvor-device-agent"
+topic_prefix = "zyvor/device"
+# username = ""
+# password = ""
+
+[fleet]
+enabled = true
+mode = "projection"
+
+[plugins]
+directory = "/etc/zyvor/device-agent/plugins.d"
+timeout_seconds = 3

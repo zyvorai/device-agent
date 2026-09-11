@@ -1,0 +1,22 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+  packages: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cd web/dashboard && npm install --no-audit --no-fund && npm run build
+      - run: cargo build --release
+      - run: tar czf zyvor-device-agent-${GITHUB_REF_NAME}-linux-amd64.tar.gz target/release/zyvor-device-agent config packaging web/dashboard/dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: zyvor-device-agent-*.tar.gz

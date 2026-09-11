@@ -1,0 +1,5 @@
+target
+web/dashboard/node_modules
+web/dashboard/dist
+.git
+*.log

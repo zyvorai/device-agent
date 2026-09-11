@@ -1,0 +1,7 @@
+/target
+/dist
+web/dashboard/node_modules
+web/dashboard/dist
+.DS_Store
+.env
+*.log

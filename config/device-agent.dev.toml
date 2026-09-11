@@ -1,0 +1,26 @@
+[server]
+listen = "127.0.0.1:9188"
+dashboard_dir = "web/dashboard/dist"
+
+[device]
+vendor = "Minewing"
+model = "Development Edge Gateway"
+serial = "auto"
+profile = "minewing-reference-arm64"
+profile_directory = "profiles"
+telemetry_interval_seconds = 10
+
+[nodra]
+enabled = false
+broker = "127.0.0.1"
+port = 1883
+client_id = "zyvor-device-agent-dev"
+topic_prefix = "zyvor/device"
+
+[fleet]
+enabled = true
+mode = "projection"
+
+[plugins]
+directory = "examples/plugins.d"
+timeout_seconds = 3

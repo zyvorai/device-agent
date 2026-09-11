@@ -1,0 +1,13 @@
+name = "generic-linux-arm64"
+vendor = "Generic"
+arch = "aarch64"
+
+[minimum]
+ethernet = 1
+gpio = 0
+i2c = 0
+spi = 0
+uart = 0
+can = 0
+usb = 0
+watchdog = 0

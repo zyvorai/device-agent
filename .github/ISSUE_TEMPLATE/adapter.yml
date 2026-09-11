@@ -1,0 +1,22 @@
+name: Hardware / sensor adapter
+description: Propose support for a new physical device or sensor
+labels: [hardware]
+body:
+  - type: input
+    id: bus
+    attributes:
+      label: Bus
+      placeholder: I2C, SPI, UART, CAN, GPIO, USB
+    validations:
+      required: true
+  - type: input
+    id: part
+    attributes:
+      label: Device / part number
+    validations:
+      required: true
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Local driver contract
+      description: Describe the raw hardware interface. Protocol semantics should normally live in Nodra.

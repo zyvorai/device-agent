@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a Device Agent defect
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware / board
+      placeholder: Minewing model, CPU/SoC, RAM
+  - type: input
+    id: version
+    attributes:
+      label: Device Agent version
+  - type: textarea
+    id: doctor
+    attributes:
+      label: zyvor-device-agent doctor output
+      render: shell

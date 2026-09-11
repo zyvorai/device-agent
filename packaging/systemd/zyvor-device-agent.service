@@ -1,0 +1,25 @@
+[Unit]
+Description=Zyvor Device Agent
+Documentation=https://zyvor.dev
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/zyvor-device-agent --config /etc/zyvor/device-agent.toml serve
+Restart=always
+RestartSec=3
+User=root
+Group=root
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/zyvor-device-agent /run/zyvor-device-agent
+DevicePolicy=auto
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+Environment=RUST_LOG=zyvor_device_agent=info
+
+[Install]
+WantedBy=multi-user.target

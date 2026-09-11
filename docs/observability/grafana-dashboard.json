@@ -1,0 +1,163 @@
+{
+  "title": "Zyvor Device Agent",
+  "uid": "zyvor-device-agent",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "label": "Prometheus"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Agent up",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "zyvor_device_agent_up", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "down", "color": "red" }, "1": { "text": "up", "color": "green" } } }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Inventory generation",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [
+        { "expr": "zyvor_device_agent_inventory_generation", "refId": "A" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Sensors OK",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [
+        { "expr": "zyvor_device_agent_sensors_ok", "refId": "A" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Nodra connected",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "zyvor_device_agent_nodra_connected", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "disconnected", "color": "red" }, "1": { "text": "connected", "color": "green" } } }
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Fleet projection ready",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [
+        { "expr": "zyvor_device_agent_fleet_projection_ready", "refId": "A" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Highest thermal-zone temperature",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "fieldConfig": { "defaults": { "unit": "celsius" } },
+      "targets": [
+        { "expr": "zyvor_device_agent_temperature_celsius", "legendFormat": "temperature", "refId": "A" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Sensor sample failures (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "rate(zyvor_device_agent_sensor_sample_failures_total[5m])", "legendFormat": "failures/s", "refId": "A" },
+        { "expr": "rate(zyvor_device_agent_sensor_samples_total[5m])", "legendFormat": "samples/s", "refId": "B" }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "CAN interface up",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "zyvor_device_agent_can_up", "legendFormat": "{{interface}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "CAN BUS-OFF",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "targets": [
+        { "expr": "zyvor_device_agent_can_bus_off", "legendFormat": "{{interface}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "CAN RX/TX errors (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "targets": [
+        { "expr": "rate(zyvor_device_agent_can_rx_errors_total[5m])", "legendFormat": "{{interface}} rx", "refId": "A" },
+        { "expr": "rate(zyvor_device_agent_can_tx_errors_total[5m])", "legendFormat": "{{interface}} tx", "refId": "B" }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "CAN capture frames / drops (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        { "expr": "rate(zyvor_device_agent_can_capture_frames_total[5m])", "legendFormat": "frames/s", "refId": "A" },
+        { "expr": "rate(zyvor_device_agent_can_capture_dropped_total[5m])", "legendFormat": "dropped/s", "refId": "B" }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Detected buses/interfaces",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        { "expr": "zyvor_device_agent_network_interfaces", "legendFormat": "network", "refId": "A" },
+        { "expr": "zyvor_device_agent_can_interfaces", "legendFormat": "can", "refId": "B" },
+        { "expr": "zyvor_device_agent_i2c_buses", "legendFormat": "i2c", "refId": "C" },
+        { "expr": "zyvor_device_agent_rs485_declared_ports", "legendFormat": "rs485", "refId": "D" }
+      ]
+    }
+  ]
+}

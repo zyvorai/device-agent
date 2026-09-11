@@ -88,6 +88,20 @@
   proving the auth middleware wiring works end-to-end against the real
   `Router` (health/dashboard-shell reachable without a token, inventory
   correctly gated in bearer mode) rather than only unit-testing each piece.
+- Add `docs/QUICKSTART.md` (packaged/systemd install, bearer auth, dashboard
+  token connection, Prometheus scrape config, end to end) and
+  `docs/observability/` (a Prometheus scrape-config example and a starter
+  Grafana dashboard built from the real `/metrics` metric names).
+- `docs/ROADMAP.md`: move `v0.4` (OTA executor) and `v0.5` (Edge AI bridge)
+  into a "Later / not yet scoped" section, resolving a contradiction with
+  `docs/BACKLOG.md`'s "explicitly outside Device Agent v0.x" list (which
+  disclaimed both) — neither doc change implements anything, just removes
+  the disagreement between them. Mark `v0.2`'s Unix-socket/RBAC, plugin
+  privilege separation and health-threshold lines done.
+- `docs/BACKLOG.md`: check off everything shipped this release; split the
+  bearer/mTLS P1 line now that bearer is done and mTLS is separately
+  scoped; add previously-untracked `seccomp` profiles (mentioned only in
+  `docs/ARCHITECTURE.md` until now) and config hot-reload as open items.
 
 ## 0.1.3-dev — 2026-09-11
 

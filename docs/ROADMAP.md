@@ -35,9 +35,15 @@
 - mTLS device certificates
 - secure bootstrap/enrollment token
 - TPM2 / secure-element identity when hardware provides it
-- Unix socket + local RBAC
-- privilege separation helper for GPIO/I2C/SPI/CAN
-- richer health thresholds and event sources
+- [x] Unix socket + local RBAC (v0.1.4)
+- [x] privilege separation for sensor plugin subprocesses (v0.1.4 —
+  `plugins.run_as_uid`/`run_as_gid`; the daemon itself intentionally still
+  runs as root for direct GPIO/I2C/SPI/CAN bus access — see
+  `docs/HARDWARE_PERMISSIONS.md`. A privilege-separation helper for the
+  daemon's *own* bus access, as opposed to plugin subprocesses, remains open)
+- [x] richer health thresholds and event sources (v0.1.4 — `[thresholds]`,
+  thermal + CAN controller error counters; more event sources can still be
+  added later)
 
 ## v0.3 — Nodra protocol packs
 
@@ -52,17 +58,16 @@
 
 These remain Nodra adapters, not Device Agent modules.
 
-## v0.4 — OTA executor
+## Later / not yet scoped
 
-- signed bundle verification
-- A/B inactive-slot write
-- reboot + health confirmation
-- commit/rollback
-- rollout initiated by Fleet
+Directionally plausible, but not committed to a version and not currently
+being worked on. Also flagged in `docs/BACKLOG.md`'s "explicitly outside
+Device Agent v0.x" list as out of scope for the v0.x line specifically —
+these would need to be re-scoped (and that exclusion revisited) before
+either becomes real roadmap work:
 
-## v0.5 — Edge AI bridge
-
-- V4L2 / RTSP device discovery
-- one accelerator family first
-- local inference event contract into Nodra
-- Fleet health and application lifecycle
+- **OTA executor** — signed bundle verification, A/B inactive-slot write,
+  reboot + health confirmation, commit/rollback, rollout initiated by Fleet.
+- **Edge AI bridge** — V4L2/RTSP device discovery, one accelerator family
+  first, local inference event contract into Nodra, Fleet health and
+  application lifecycle.

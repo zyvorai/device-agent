@@ -18,7 +18,11 @@ def main() -> int:
             tomllib.load(handle)
         print(f"TOML OK  {path.relative_to(ROOT)}")
 
-    json_paths = [ROOT / "web/dashboard/package.json", *sorted((ROOT / "examples/plugins.d").glob("*.json"))]
+    json_paths = [
+        ROOT / "web/dashboard/package.json",
+        ROOT / "docs/observability/grafana-dashboard.json",
+        *sorted((ROOT / "examples/plugins.d").glob("*.json")),
+    ]
     for path in json_paths:
         json.loads(path.read_text())
         print(f"JSON OK  {path.relative_to(ROOT)}")

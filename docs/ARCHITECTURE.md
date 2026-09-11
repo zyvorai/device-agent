@@ -52,4 +52,10 @@ Sensor plugins are separate executables described by JSON manifests under `plugi
 
 ## Security model
 
-v0.1 is intended to bind to a trusted management LAN or localhost. Before GA, add mTLS/device identity, signed Fleet inventory bridge tokens, strict CORS, Unix-socket mode, per-plugin execution policy, seccomp profiles and optional privilege separation for physical bus access.
+v0.1 is intended to bind to a trusted management LAN or localhost. As of v0.1.4: bearer-token
+API auth, Unix-socket mode with peer-credential RBAC, opt-in CORS, per-plugin execution policy
+(owner/directory allowlists, resource limits) and opt-in privilege separation for plugin
+subprocesses are done — see `docs/BACKLOG.md`. Still open before GA: mTLS/device identity
+(`docs/ROADMAP.md` v0.2), signed Fleet inventory bridge tokens, `seccomp` profiles for plugin
+execution, and privilege separation for the *daemon's own* physical bus access (it
+intentionally still runs as root — see `docs/HARDWARE_PERMISSIONS.md`).

@@ -22,24 +22,34 @@
 
 ## P0 — Physical Minewing acceptance
 
-- [ ] Select exact Minewing SKU and freeze expected device-tree nodes.
-- [ ] Install the reference plugin on the physical unit and confirm the real I2C bus/address.
-- [ ] Add the first RS485/Modbus RTU adapter in `zyvorai/nodra` (not Device Agent).
-- [ ] Teach the existing `fleet-agent` to merge `/api/v1/integrations/fleet/inventory`.
-- [ ] Hardware-in-loop test on the physical Minewing unit.
-- [ ] WAN-loss/reconnect demo with Nodra WAL replay.
+- [ ] Select exact Minewing SKU and freeze expected device-tree nodes. (needs physical hardware)
+- [ ] Install the reference plugin on the physical unit and confirm the real I2C bus/address. (needs physical hardware)
+- [x] Add the first RS485/Modbus RTU adapter in `zyvorai/nodra` (not Device Agent).
+- [x] Teach the existing `fleet-agent` to merge `/api/v1/integrations/fleet/inventory`.
+- [ ] Hardware-in-loop test on the physical Minewing unit. (needs physical hardware)
+- [ ] WAN-loss/reconnect demo with Nodra WAL replay. (needs physical hardware)
 
 ## P1 — Production hardening
 
-- [ ] Local bearer/mTLS protection when binding beyond loopback.
-- [ ] Unix-domain-socket API mode.
-- [ ] Linux capability/udev policy documentation per bus.
-- [ ] Plugin executable owner allowlist and process resource limits.
-- [ ] Signed release artifacts, SBOM, provenance and cosign workflow.
+- [x] Local bearer protection when binding beyond loopback (v0.1.4).
+  mTLS is separately scoped (see `docs/ROADMAP.md` v0.2 — enrollment token +
+  mTLS device certs, not yet started).
+- [x] Unix-domain-socket API mode (v0.1.4).
+- [x] Linux capability/udev policy documentation per bus (v0.1.4 —
+  `docs/HARDWARE_PERMISSIONS.md`).
+- [x] Plugin executable owner allowlist and process resource limits (v0.1.4).
+- [x] Signed release artifacts, SBOM, provenance and cosign workflow (v0.1.4).
 - [ ] Debian/RPM packages and clean uninstall path.
-- [ ] ARM64 smoke test under QEMU in CI.
+- [x] ARM64 smoke test under QEMU in CI (v0.1.4 — and its own smoke-test
+  command bug, present since it was added, only caught and fixed once
+  `-D warnings` made the CI clippy gate meaningful).
 - [ ] Optional Linux udev/netlink event source to complement polling.
-- [ ] Configurable thermal/counter health thresholds and alert events.
+- [x] Configurable thermal/counter health thresholds and alert events (v0.1.4).
+- [ ] Graceful config reload without a full restart (SIGHUP or a reload
+  endpoint) — every config change today requires `systemctl restart`.
+- [ ] `seccomp` profiles for plugin subprocess execution — mentioned in
+  `docs/ARCHITECTURE.md`'s security-model list but never tracked here until
+  now; needs its own investigation into which syscalls plugins actually need.
 
 ## Explicitly outside Device Agent v0.x
 

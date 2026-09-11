@@ -1,0 +1,19 @@
+# Prometheus scrape config for zyvor-device-agent.
+#
+# `auth.mode = "none"` (the default): drop the `authorization:` block entirely.
+#
+# `auth.mode = "bearer"`: the same bearer token used for the REST API also
+# guards /metrics (it is not in auth.exempt_paths by default). Prometheus
+# supports this natively - no code-side change needed on the agent. See
+# README.md's "API auth and Unix socket" section, and the snippet
+# scripts/deploy-remote.sh prints automatically when deploying with
+# --auth-mode bearer.
+scrape_configs:
+  - job_name: zyvor-device-agent
+    scrape_interval: 15s
+    scheme: http
+    static_configs:
+      - targets: ['127.0.0.1:9188']
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/zyvor-device-agent.token

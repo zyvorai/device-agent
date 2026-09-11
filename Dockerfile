@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM rust:1.82-bookworm AS backend
+FROM rust:1.98-bookworm AS backend
 WORKDIR /src
 COPY Cargo.toml Cargo.lock* ./
 COPY src ./src

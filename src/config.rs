@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub server: ServerConfig,
     pub device: DeviceConfig,
+    pub industrial: IndustrialConfig,
     pub nodra: NodraConfig,
     pub fleet: FleetConfig,
     pub plugins: PluginConfig,
@@ -32,6 +33,17 @@ pub struct DeviceConfig {
     pub profile_directory: String,
     pub telemetry_interval_seconds: u64,
     pub inventory_refresh_seconds: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct IndustrialConfig {
+    /// Command used only for richer read-only SocketCAN details. Set empty to disable.
+    pub can_ip_command: String,
+    /// Serial ports that the board/operator declares as RS485-capable, e.g. ttyS1 or /dev/ttyS1.
+    pub rs485_ports: Vec<String>,
+    /// Publish industrial inventory snapshots into the Nodra MQTT namespace.
+    pub publish_to_nodra: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,6 +96,16 @@ impl Default for DeviceConfig {
             profile_directory: "/etc/zyvor/device-agent/profiles".into(),
             telemetry_interval_seconds: 10,
             inventory_refresh_seconds: 5,
+        }
+    }
+}
+
+impl Default for IndustrialConfig {
+    fn default() -> Self {
+        Self {
+            can_ip_command: "ip".into(),
+            rs485_ports: Vec::new(),
+            publish_to_nodra: true,
         }
     }
 }

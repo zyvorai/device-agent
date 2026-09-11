@@ -59,3 +59,21 @@ header { display: flex; justify-content: space-between; align-items: end; margin
 .event-row b { font-size:12px; overflow:hidden; text-overflow:ellipsis; }
 .event-row span { color:var(--muted); font-size:10px; }
 @media (max-width:980px) { .sensor-grid,.diagnostic-layout { grid-template-columns:1fr; } }
+
+/* v0.1.2 industrial bus cockpit */
+.industrial-layout { display:grid; grid-template-columns:1fr; gap:14px; }
+.industrial-hero { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr); gap:28px; align-items:end; }
+.industrial-hero h2 { max-width:760px; }
+.industrial-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.industrial-stats .metric { box-shadow:none; background:#f7f7f9; }
+.industrial-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.industrial-card { min-height:360px; }
+.industrial-rate { margin:34px 0 22px; font-size:clamp(38px,5vw,58px); font-weight:760; letter-spacing:-.055em; }
+.serial-row { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:15px 0; border-top:1px solid var(--line); }
+.serial-row > div:first-child { display:flex; gap:13px; align-items:center; min-width:0; }
+.serial-row > div:first-child > div { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.serial-row b { font-size:13px; }
+.serial-row span { color:var(--muted); font-size:11px; }
+.serial-detail { display:flex; flex-direction:column; gap:4px; text-align:right; white-space:nowrap; }
+@media (max-width:980px) { .industrial-hero,.industrial-grid { grid-template-columns:1fr; } .industrial-stats { grid-template-columns:repeat(3,1fr); } }
+@media (max-width:700px) { .industrial-stats { grid-template-columns:1fr; } .serial-row { align-items:flex-start; } .serial-detail { white-space:normal; } }

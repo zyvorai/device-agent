@@ -46,6 +46,8 @@ enum Command {
     Serve,
     /// Print detected hardware inventory as JSON.
     Inventory,
+    /// Print CAN and serial/RS485 hardware state as JSON.
+    Industrial,
     /// Run local health and interface diagnostics.
     Doctor,
     /// Print the local inventory projection consumed by Zyvor Fleet agent.
@@ -75,6 +77,11 @@ async fn main() -> anyhow::Result<()> {
         Command::Inventory => {
             let inventory = hardware::collect_inventory(&cfg).await;
             println!("{}", serde_json::to_string_pretty(&inventory)?);
+            Ok(())
+        }
+        Command::Industrial => {
+            let industrial = hardware::industrial_inventory(&cfg).await;
+            println!("{}", serde_json::to_string_pretty(&industrial)?);
             Ok(())
         }
         Command::Doctor => {

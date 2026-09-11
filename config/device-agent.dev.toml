@@ -11,6 +11,13 @@ profile_directory = "profiles"
 telemetry_interval_seconds = 10
 inventory_refresh_seconds = 5
 
+[industrial]
+# Read-only SocketCAN enrichment. Set to "" to use sysfs-only discovery.
+can_ip_command = "ip"
+# Declare only ports wired/configured for RS485 on your board. No active serial probing is performed.
+rs485_ports = []
+publish_to_nodra = true
+
 [nodra]
 enabled = false
 broker = "127.0.0.1"

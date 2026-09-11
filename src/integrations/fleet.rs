@@ -60,6 +60,36 @@ pub fn project(inventory: &Inventory) -> FleetInventoryProjection {
         inventory.buses.watchdog.len().to_string(),
     );
     metadata.insert(
+        "zyvor.hardware.rs485".into(),
+        inventory
+            .industrial
+            .serial
+            .iter()
+            .filter(|port| port.rs485.is_some())
+            .count()
+            .to_string(),
+    );
+    metadata.insert(
+        "zyvor.hardware.can.detail".into(),
+        inventory
+            .industrial
+            .can
+            .iter()
+            .map(|interface| {
+                let state = interface
+                    .can_state
+                    .as_deref()
+                    .unwrap_or(&interface.operstate);
+                let bitrate = interface
+                    .bitrate
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| "unknown".into());
+                format!("{}:{state}:{bitrate}", interface.name)
+            })
+            .collect::<Vec<_>>()
+            .join(","),
+    );
+    metadata.insert(
         "zyvor.network.interfaces".into(),
         inventory
             .network

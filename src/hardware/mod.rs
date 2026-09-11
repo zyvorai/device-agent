@@ -2,6 +2,7 @@
 
 mod buses;
 mod identity;
+mod industrial;
 mod network;
 mod system;
 mod thermal;
@@ -9,7 +10,7 @@ mod usb;
 
 use crate::{
     config::Config,
-    model::{DoctorCheck, DoctorReport, Inventory},
+    model::{DoctorCheck, DoctorReport, IndustrialInventory, Inventory},
     profile,
 };
 
@@ -18,6 +19,7 @@ pub async fn collect_inventory(cfg: &Config) -> Inventory {
     let system = system::collect();
     let network = network::collect();
     let buses = buses::collect();
+    let industrial = industrial::collect(&cfg.industrial, &buses);
     let usb = usb::collect();
     let thermal = thermal::collect();
 
@@ -28,6 +30,7 @@ pub async fn collect_inventory(cfg: &Config) -> Inventory {
         "sensor-scheduler".into(),
         "hardware-events".into(),
         "fleet-inventory-projection".into(),
+        "industrial-inventory".into(),
     ];
     if !buses.gpio_chips.is_empty() {
         capabilities.push("gpio".into());
@@ -40,9 +43,14 @@ pub async fn collect_inventory(cfg: &Config) -> Inventory {
     }
     if !buses.uart.is_empty() {
         capabilities.push("uart".into());
+        capabilities.push("rs485-awareness".into());
     }
     if !buses.can.is_empty() {
         capabilities.push("can".into());
+        capabilities.push("can-health".into());
+    }
+    if industrial.serial.iter().any(|port| port.rs485.is_some()) {
+        capabilities.push("rs485-declared".into());
     }
     if !buses.watchdog.is_empty() {
         capabilities.push("watchdog".into());
@@ -53,10 +61,16 @@ pub async fn collect_inventory(cfg: &Config) -> Inventory {
         system,
         network,
         buses,
+        industrial,
         usb,
         thermal,
         capabilities,
     }
+}
+
+pub async fn industrial_inventory(cfg: &Config) -> IndustrialInventory {
+    let buses = buses::collect();
+    industrial::collect(&cfg.industrial, &buses)
 }
 
 pub async fn doctor(cfg: &Config) -> DoctorReport {
@@ -79,12 +93,15 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
     });
     checks.push(DoctorCheck {
         name: "network-physical".into(),
-        ok: inventory.network.iter().any(|n| n.name != "lo"),
+        ok: inventory
+            .network
+            .iter()
+            .any(|interface| interface.name != "lo"),
         detail: inventory
             .network
             .iter()
-            .filter(|n| n.name != "lo")
-            .map(|n| format!("{}:{}", n.name, n.operstate))
+            .filter(|interface| interface.name != "lo")
+            .map(|interface| format!("{}:{}", interface.name, interface.operstate))
             .collect::<Vec<_>>()
             .join(", "),
     });
@@ -98,6 +115,56 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
         ok: true,
         detail: cfg.plugins.directory.clone(),
     });
+
+    for can in &inventory.industrial.can {
+        let state = can.can_state.as_deref().unwrap_or(&can.operstate);
+        let healthy = !state.eq_ignore_ascii_case("bus-off");
+        let bitrate = can
+            .bitrate
+            .map(|value| format!("{value} bps"))
+            .unwrap_or_else(|| "bitrate unknown".into());
+        checks.push(DoctorCheck {
+            name: format!("can.{}", can.name),
+            ok: healthy,
+            detail: format!(
+                "{} · {} · {} · controller-errors tx={} rx={} · net-errors tx={} rx={}",
+                can.kind,
+                state,
+                bitrate,
+                can.tx_error_counter.unwrap_or(0),
+                can.rx_error_counter.unwrap_or(0),
+                can.tx_errors.unwrap_or(0),
+                can.rx_errors.unwrap_or(0)
+            ),
+        });
+    }
+
+    for declared in &cfg.industrial.rs485_ports {
+        let normalized = declared.trim_start_matches("/dev/");
+        let port = inventory
+            .industrial
+            .serial
+            .iter()
+            .find(|port| port.name == normalized);
+        checks.push(DoctorCheck {
+            name: format!("rs485.{normalized}"),
+            ok: port.is_some(),
+            detail: port
+                .map(|port| {
+                    let source = port
+                        .rs485
+                        .as_ref()
+                        .map(|rs485| rs485.source.as_str())
+                        .unwrap_or("configured");
+                    format!(
+                        "{} · driver={} · source={source}",
+                        port.path,
+                        port.driver.as_deref().unwrap_or("unknown")
+                    )
+                })
+                .unwrap_or_else(|| format!("configured RS485 port {declared} is not present")),
+        });
+    }
 
     for plugin in crate::plugins::statuses(cfg) {
         checks.push(DoctorCheck {
@@ -114,89 +181,96 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
     }
 
     match profile::load(cfg) {
-        Ok(p) => {
+        Ok(profile) => {
             let ethernet = inventory
                 .network
                 .iter()
-                .filter(|n| n.kind == "ethernet")
+                .filter(|interface| interface.kind == "ethernet")
                 .count();
             let values = [
                 (
                     "profile.name",
-                    cfg.device.profile == p.name,
-                    format!("expected {}, loaded {}", cfg.device.profile, p.name),
+                    cfg.device.profile == profile.name,
+                    format!("expected {}, loaded {}", cfg.device.profile, profile.name),
                 ),
                 (
                     "profile.vendor",
-                    inventory.device.vendor == p.vendor,
-                    format!("expected {}, found {}", p.vendor, inventory.device.vendor),
+                    inventory.device.vendor == profile.vendor,
+                    format!(
+                        "expected {}, found {}",
+                        profile.vendor, inventory.device.vendor
+                    ),
                 ),
                 (
                     "profile.arch",
-                    inventory.system.arch == p.arch,
-                    format!("expected {}, found {}", p.arch, inventory.system.arch),
+                    inventory.system.arch == profile.arch,
+                    format!("expected {}, found {}", profile.arch, inventory.system.arch),
                 ),
                 (
                     "profile.ethernet",
-                    ethernet >= p.minimum.ethernet,
-                    format!("minimum {}, found {}", p.minimum.ethernet, ethernet),
+                    ethernet >= profile.minimum.ethernet,
+                    format!("minimum {}, found {}", profile.minimum.ethernet, ethernet),
                 ),
                 (
                     "profile.gpio",
-                    inventory.buses.gpio_chips.len() >= p.minimum.gpio,
+                    inventory.buses.gpio_chips.len() >= profile.minimum.gpio,
                     format!(
                         "minimum {}, found {}",
-                        p.minimum.gpio,
+                        profile.minimum.gpio,
                         inventory.buses.gpio_chips.len()
                     ),
                 ),
                 (
                     "profile.i2c",
-                    inventory.buses.i2c.len() >= p.minimum.i2c,
+                    inventory.buses.i2c.len() >= profile.minimum.i2c,
                     format!(
                         "minimum {}, found {}",
-                        p.minimum.i2c,
+                        profile.minimum.i2c,
                         inventory.buses.i2c.len()
                     ),
                 ),
                 (
                     "profile.spi",
-                    inventory.buses.spi.len() >= p.minimum.spi,
+                    inventory.buses.spi.len() >= profile.minimum.spi,
                     format!(
                         "minimum {}, found {}",
-                        p.minimum.spi,
+                        profile.minimum.spi,
                         inventory.buses.spi.len()
                     ),
                 ),
                 (
                     "profile.uart",
-                    inventory.buses.uart.len() >= p.minimum.uart,
+                    inventory.buses.uart.len() >= profile.minimum.uart,
                     format!(
                         "minimum {}, found {}",
-                        p.minimum.uart,
+                        profile.minimum.uart,
                         inventory.buses.uart.len()
                     ),
                 ),
                 (
                     "profile.can",
-                    inventory.buses.can.len() >= p.minimum.can,
+                    inventory.buses.can.len() >= profile.minimum.can,
                     format!(
                         "minimum {}, found {}",
-                        p.minimum.can,
+                        profile.minimum.can,
                         inventory.buses.can.len()
                     ),
                 ),
                 (
                     "profile.usb",
-                    inventory.usb.len() >= p.minimum.usb,
-                    format!("minimum {}, found {}", p.minimum.usb, inventory.usb.len()),
+                    inventory.usb.len() >= profile.minimum.usb,
+                    format!(
+                        "minimum {}, found {}",
+                        profile.minimum.usb,
+                        inventory.usb.len()
+                    ),
                 ),
                 (
                     "profile.watchdog",
-                    inventory.buses.watchdog.len() >= p.minimum.watchdog,
+                    inventory.buses.watchdog.len() >= profile.minimum.watchdog,
                     format!(
                         "minimum {}, found {}",
-                        p.minimum.watchdog,
+                        profile.minimum.watchdog,
                         inventory.buses.watchdog.len()
                     ),
                 ),
@@ -217,7 +291,7 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
     }
 
     DoctorReport {
-        ok: checks.iter().all(|c| c.ok),
+        ok: checks.iter().all(|check| check.ok),
         checks,
     }
 }

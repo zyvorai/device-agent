@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{convert::Infallible, sync::Arc, time::Duration};
+use std::{convert::Infallible, fmt::Write as _, sync::Arc, time::Duration};
 
 use axum::{
     extract::{Path, State},
@@ -26,6 +26,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/inventory/refresh", post(refresh_inventory))
         .route("/api/v1/hardware", get(inventory))
         .route("/api/v1/interfaces", get(interfaces))
+        .route("/api/v1/industrial", get(industrial))
+        .route("/api/v1/industrial/can", get(industrial_can))
+        .route("/api/v1/industrial/serial", get(industrial_serial))
         .route("/api/v1/thermal", get(thermal))
         .route("/api/v1/integrations", get(integrations))
         .route("/api/v1/integrations/fleet/inventory", get(fleet_inventory))
@@ -72,8 +75,25 @@ async fn interfaces(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     Json(serde_json::json!({
         "network": current.network,
         "buses": current.buses,
+        "industrial": current.industrial,
         "usb": current.usb
     }))
+}
+
+async fn industrial(State(state): State<Arc<AppState>>) -> Json<crate::model::IndustrialInventory> {
+    Json(state.inventory_snapshot().await.industrial)
+}
+
+async fn industrial_can(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<crate::model::CanInterfaceInfo>> {
+    Json(state.inventory_snapshot().await.industrial.can)
+}
+
+async fn industrial_serial(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<crate::model::SerialPortInfo>> {
+    Json(state.inventory_snapshot().await.industrial.serial)
 }
 
 async fn thermal(State(state): State<Arc<AppState>>) -> Json<Vec<crate::model::ThermalZone>> {
@@ -172,7 +192,14 @@ async fn metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
         .reduce(f64::max)
         .unwrap_or(f64::NAN);
     let sensor_ok = samples.iter().filter(|sample| sample.ok).count();
-    let body = format!(
+    let rs485_ports = current
+        .industrial
+        .serial
+        .iter()
+        .filter(|port| port.rs485.is_some())
+        .count();
+
+    let mut body = format!(
         "# HELP zyvor_device_agent_up Whether the device agent is serving requests.\n\
 # TYPE zyvor_device_agent_up gauge\n\
 zyvor_device_agent_up 1\n\
@@ -188,6 +215,9 @@ zyvor_device_agent_network_interfaces {}\n\
 # HELP zyvor_device_agent_can_interfaces Number of CAN interfaces.\n\
 # TYPE zyvor_device_agent_can_interfaces gauge\n\
 zyvor_device_agent_can_interfaces {}\n\
+# HELP zyvor_device_agent_rs485_declared_ports Number of serial ports declared as RS485.\n\
+# TYPE zyvor_device_agent_rs485_declared_ports gauge\n\
+zyvor_device_agent_rs485_declared_ports {rs485_ports}\n\
 # HELP zyvor_device_agent_i2c_buses Number of I2C device nodes.\n\
 # TYPE zyvor_device_agent_i2c_buses gauge\n\
 zyvor_device_agent_i2c_buses {}\n\
@@ -208,12 +238,80 @@ zyvor_device_agent_nodra_connected {}\n\
 zyvor_device_agent_fleet_projection_ready {}\n",
         status.inventory_generation,
         current.network.len(),
-        current.buses.can.len(),
+        current.industrial.can.len(),
         current.buses.i2c.len(),
         status.sensor_samples_total,
         status.sensor_sample_failures,
         u8::from(state.nodra_connected()),
         u8::from(state.config.fleet.enabled && state.config.fleet.mode == "projection"),
     );
+
+    body.push_str(
+        "# HELP zyvor_device_agent_can_up Whether a CAN netdevice is operationally up.\n",
+    );
+    body.push_str("# TYPE zyvor_device_agent_can_up gauge\n");
+    body.push_str(
+        "# HELP zyvor_device_agent_can_bus_off Whether the CAN controller reports BUS-OFF.\n",
+    );
+    body.push_str("# TYPE zyvor_device_agent_can_bus_off gauge\n");
+    body.push_str("# HELP zyvor_device_agent_can_bitrate_bits_per_second Configured CAN nominal bitrate when discoverable.\n");
+    body.push_str("# TYPE zyvor_device_agent_can_bitrate_bits_per_second gauge\n");
+    body.push_str(
+        "# HELP zyvor_device_agent_can_rx_errors_total Linux netdevice CAN receive errors.\n",
+    );
+    body.push_str("# TYPE zyvor_device_agent_can_rx_errors_total counter\n");
+    body.push_str(
+        "# HELP zyvor_device_agent_can_tx_errors_total Linux netdevice CAN transmit errors.\n",
+    );
+    body.push_str("# TYPE zyvor_device_agent_can_tx_errors_total counter\n");
+
+    for can in &current.industrial.can {
+        let label = prometheus_label(&can.name);
+        let bus_off = can
+            .can_state
+            .as_deref()
+            .is_some_and(|value| value.eq_ignore_ascii_case("bus-off"));
+        let _ = writeln!(
+            body,
+            "zyvor_device_agent_can_up{{interface=\"{label}\"}} {}",
+            u8::from(can.operstate.eq_ignore_ascii_case("up"))
+        );
+        let _ = writeln!(
+            body,
+            "zyvor_device_agent_can_bus_off{{interface=\"{label}\"}} {}",
+            u8::from(bus_off)
+        );
+        if let Some(bitrate) = can.bitrate {
+            let _ = writeln!(
+                body,
+                "zyvor_device_agent_can_bitrate_bits_per_second{{interface=\"{label}\"}} {bitrate}"
+            );
+        }
+        if let Some(errors) = can.rx_errors {
+            let _ = writeln!(
+                body,
+                "zyvor_device_agent_can_rx_errors_total{{interface=\"{label}\"}} {errors}"
+            );
+        }
+        if let Some(errors) = can.tx_errors {
+            let _ = writeln!(
+                body,
+                "zyvor_device_agent_can_tx_errors_total{{interface=\"{label}\"}} {errors}"
+            );
+        }
+    }
+
     ([(header::CONTENT_TYPE, "text/plain; version=0.0.4")], body)
+}
+
+fn prometheus_label(value: &str) -> String {
+    value
+        .chars()
+        .flat_map(|character| match character {
+            '\\' => "\\\\".chars().collect::<Vec<_>>(),
+            '"' => "\\\"".chars().collect::<Vec<_>>(),
+            '\n' => "\\n".chars().collect::<Vec<_>>(),
+            other => vec![other],
+        })
+        .collect()
 }

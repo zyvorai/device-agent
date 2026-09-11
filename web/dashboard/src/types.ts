@@ -20,11 +20,57 @@ export type NetworkInterface = {
   tx_errors?: number | null;
 };
 
+export type CanInterfaceInfo = {
+  name: string;
+  kind: string;
+  operstate: string;
+  driver?: string | null;
+  mtu?: number | null;
+  bitrate?: number | null;
+  data_bitrate?: number | null;
+  can_state?: string | null;
+  restart_ms?: number | null;
+  tx_error_counter?: number | null;
+  rx_error_counter?: number | null;
+  rx_bytes?: number | null;
+  tx_bytes?: number | null;
+  rx_errors?: number | null;
+  tx_errors?: number | null;
+  rx_dropped?: number | null;
+  tx_dropped?: number | null;
+  controller_modes: string[];
+  details_source: string;
+};
+
+export type Rs485Info = {
+  declared: boolean;
+  source: string;
+  enabled_at_boot?: boolean | null;
+  rts_active_high?: boolean | null;
+  rx_during_tx?: boolean | null;
+  delay_before_send_ms?: number | null;
+  delay_after_send_ms?: number | null;
+};
+
+export type SerialPortInfo = {
+  name: string;
+  path: string;
+  driver?: string | null;
+  transport: string;
+  rs485?: Rs485Info | null;
+};
+
+export type IndustrialInventory = {
+  can: CanInterfaceInfo[];
+  serial: SerialPortInfo[];
+};
+
 export type Inventory = {
   device: { serial: string; vendor: string; model: string; hostname: string; machine_id: string };
   system: { arch: string; kernel: string; os: string; cpu_model: string; cpu_cores: number; memory_bytes: number; storage_bytes: number | null; uptime_seconds: number };
   network: NetworkInterface[];
   buses: BusInventory;
+  industrial: IndustrialInventory;
   usb: Array<{ path: string; vendor_id?: string | null; product_id?: string | null; manufacturer?: string | null; product?: string | null }>;
   thermal: Array<{ name: string; kind: string; celsius?: number | null }>;
   capabilities: string[];

@@ -76,6 +76,35 @@ pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
                 }))?;
                 publish(&client, format!("{prefix}/status"), true, health, &state).await;
 
+                if state.config.industrial.publish_to_nodra {
+                    let industrial = serde_json::to_vec(&inventory.industrial)?;
+                    publish(
+                        &client,
+                        format!("{prefix}/industrial/status"),
+                        true,
+                        industrial,
+                        &state,
+                    ).await;
+                    for can in &inventory.industrial.can {
+                        publish(
+                            &client,
+                            format!("{prefix}/industrial/can/{}/status", topic_segment(&can.name)),
+                            true,
+                            serde_json::to_vec(can)?,
+                            &state,
+                        ).await;
+                    }
+                    for port in &inventory.industrial.serial {
+                        publish(
+                            &client,
+                            format!("{prefix}/industrial/serial/{}/status", topic_segment(&port.name)),
+                            true,
+                            serde_json::to_vec(port)?,
+                            &state,
+                        ).await;
+                    }
+                }
+
                 for sample in state.latest_samples().await {
                     if !sample.publish_to_nodra {
                         continue;

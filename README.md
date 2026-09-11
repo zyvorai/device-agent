@@ -2,7 +2,7 @@
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
 
-**Status:** v0.1.1 live-hardware development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
+**Status:** v0.1.2 industrial-bus development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
 
 ```text
 Minewing / Linux edge hardware
@@ -36,6 +36,8 @@ It intentionally does **not** interpret Modbus registers, CAN/J1939 PGNs or OPC-
 - continuous cached inventory refresh + material hardware-change events
 - sensor plugin process API + scheduled sampling
 - real LM75/TMP102 I²C temperature reference plugin (explicit bus/address; no scanning)
+- read-only SocketCAN health: controller state, bitrate/CAN-FD bitrate and error counters
+- passive serial/RS485 awareness from board config + Linux device tree
 - REST API
 - Prometheus metrics endpoint
 - Nodra MQTT publishing: retained inventory/status, per-sensor and event topics
@@ -76,7 +78,10 @@ npm run build
 | `GET /api/v1/status` | agent generation/sample counters |
 | `GET /api/v1/inventory` | cached full device inventory |
 | `POST /api/v1/inventory/refresh` | force an immediate Linux inventory refresh |
-| `GET /api/v1/interfaces` | network, buses and USB |
+| `GET /api/v1/interfaces` | network, buses, industrial state and USB |
+| `GET /api/v1/industrial` | CAN + serial/RS485 hardware state |
+| `GET /api/v1/industrial/can` | SocketCAN controller/netdevice health |
+| `GET /api/v1/industrial/serial` | UART/USB serial and RS485 declarations |
 | `GET /api/v1/thermal` | Linux thermal zones |
 | `GET /api/v1/integrations` | Nodra/Fleet connection state |
 | `GET /api/v1/plugins` | plugin manifests + validation state |
@@ -99,11 +104,26 @@ Aether:       "This application requires CAN + 4 cores; this node is eligible."
 
 This separation is a design rule, not just an implementation detail.
 
+## Industrial bus layer (v0.1.2)
+
+Device Agent now enriches SocketCAN from Linux sysfs and optional read-only `ip -j -details -statistics` output. It surfaces `BUS-OFF`, nominal bitrate, CAN-FD data bitrate, controller error counters, netdevice counters, driver and physical/virtual classification. It never opens or decodes CAN frames.
+
+RS485 discovery is deliberately passive. Declare the board port explicitly, or let Linux device-tree properties identify it:
+
+```toml
+[industrial]
+can_ip_command = "ip"
+rs485_ports = ["ttyS1"]
+publish_to_nodra = true
+```
+
+Protocol meaning still belongs to Nodra. The proposed Modbus RTU adapter seam is documented in `docs/NODRA_MODBUS_RTU_CONTRACT.md`.
+
 ## UX principles
 
 The dashboard is a **local hardware cockpit**. It opens on one screen showing device identity, health, CPU/RAM/temperature, detected physical interfaces, and Nodra/Fleet status. The visual language is intentionally minimal: system typography, white space, glass-like navigation, monochrome surfaces, dark diagnostics, and Zyvor orange used only for emphasis.
 
-Pages: **Overview · Hardware · Interfaces · Sensors · Integrations · Diagnostics · Settings**.
+Pages: **Overview · Hardware · Interfaces · Industrial · Sensors · Integrations · Diagnostics · Settings**.
 
 ## Repository map
 
@@ -126,7 +146,7 @@ docs/                    architecture, roadmap, Minewing profile
 
 A clean ARM64 Minewing unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
 
-See `docs/MINEWING_REFERENCE.md`, `docs/V0.1.1_LIVE_HARDWARE.md` and `docs/ROADMAP.md`.
+See `docs/MINEWING_REFERENCE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`, `docs/INDUSTRIAL_BUSES.md`, `docs/MINEWING_INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md` and `docs/ROADMAP.md`.
 
 ## License
 

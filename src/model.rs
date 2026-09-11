@@ -10,6 +10,8 @@ pub struct Inventory {
     pub system: SystemInfo,
     pub network: Vec<NetworkInterface>,
     pub buses: BusInventory,
+    #[serde(default)]
+    pub industrial: IndustrialInventory,
     pub usb: Vec<UsbDevice>,
     pub thermal: Vec<ThermalZone>,
     pub capabilities: Vec<String>,
@@ -59,6 +61,58 @@ pub struct BusInventory {
     pub uart: Vec<String>,
     pub can: Vec<String>,
     pub watchdog: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct IndustrialInventory {
+    #[serde(default)]
+    pub can: Vec<CanInterfaceInfo>,
+    #[serde(default)]
+    pub serial: Vec<SerialPortInfo>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CanInterfaceInfo {
+    pub name: String,
+    pub kind: String,
+    pub operstate: String,
+    pub driver: Option<String>,
+    pub mtu: Option<u32>,
+    pub bitrate: Option<u64>,
+    pub data_bitrate: Option<u64>,
+    pub can_state: Option<String>,
+    pub restart_ms: Option<u64>,
+    pub tx_error_counter: Option<u64>,
+    pub rx_error_counter: Option<u64>,
+    pub rx_bytes: Option<u64>,
+    pub tx_bytes: Option<u64>,
+    pub rx_errors: Option<u64>,
+    pub tx_errors: Option<u64>,
+    pub rx_dropped: Option<u64>,
+    pub tx_dropped: Option<u64>,
+    #[serde(default)]
+    pub controller_modes: Vec<String>,
+    pub details_source: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SerialPortInfo {
+    pub name: String,
+    pub path: String,
+    pub driver: Option<String>,
+    pub transport: String,
+    pub rs485: Option<Rs485Info>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Rs485Info {
+    pub declared: bool,
+    pub source: String,
+    pub enabled_at_boot: Option<bool>,
+    pub rts_active_high: Option<bool>,
+    pub rx_during_tx: Option<bool>,
+    pub delay_before_send_ms: Option<u32>,
+    pub delay_after_send_ms: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

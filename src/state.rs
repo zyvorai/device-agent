@@ -186,6 +186,9 @@ fn changed_sections(old: &Inventory, new: &Inventory) -> Vec<&'static str> {
     if old.buses != new.buses {
         changed.push("buses");
     }
+    if industrial_topology_changed(old, new) {
+        changed.push("industrial");
+    }
     if old.usb != new.usb {
         changed.push("usb");
     }
@@ -238,6 +241,78 @@ fn network_topology_changed(old: &Inventory, new: &Inventory) -> bool {
         })
         .collect::<Vec<_>>();
     old_view != new_view
+}
+
+fn industrial_topology_changed(old: &Inventory, new: &Inventory) -> bool {
+    let old_can = old
+        .industrial
+        .can
+        .iter()
+        .map(|interface| {
+            (
+                &interface.name,
+                &interface.kind,
+                &interface.operstate,
+                &interface.driver,
+                &interface.bitrate,
+                &interface.data_bitrate,
+                &interface.can_state,
+                &interface.restart_ms,
+                &interface.controller_modes,
+            )
+        })
+        .collect::<Vec<_>>();
+    let new_can = new
+        .industrial
+        .can
+        .iter()
+        .map(|interface| {
+            (
+                &interface.name,
+                &interface.kind,
+                &interface.operstate,
+                &interface.driver,
+                &interface.bitrate,
+                &interface.data_bitrate,
+                &interface.can_state,
+                &interface.restart_ms,
+                &interface.controller_modes,
+            )
+        })
+        .collect::<Vec<_>>();
+    if old_can != new_can {
+        return true;
+    }
+
+    let old_serial = old
+        .industrial
+        .serial
+        .iter()
+        .map(|port| {
+            (
+                &port.name,
+                &port.path,
+                &port.driver,
+                &port.transport,
+                &port.rs485,
+            )
+        })
+        .collect::<Vec<_>>();
+    let new_serial = new
+        .industrial
+        .serial
+        .iter()
+        .map(|port| {
+            (
+                &port.name,
+                &port.path,
+                &port.driver,
+                &port.transport,
+                &port.rs485,
+            )
+        })
+        .collect::<Vec<_>>();
+    old_serial != new_serial
 }
 
 fn thermal_topology_changed(old: &Inventory, new: &Inventory) -> bool {

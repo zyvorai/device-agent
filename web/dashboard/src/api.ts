@@ -53,3 +53,10 @@ export function age(unixMs: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   return `${Math.floor(seconds / 3600)}h ago`;
 }
+
+export function bitrate(value: number | null | undefined): string {
+  if (!value) return '—';
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)} Mbit/s`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 1)} kbit/s`;
+  return `${value} bit/s`;
+}

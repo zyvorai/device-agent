@@ -5,7 +5,7 @@ use std::{fs, path::Path};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub server: ServerConfig,
@@ -59,32 +59,54 @@ pub struct PluginConfig {
     pub timeout_seconds: u64,
 }
 
-impl Default for Config {
+impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            server: ServerConfig::default(),
-            device: DeviceConfig::default(),
-            nodra: NodraConfig::default(),
-            fleet: FleetConfig::default(),
-            plugins: PluginConfig::default(),
+            listen: "0.0.0.0:9188".into(),
+            dashboard_dir: "/usr/share/zyvor-device-agent/dashboard".into(),
         }
     }
 }
-
-impl Default for ServerConfig {
-    fn default() -> Self { Self { listen: "0.0.0.0:9188".into(), dashboard_dir: "/usr/share/zyvor-device-agent/dashboard".into() } }
-}
 impl Default for DeviceConfig {
-    fn default() -> Self { Self { vendor: "Generic Linux".into(), model: "Edge Gateway".into(), serial: "auto".into(), profile: "generic-linux-arm64".into(), profile_directory: "/etc/zyvor/device-agent/profiles".into(), telemetry_interval_seconds: 10 } }
+    fn default() -> Self {
+        Self {
+            vendor: "Generic Linux".into(),
+            model: "Edge Gateway".into(),
+            serial: "auto".into(),
+            profile: "generic-linux-arm64".into(),
+            profile_directory: "/etc/zyvor/device-agent/profiles".into(),
+            telemetry_interval_seconds: 10,
+        }
+    }
 }
 impl Default for NodraConfig {
-    fn default() -> Self { Self { enabled: false, broker: "127.0.0.1".into(), port: 1883, client_id: "zyvor-device-agent".into(), topic_prefix: "zyvor/device".into(), username: None, password: None } }
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            broker: "127.0.0.1".into(),
+            port: 1883,
+            client_id: "zyvor-device-agent".into(),
+            topic_prefix: "zyvor/device".into(),
+            username: None,
+            password: None,
+        }
+    }
 }
 impl Default for FleetConfig {
-    fn default() -> Self { Self { enabled: true, mode: "projection".into() } }
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            mode: "projection".into(),
+        }
+    }
 }
 impl Default for PluginConfig {
-    fn default() -> Self { Self { directory: "/etc/zyvor/device-agent/plugins.d".into(), timeout_seconds: 3 } }
+    fn default() -> Self {
+        Self {
+            directory: "/etc/zyvor/device-agent/plugins.d".into(),
+            timeout_seconds: 3,
+        }
+    }
 }
 
 impl Config {
@@ -92,7 +114,8 @@ impl Config {
         if !path.exists() {
             return Ok(Self::default());
         }
-        let raw = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+        let raw =
+            fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
         toml::from_str(&raw).with_context(|| format!("parsing {}", path.display()))
     }
 }

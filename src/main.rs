@@ -20,9 +20,17 @@ use tracing_subscriber::EnvFilter;
 use crate::{config::Config, state::AppState};
 
 #[derive(Debug, Parser)]
-#[command(name = "zyvor-device-agent", version, about = "Zyvor hardware edge agent")]
+#[command(
+    name = "zyvor-device-agent",
+    version,
+    about = "Zyvor hardware edge agent"
+)]
 struct Cli {
-    #[arg(long, env = "ZYVOR_DEVICE_AGENT_CONFIG", default_value = "/etc/zyvor/device-agent.toml")]
+    #[arg(
+        long,
+        env = "ZYVOR_DEVICE_AGENT_CONFIG",
+        default_value = "/etc/zyvor/device-agent.toml"
+    )]
     config: PathBuf,
 
     #[command(subcommand)]
@@ -44,7 +52,10 @@ enum Command {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "zyvor_device_agent=info,tower_http=info".into()))
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "zyvor_device_agent=info,tower_http=info".into()),
+        )
         .init();
 
     let cli = Cli::parse();
@@ -59,7 +70,11 @@ async fn main() -> anyhow::Result<()> {
         Command::Doctor => {
             let report = hardware::doctor(&cfg).await;
             println!("{}", serde_json::to_string_pretty(&report)?);
-            if report.ok { Ok(()) } else { anyhow::bail!("one or more checks failed") }
+            if report.ok {
+                Ok(())
+            } else {
+                anyhow::bail!("one or more checks failed")
+            }
         }
         Command::FleetInventory => {
             let inventory = hardware::collect_inventory(&cfg).await;
@@ -83,7 +98,6 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
             }
         });
     }
-
 
     let app = api::router(state);
     let addr: SocketAddr = cfg.server.listen.parse().context("invalid server.listen")?;

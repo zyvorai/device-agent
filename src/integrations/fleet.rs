@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::model::Inventory;
 
@@ -25,17 +25,49 @@ pub struct FleetInventoryProjection {
 
 pub fn project(inventory: &Inventory) -> FleetInventoryProjection {
     let mut metadata = BTreeMap::new();
-    metadata.insert("zyvor.device.serial".into(), inventory.device.serial.clone());
-    metadata.insert("zyvor.device.vendor".into(), inventory.device.vendor.clone());
+    metadata.insert(
+        "zyvor.device.serial".into(),
+        inventory.device.serial.clone(),
+    );
+    metadata.insert(
+        "zyvor.device.vendor".into(),
+        inventory.device.vendor.clone(),
+    );
     metadata.insert("zyvor.device.model".into(), inventory.device.model.clone());
-    metadata.insert("zyvor.hardware.gpio".into(), inventory.buses.gpio_chips.len().to_string());
-    metadata.insert("zyvor.hardware.i2c".into(), inventory.buses.i2c.len().to_string());
-    metadata.insert("zyvor.hardware.spi".into(), inventory.buses.spi.len().to_string());
-    metadata.insert("zyvor.hardware.uart".into(), inventory.buses.uart.len().to_string());
-    metadata.insert("zyvor.hardware.can".into(), inventory.buses.can.len().to_string());
+    metadata.insert(
+        "zyvor.hardware.gpio".into(),
+        inventory.buses.gpio_chips.len().to_string(),
+    );
+    metadata.insert(
+        "zyvor.hardware.i2c".into(),
+        inventory.buses.i2c.len().to_string(),
+    );
+    metadata.insert(
+        "zyvor.hardware.spi".into(),
+        inventory.buses.spi.len().to_string(),
+    );
+    metadata.insert(
+        "zyvor.hardware.uart".into(),
+        inventory.buses.uart.len().to_string(),
+    );
+    metadata.insert(
+        "zyvor.hardware.can".into(),
+        inventory.buses.can.len().to_string(),
+    );
     metadata.insert("zyvor.hardware.usb".into(), inventory.usb.len().to_string());
-    metadata.insert("zyvor.hardware.watchdog".into(), inventory.buses.watchdog.len().to_string());
-    metadata.insert("zyvor.network.interfaces".into(), inventory.network.iter().map(|n| n.name.as_str()).collect::<Vec<_>>().join(","));
+    metadata.insert(
+        "zyvor.hardware.watchdog".into(),
+        inventory.buses.watchdog.len().to_string(),
+    );
+    metadata.insert(
+        "zyvor.network.interfaces".into(),
+        inventory
+            .network
+            .iter()
+            .map(|n| n.name.as_str())
+            .collect::<Vec<_>>()
+            .join(","),
+    );
 
     FleetInventoryProjection {
         hostname: inventory.device.hostname.clone(),

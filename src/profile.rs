@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{fs, path::PathBuf};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use std::{fs, path::PathBuf};
 
 use crate::config::Config;
 
@@ -29,6 +29,7 @@ pub struct MinimumInterfaces {
 pub fn load(cfg: &Config) -> anyhow::Result<BoardProfile> {
     let mut path = PathBuf::from(&cfg.device.profile_directory);
     path.push(format!("{}.toml", cfg.device.profile));
-    let raw = fs::read_to_string(&path).with_context(|| format!("reading board profile {}", path.display()))?;
+    let raw = fs::read_to_string(&path)
+        .with_context(|| format!("reading board profile {}", path.display()))?;
     toml::from_str(&raw).with_context(|| format!("parsing board profile {}", path.display()))
 }

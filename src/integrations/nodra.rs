@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{sync::Arc, time::Duration};
 use rumqttc::{AsyncClient, Event, MqttOptions, QoS};
+use std::{sync::Arc, time::Duration};
 use tokio::time::{interval, sleep};
 use tracing::warn;
 
@@ -16,8 +16,14 @@ pub async fn publisher_loop(state: Arc<AppState>) -> anyhow::Result<()> {
     }
 
     let (client, mut eventloop) = AsyncClient::new(options, 32);
-    let prefix = format!("{}/{}", cfg.topic_prefix.trim_end_matches('/'), state.inventory.device.serial);
-    let mut ticker = interval(Duration::from_secs(state.config.device.telemetry_interval_seconds.max(1)));
+    let prefix = format!(
+        "{}/{}",
+        cfg.topic_prefix.trim_end_matches('/'),
+        state.inventory.device.serial
+    );
+    let mut ticker = interval(Duration::from_secs(
+        state.config.device.telemetry_interval_seconds.max(1),
+    ));
 
     loop {
         tokio::select! {

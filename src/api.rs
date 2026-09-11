@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::Arc;
 use axum::{
     extract::{Path, State},
     http::{header, StatusCode},
@@ -8,6 +7,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use std::sync::Arc;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
 use crate::{hardware, model::IntegrationStatus, plugins, state::AppState};
@@ -63,11 +63,14 @@ async fn integrations(State(state): State<Arc<AppState>>) -> Json<IntegrationSta
         nodra_enabled: state.config.nodra.enabled,
         nodra_connected: state.nodra_connected(),
         fleet_enabled: state.config.fleet.enabled,
-        fleet_projection_ready: state.config.fleet.enabled && state.config.fleet.mode == "projection",
+        fleet_projection_ready: state.config.fleet.enabled
+            && state.config.fleet.mode == "projection",
     })
 }
 
-async fn fleet_inventory(State(state): State<Arc<AppState>>) -> Json<crate::integrations::fleet::FleetInventoryProjection> {
+async fn fleet_inventory(
+    State(state): State<Arc<AppState>>,
+) -> Json<crate::integrations::fleet::FleetInventoryProjection> {
     let inventory = hardware::collect_inventory(&state.config).await;
     Json(crate::integrations::fleet::project(&inventory))
 }
@@ -76,21 +79,22 @@ async fn list_plugins(State(state): State<Arc<AppState>>) -> Json<Vec<plugins::P
     Json(plugins::discover(&state.config))
 }
 
-async fn sample_plugin(
-    Path(name): Path<String>,
-    State(state): State<Arc<AppState>>,
-) -> Response {
+async fn sample_plugin(Path(name): Path<String>, State(state): State<Arc<AppState>>) -> Response {
     let list = plugins::discover(&state.config);
     let Some(plugin) = list.iter().find(|p| p.name == name) else {
         return (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({"error":"plugin not found"})),
-        ).into_response();
+        )
+            .into_response();
     };
     (
         StatusCode::OK,
-        Json(serde_json::to_value(plugins::sample(&state.config, plugin).await).unwrap_or_default()),
-    ).into_response()
+        Json(
+            serde_json::to_value(plugins::sample(&state.config, plugin).await).unwrap_or_default(),
+        ),
+    )
+        .into_response()
 }
 
 async fn doctor(State(state): State<Arc<AppState>>) -> Json<crate::model::DoctorReport> {
@@ -99,7 +103,11 @@ async fn doctor(State(state): State<Arc<AppState>>) -> Json<crate::model::Doctor
 
 async fn metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let current = hardware::collect_inventory(&state.config).await;
-    let temp = current.thermal.iter().find_map(|z| z.celsius).unwrap_or(f64::NAN);
+    let temp = current
+        .thermal
+        .iter()
+        .find_map(|z| z.celsius)
+        .unwrap_or(f64::NAN);
     let body = format!(
         "# HELP zyvor_device_agent_up Whether the device agent is serving requests.\n\
 # TYPE zyvor_device_agent_up gauge\n\

@@ -9,6 +9,16 @@ file_mode = 0o660
 allow_uids = []
 allow_gids = []
 
+[server.cors]
+enabled = false
+allowed_origins = []
+
+[server.rate_limit]
+# Off in dev so a fast local dashboard/test loop never trips it.
+enabled = false
+requests_per_second = 20
+burst = 40
+
 [auth]
 mode = "none"
 exempt_paths = ["/api/v1/health", "/api/v1/ready"]

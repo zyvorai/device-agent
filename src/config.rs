@@ -23,6 +23,29 @@ pub struct ServerConfig {
     pub listen: String,
     pub dashboard_dir: String,
     pub unix_socket: UnixSocketConfig,
+    pub cors: CorsConfig,
+    pub rate_limit: RateLimitConfig,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CorsConfig {
+    /// Off by default: the bundled dashboard is served same-origin (see
+    /// `api::router`'s `ServeDir` fallback) and needs no CORS layer at all.
+    /// Enable only for a cross-origin dashboard/integration.
+    pub enabled: bool,
+    pub allowed_origins: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RateLimitConfig {
+    /// On by default with a generous limit: pure DoS protection with no
+    /// behavior change for normal traffic, unlike auth/CORS which change
+    /// what a legitimate caller has to do.
+    pub enabled: bool,
+    pub requests_per_second: u32,
+    pub burst: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,6 +173,18 @@ impl Default for ServerConfig {
             listen: "0.0.0.0:9188".into(),
             dashboard_dir: "/usr/share/zyvor-device-agent/dashboard".into(),
             unix_socket: UnixSocketConfig::default(),
+            cors: CorsConfig::default(),
+            rate_limit: RateLimitConfig::default(),
+        }
+    }
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            requests_per_second: 20,
+            burst: 40,
         }
     }
 }

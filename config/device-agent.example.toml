@@ -11,6 +11,19 @@ file_mode = 0o660
 allow_uids = []
 allow_gids = []
 
+[server.cors]
+# Off by default: the bundled dashboard is served same-origin and needs no CORS
+# layer. Enable only for a cross-origin dashboard/integration.
+enabled = false
+allowed_origins = []
+
+[server.rate_limit]
+# On by default with generous limits — pure DoS protection, no behavior change
+# for normal traffic. Applies per peer IP, TCP listener only (not the Unix socket).
+enabled = true
+requests_per_second = 20
+burst = 40
+
 [auth]
 # "none" (default, backward compatible) or "bearer". scripts/deploy-remote.sh
 # generates a token and populates auth.bearer.token_hash_file automatically

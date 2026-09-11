@@ -14,12 +14,15 @@ mod state;
 use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
+use axum::http::{header, HeaderValue, Method};
 use clap::{Parser, Subcommand};
 use tokio::{
     net::TcpListener,
     time::{interval, MissedTickBehavior},
 };
 use tokio_util::sync::CancellationToken;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -155,15 +158,62 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
         )?;
     }
 
-    let app = api::router(state);
+    // Rate limiting and CORS apply only to this network-facing TCP router, not the
+    // Unix-socket one above: neither concept applies to a same-host UDS connection
+    // (no peer IP for the rate limiter's key, no browser origin to check).
+    let mut app = api::router(state);
+    if let Some(cors) = build_cors_layer(&cfg.server.cors) {
+        app = app.layer(cors);
+    }
+    if cfg.server.rate_limit.enabled {
+        let rl = &cfg.server.rate_limit;
+        let period_ms = (1000 / rl.requests_per_second.max(1)).max(1);
+        let governor_conf = Arc::new(
+            GovernorConfigBuilder::default()
+                .per_millisecond(u64::from(period_ms))
+                .burst_size(rl.burst.max(1))
+                .finish()
+                .context("invalid server.rate_limit configuration")?,
+        );
+        app = app.layer(GovernorLayer {
+            config: governor_conf,
+        });
+    }
+
     let addr: SocketAddr = cfg.server.listen.parse().context("invalid server.listen")?;
     let listener = TcpListener::bind(addr).await?;
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
+    .await?;
     info!("shutdown complete");
     Ok(())
+}
+
+fn build_cors_layer(cfg: &crate::config::CorsConfig) -> Option<CorsLayer> {
+    if !cfg.enabled {
+        return None;
+    }
+    let origins: Vec<HeaderValue> = cfg
+        .allowed_origins
+        .iter()
+        .filter_map(|origin| match origin.parse::<HeaderValue>() {
+            Ok(value) => Some(value),
+            Err(error) => {
+                warn!(%origin, %error, "invalid server.cors.allowed_origins entry, skipping");
+                None
+            }
+        })
+        .collect();
+    Some(
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::list(origins))
+            .allow_methods([Method::GET, Method::POST])
+            .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]),
+    )
 }
 
 /// Resolves once SIGINT/SIGTERM is received, or the shared token is otherwise

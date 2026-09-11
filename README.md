@@ -186,6 +186,25 @@ allow_gids = []
 
 Empty `allow_uids`/`allow_gids` deny everyone — both must be explicitly populated.
 
+## CORS and rate limiting (v0.1.4)
+
+Both apply only to the TCP listener (not the Unix socket, where neither concept applies):
+
+```toml
+[server.cors]
+enabled = false          # off by default — the bundled dashboard is same-origin
+allowed_origins = []
+
+[server.rate_limit]
+enabled = true           # on by default — pure DoS protection, no behavior change
+requests_per_second = 20 # per peer IP
+burst = 40
+```
+
+CORS is opt-in: only needed for a dashboard/integration served from a different origin
+than the agent itself. Rate limiting defaults on with generous limits since it only ever
+affects abusive traffic, not normal usage.
+
 ## Product boundary
 
 ```text

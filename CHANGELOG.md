@@ -40,6 +40,16 @@
 - `scripts/deploy-remote.sh --auth-mode bearer` now also prints a ready-to-paste
   Prometheus scrape-config snippet for `/metrics`, which requires the same
   bearer token.
+- Add opt-in CORS (`server.cors`, off by default) and rate limiting
+  (`server.rate_limit`, on by default with generous per-IP limits) to the TCP
+  listener. Neither applies to the Unix-socket listener.
+- Container image now runs as a non-root `zyvor` user by default and adds a
+  `HEALTHCHECK` against `/api/v1/ready`; real GPIO/I2C/CAN bus access still
+  goes through the systemd deployment, which intentionally stays root.
+- Fix: the `container` CI job's smoke test passed the entrypoint binary's own
+  path as a CLI argument to itself (`docker run <image> /usr/bin/zyvor-device-agent
+  --version` when the image's `ENTRYPOINT` is already that binary), so it had
+  been failing since it was added in this release and was never actually green.
 
 ## 0.1.3-dev — 2026-09-11
 

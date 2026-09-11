@@ -5,8 +5,8 @@ import {
   Settings2, Thermometer, Usb, Wifi, Workflow
 } from 'lucide-react';
 import {
-  age, bitrate, bytes, duration, getCanCaptureStatus, getDoctor, getIntegrations, getInventory,
-  getRecentCanFrames, getRecentEvents, getSensors, getStatus
+  age, AuthRequiredError, bitrate, bytes, duration, getCanCaptureStatus, getDoctor, getIntegrations,
+  getInventory, getRecentCanFrames, getRecentEvents, getSensors, getStatus, getToken, setToken, withTokenParam
 } from './api';
 import type {
   AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample
@@ -94,6 +94,8 @@ function App() {
   const [live, setLive] = React.useState(false);
   const [streamLive, setStreamLive] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [authRequired, setAuthRequired] = React.useState(false);
+  const [tokenInput, setTokenInput] = React.useState(getToken());
 
   const refresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -101,10 +103,19 @@ function App() {
       const [inv, ints, samples, checks, agent, recent, captureStatus, frames] = await Promise.all([
         getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents(), getCanCaptureStatus(), getRecentCanFrames()
       ]);
-      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setLive(true);
-    } catch { setLive(false); }
+      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setLive(true); setAuthRequired(false);
+    } catch (error) {
+      setLive(false);
+      setAuthRequired(error instanceof AuthRequiredError);
+    }
     finally { setRefreshing(false); }
   }, []);
+
+  const saveToken = React.useCallback((value: string) => {
+    setToken(value.trim());
+    setTokenInput(value.trim());
+    refresh();
+  }, [refresh]);
 
   React.useEffect(() => {
     refresh();
@@ -113,7 +124,8 @@ function App() {
   }, [refresh]);
 
   React.useEffect(() => {
-    const source = new EventSource('/api/v1/events');
+    if (authRequired) return;
+    const source = new EventSource(withTokenParam('/api/v1/events'));
     source.onopen = () => setStreamLive(true);
     source.onerror = () => setStreamLive(false);
     source.onmessage = (message) => {
@@ -124,11 +136,11 @@ function App() {
       } catch { /* ignore malformed event */ }
     };
     return () => source.close();
-  }, [refresh]);
+  }, [refresh, authRequired, tokenInput]);
 
   React.useEffect(() => {
-    if (!capture.enabled) return;
-    const source = new EventSource('/api/v1/can/frames/stream');
+    if (!capture.enabled || authRequired) return;
+    const source = new EventSource(withTokenParam('/api/v1/can/frames/stream'));
     source.addEventListener('can.frame', (message) => {
       try {
         const frame = JSON.parse((message as MessageEvent).data) as CanFrame;
@@ -136,7 +148,7 @@ function App() {
       } catch { /* ignore malformed frame */ }
     });
     return () => source.close();
-  }, [capture.enabled]);
+  }, [capture.enabled, authRequired, tokenInput]);
 
   const temp = inventory.thermal.map(z => z.celsius).filter((v): v is number => v != null).sort((a, b) => b - a)[0];
   const busCount = inventory.buses.gpio_chips.length + inventory.buses.i2c.length + inventory.buses.spi.length + inventory.buses.uart.length + inventory.buses.can.length;
@@ -145,11 +157,19 @@ function App() {
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark">Z</div><div><strong>Device Agent</strong><span>Zyvor Edge</span></div></div>
       <nav>{pages.map(([name, icon]) => <button key={name} className={page === name ? 'active' : ''} onClick={() => setPage(name)}>{icon}<span>{name}</span></button>)}</nav>
-      <div className="side-foot"><StatusPill ok={live && streamLive}>{live ? (streamLive ? 'Live device' : 'API live') : 'Preview mode'}</StatusPill><span>v{status.version} · Apache-2.0</span></div>
+      <div className="side-foot"><StatusPill ok={live && streamLive}>{authRequired ? 'Authentication required' : live ? (streamLive ? 'Live device' : 'API live') : 'Preview mode'}</StatusPill><span>v{status.version} · Apache-2.0</span></div>
     </aside>
 
     <main>
       <header><div><span className="eyebrow">{inventory.device.vendor} · {inventory.system.arch}</span><h1>{page}</h1></div><div className="header-actions"><span className="serial">{inventory.device.serial}</span><button className="refresh" onClick={refresh} aria-label="Refresh"><RefreshCw size={17} className={refreshing ? 'spin' : ''}/></button></div></header>
+
+      {authRequired && <section className="card auth-banner" role="alert">
+        <div><span className="eyebrow">AUTHENTICATION REQUIRED</span><h3>This Device Agent requires a bearer token</h3><p className="muted">Enter the token issued when the agent was deployed (see <code>scripts/deploy-remote.sh</code>'s output, or <code>sudo cat /etc/zyvor/device-agent/auth/bearer.token</code>).</p></div>
+        <form className="auth-banner-form" onSubmit={(event) => { event.preventDefault(); saveToken(tokenInput); }}>
+          <input type="password" placeholder="Bearer token" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} aria-label="Bearer token" />
+          <button type="submit">Connect</button>
+        </form>
+      </section>}
 
       {page === 'Overview' && <>
         <section className="hero card"><div><span className="eyebrow">EDGE NODE · GENERATION {status.inventory_generation}</span><h2>{inventory.device.model}</h2><p>{inventory.device.hostname} continuously watches Linux hardware, samples local sensors and exposes a stable edge contract.</p><div className="hero-pills"><StatusPill ok={integrations.nodra_connected}>Nodra</StatusPill><StatusPill ok={integrations.fleet_projection_ready}>Fleet</StatusPill><StatusPill ok={streamLive}>Events</StatusPill><StatusPill ok={doctor.ok}>Doctor</StatusPill></div></div><div className="orb"><Cpu size={44}/><span>{inventory.system.cpu_cores} core</span></div></section>
@@ -175,7 +195,8 @@ function App() {
 
       {page === 'Diagnostics' && <section className="diagnostic-layout"><div className="terminal card"><div className="terminal-head"><div className="lights"><i/><i/><i/></div><span>zyvor-device-agent doctor</span></div><pre>{doctor.checks.map(check => `${check.ok ? '✓' : '✕'} ${check.name.padEnd(22)} ${check.detail}`).join('\n') || 'No diagnostic checks returned.'}</pre></div><div className="card event-card"><div className="section-head"><div><span className="eyebrow">EVENT STREAM</span><h3>{streamLive ? 'Streaming' : 'Disconnected'}</h3></div><Activity/></div><div className="event-list">{events.slice().reverse().map(event => <div className="event-row" key={`${event.id}-${event.at_unix_ms}`}><Dot on={!event.kind.includes('disconnected')}/><div><b>{event.kind}</b><span>{age(event.at_unix_ms)}</span></div></div>)}</div></div></section>}
 
-      {page === 'Settings' && <section className="content-grid"><div className="card wide"><span className="eyebrow">RUNTIME</span><h2>Minewing reference ARM64</h2><p className="muted">The agent refreshes hardware continuously, samples plugins independently from browser traffic, and exports CAN/RS485 health without decoding industrial protocols. Modbus/J1939 semantics stay in Nodra.</p><div className="settings-line"><span>REST API</span><code>:9188</code></div><div className="settings-line"><span>Inventory generation</span><code>{status.inventory_generation}</code></div><div className="settings-line"><span>Last refresh</span><code>{age(status.last_inventory_refresh_unix_ms)}</code></div><div className="settings-line"><span>Sensor failures</span><code>{status.sensor_sample_failures}</code></div><div className="settings-line"><span>Event subscribers</span><code>{status.event_subscribers}</code></div></div></section>}
+      {page === 'Settings' && <section className="content-grid"><div className="card wide"><span className="eyebrow">RUNTIME</span><h2>Minewing reference ARM64</h2><p className="muted">The agent refreshes hardware continuously, samples plugins independently from browser traffic, and exports CAN/RS485 health without decoding industrial protocols. Modbus/J1939 semantics stay in Nodra.</p><div className="settings-line"><span>REST API</span><code>:9188</code></div><div className="settings-line"><span>Inventory generation</span><code>{status.inventory_generation}</code></div><div className="settings-line"><span>Last refresh</span><code>{age(status.last_inventory_refresh_unix_ms)}</code></div><div className="settings-line"><span>Sensor failures</span><code>{status.sensor_sample_failures}</code></div><div className="settings-line"><span>Event subscribers</span><code>{status.event_subscribers}</code></div></div>
+        <div className="card"><span className="eyebrow">AUTHENTICATION</span><h3>Bearer token</h3><p className="muted">Only needed if this agent has <code>auth.mode = "bearer"</code> configured. Stored in this browser only (localStorage), never sent anywhere but this agent.</p><form className="auth-banner-form" onSubmit={(event) => { event.preventDefault(); saveToken(tokenInput); }}><input type="password" placeholder="Bearer token" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} aria-label="Bearer token" /><button type="submit">Save</button></form>{getToken() && <button className="link-button" onClick={() => saveToken('')}>Clear stored token</button>}</div></section>}
     </main>
   </div>;
 }

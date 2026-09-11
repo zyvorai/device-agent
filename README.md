@@ -132,9 +132,12 @@ Raw frames (classic, extended, and CAN-FD with BRS/ESI flags) are available over
 ## API auth and Unix socket (v0.1.4)
 
 The API is unauthenticated by default (`auth.mode = "none"`), matching v0.1.0–v0.1.3. Set
-`auth.mode = "bearer"` to require `Authorization: Bearer <token>` on every route except
-`auth.exempt_paths` (`/api/v1/health` only, by default — note `/metrics` is **not** exempt).
-The daemon never stores the raw token, only its SHA-256 hash:
+`auth.mode = "bearer"` to require `Authorization: Bearer <token>` on every `/api/*` route
+and on `/metrics`, except `auth.exempt_paths` (`/api/v1/health` only, by default — note
+`/metrics` is **not** exempt). The bundled dashboard's static shell (everything outside
+`/api/*`/`/metrics`) is always unauthenticated, regardless of `auth.mode` — it carries no
+device data, and needs to load before it can show its own token prompt. The daemon never
+stores the raw token, only its SHA-256 hash:
 
 ```toml
 [auth]
@@ -146,7 +149,27 @@ token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"
 ```
 
 `./scripts/deploy-remote.sh HOST --auth-mode bearer` generates the token and installs the
-hash automatically (same pattern as `../fabric`'s admin-password bootstrap).
+hash automatically (same pattern as `../fabric`'s admin-password bootstrap), and prints a
+ready-to-paste Prometheus scrape-config snippet for `/metrics` (which requires the same
+bearer token — Prometheus supports this natively via the `authorization:` scrape-config
+block, no code-side change needed):
+
+```yaml
+scrape_configs:
+  - job_name: zyvor-device-agent
+    static_configs:
+      - targets: ['HOST:9188']
+    authorization:
+      type: Bearer
+      credentials: <token>
+```
+
+The bundled dashboard (`web/dashboard`) also understands bearer auth: it prompts for a token
+on first load against a bearer-protected agent (stored in that browser's `localStorage`
+only), and re-sends it on every request. The two SSE streams (`/api/v1/events`,
+`/api/v1/can/frames/stream`) additionally accept the token as a `?token=` query parameter,
+since browsers' `EventSource` API cannot set custom headers — this fallback is scoped to
+just those two routes and is never accepted in place of the header for any other route.
 
 A second, additive API listener over a Unix domain socket is available for same-host callers
 (Fleet, Nodra) that would rather use kernel peer-credential checks than carry a token:

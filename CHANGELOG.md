@@ -20,6 +20,17 @@
   and SBOMs with keyless `cosign`, and attach a SLSA build-provenance attestation.
 - Add opt-in plugin hardening: `allowed_owners`/`allowed_directories` command
   allowlists, and `max_memory_bytes`/`max_cpu_seconds`/`max_processes` rlimits.
+- Fix: the bundled dashboard now supports bearer auth (token entry UI, sends
+  `Authorization: Bearer` on every request, and a scoped `?token=` fallback for
+  the two SSE streams) — previously turning on `auth.mode = "bearer"` silently
+  broke the dashboard with no way to authenticate.
+- Fix: the dashboard's own static shell (`index.html`, JS, CSS) is now exempt
+  from bearer auth — it was previously gated along with the API, which meant
+  the browser couldn't even load the app far enough to show the token prompt
+  above. Only `/api/*` and `/metrics` require auth; the shell carries no data.
+- `scripts/deploy-remote.sh --auth-mode bearer` now also prints a ready-to-paste
+  Prometheus scrape-config snippet for `/metrics`, which requires the same
+  bearer token.
 
 ## 0.1.3-dev — 2026-09-11
 

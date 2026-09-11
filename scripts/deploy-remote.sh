@@ -264,5 +264,19 @@ EOF
   if [[ "${BEARER_TOKEN_PRINTED:-0}" == "1" ]]; then
     log "Bearer token (generated · save this, it is not stored on the remote): ${BEARER_TOKEN}"
     log "Retrieve the hash later with: ssh ${REMOTE} '${SUDO} cat /etc/zyvor/device-agent/auth/bearer.sha256'"
+    log "/metrics requires the same bearer token. Prometheus scrape-config snippet:"
+    log "(target below assumes Prometheus reaches ${REMOTE_HOST}:${PORT} directly;"
+    log " if bound to loopback only, run the scraper on this host and target 127.0.0.1:${PORT} instead)"
+    cat <<PROM
+
+  - job_name: ${APP}
+    scheme: http
+    static_configs:
+      - targets: ['${REMOTE_HOST}:${PORT}']
+    authorization:
+      type: Bearer
+      credentials: ${BEARER_TOKEN}
+
+PROM
   fi
 fi

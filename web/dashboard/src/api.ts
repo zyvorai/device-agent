@@ -1,7 +1,42 @@
 import type { AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample } from './types';
 
+const TOKEN_STORAGE_KEY = 'zyvor-device-agent.bearer-token';
+
+export function getToken(): string {
+  try { return window.localStorage.getItem(TOKEN_STORAGE_KEY) ?? ''; }
+  catch { return ''; }
+}
+
+export function setToken(token: string): void {
+  try {
+    if (token) window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch { /* localStorage unavailable (private mode, etc.) — token just won't persist */ }
+}
+
+/** Appends the stored bearer token as a `?token=` query param, for EventSource
+ *  connections (browsers cannot set custom headers on EventSource). */
+export function withTokenParam(path: string): string {
+  const token = getToken();
+  if (!token) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}token=${encodeURIComponent(token)}`;
+}
+
+/** Thrown specifically for a 401 response, so callers can distinguish
+ *  "authentication required" from a plain network/connectivity failure. */
+export class AuthRequiredError extends Error {
+  constructor(path: string) {
+    super(`${path}: authentication required`);
+    this.name = 'AuthRequiredError';
+  }
+}
+
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path);
+  const token = getToken();
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+  const response = await fetch(path, { headers });
+  if (response.status === 401) throw new AuthRequiredError(path);
   if (!response.ok) throw new Error(`${path}: ${response.status}`);
   return response.json();
 }

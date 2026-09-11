@@ -13,5 +13,8 @@ export default defineConfig({
   build: {
     sourcemap: true,
     target: 'es2022'
+  },
+  test: {
+    setupFiles: ['./src/test-setup.ts']
   }
 });

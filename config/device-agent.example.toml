@@ -72,3 +72,11 @@ max_output_bytes = 262144
 # dialout) a given plugin needs — see docs/HARDWARE_PERMISSIONS.md.
 # run_as_uid = 1500
 # run_as_gid = 1500
+# Only allow plugin commands owned by one of these uids/usernames, and/or living under
+# one of these directory prefixes. Both empty = no restriction (today's behavior).
+allowed_owners = []
+allowed_directories = []
+# RLIMIT_AS / RLIMIT_CPU / RLIMIT_NPROC applied to plugin subprocesses. Unset = no limit.
+# max_memory_bytes = 67108864
+# max_cpu_seconds = 5
+# max_processes = 4

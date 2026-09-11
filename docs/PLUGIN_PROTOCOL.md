@@ -63,3 +63,30 @@ the bus and address explicitly configured in its manifest.
 
 The process boundary is deliberate. High-rate protocols belong in Nodra
 adapters; Device Agent plugins are for bounded hardware/sensor sampling.
+
+## Optional hardening (v0.1.4+, all opt-in)
+
+```toml
+[plugins]
+run_as_uid = 1500
+run_as_gid = 1500
+allowed_owners = ["1500"]
+allowed_directories = ["/usr/lib/zyvor-device-agent/plugins"]
+max_memory_bytes = 67108864
+max_cpu_seconds = 5
+max_processes = 4
+```
+
+- `run_as_uid`/`run_as_gid` (Linux only): drop the plugin subprocess to this
+  identity before exec instead of inheriting the daemon's own (today: root).
+  See `docs/HARDWARE_PERMISSIONS.md` for the device-group implications.
+- `allowed_owners`: reject plugin commands not owned by one of these uids
+  (numeric) or usernames.
+- `allowed_directories`: reject plugin commands whose canonicalized path
+  isn't under one of these prefixes — resolved through symlinks, so this
+  can't be bypassed with a `../` traversal or a symlink pointing elsewhere.
+- `max_memory_bytes`/`max_cpu_seconds`/`max_processes` (Linux only):
+  `RLIMIT_AS`/`RLIMIT_CPU`/`RLIMIT_NPROC` applied to the subprocess — the
+  last one in particular guards against a plugin that fork-bombs.
+
+All of these default to unrestricted/unlimited, matching pre-v0.1.4 behavior.

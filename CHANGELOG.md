@@ -18,6 +18,8 @@
   cross-building them.
 - Release pipeline: generate CycloneDX SBOMs (Rust + dashboard), sign checksums
   and SBOMs with keyless `cosign`, and attach a SLSA build-provenance attestation.
+- Add opt-in plugin hardening: `allowed_owners`/`allowed_directories` command
+  allowlists, and `max_memory_bytes`/`max_cpu_seconds`/`max_processes` rlimits.
 
 ## 0.1.3-dev — 2026-09-11
 

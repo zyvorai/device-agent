@@ -9,7 +9,7 @@ use std::{
 };
 
 #[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
 
@@ -138,9 +138,36 @@ pub fn validate(cfg: &Config, manifest: &PluginManifest) -> Vec<String> {
                 if cfg.plugins.reject_world_writable && mode & 0o002 != 0 {
                     errors.push("plugin command is world-writable".into());
                 }
+                if !cfg.plugins.allowed_owners.is_empty() {
+                    let owner_uid = metadata.uid();
+                    let allowed = cfg
+                        .plugins
+                        .allowed_owners
+                        .iter()
+                        .any(|entry| resolve_uid(entry) == Some(owner_uid));
+                    if !allowed {
+                        errors.push(format!(
+                            "plugin command owner uid {owner_uid} is not in allowed_owners"
+                        ));
+                    }
+                }
             }
         }
         Err(error) => errors.push(format!("plugin command unavailable: {error}")),
+    }
+
+    if !cfg.plugins.allowed_directories.is_empty() {
+        // Canonicalize rather than string-prefix-match the manifest's raw path, so a
+        // `../` traversal or a symlink pointing outside the allowlist can't sneak past.
+        let within = fs::canonicalize(command).is_ok_and(|canonical| {
+            cfg.plugins
+                .allowed_directories
+                .iter()
+                .any(|dir| canonical.starts_with(dir))
+        });
+        if !within {
+            errors.push("plugin command is outside allowed_directories".into());
+        }
     }
 
     if manifest.name.trim().is_empty() {
@@ -152,42 +179,84 @@ pub fn validate(cfg: &Config, manifest: &PluginManifest) -> Vec<String> {
     errors
 }
 
+/// Resolves a config entry (numeric uid, or a username to look up) to a uid.
+#[cfg(unix)]
+fn resolve_uid(value: &str) -> Option<u32> {
+    if let Ok(uid) = value.parse::<u32>() {
+        return Some(uid);
+    }
+    nix::unistd::User::from_name(value)
+        .ok()
+        .flatten()
+        .map(|user| user.uid.as_raw())
+}
+
 /// Drops the plugin subprocess to `plugins.run_as_uid`/`run_as_gid` when configured
-/// (both `None` by default — inherits the daemon's own identity, today's behavior).
-/// Also clears supplementary groups so a dropped-privilege child doesn't inherit the
+/// (both `None` by default — inherits the daemon's own identity, today's behavior),
+/// and/or applies `plugins.max_memory_bytes`/`max_cpu_seconds`/`max_processes` resource
+/// limits (all `None` by default — unlimited, today's behavior). Also clears
+/// supplementary groups when dropping identity, so the child doesn't inherit the
 /// daemon's full group membership (relevant since the daemon itself runs as root).
 #[cfg(target_os = "linux")]
-fn apply_privilege_drop(cmd: &mut Command, cfg: &Config) {
+fn apply_process_hardening(cmd: &mut Command, cfg: &Config) {
     let uid = cfg.plugins.run_as_uid;
     let gid = cfg.plugins.run_as_gid;
-    if uid.is_none() && gid.is_none() {
+    let max_memory_bytes = cfg.plugins.max_memory_bytes;
+    let max_cpu_seconds = cfg.plugins.max_cpu_seconds;
+    let max_processes = cfg.plugins.max_processes;
+    let drop_identity = uid.is_some() || gid.is_some();
+    let apply_limits =
+        max_memory_bytes.is_some() || max_cpu_seconds.is_some() || max_processes.is_some();
+    if !drop_identity && !apply_limits {
         return;
     }
     // Deliberately does the whole drop inside one pre_exec closure rather than via
     // Command::uid()/gid(): those call setuid() internally as soon as they're applied,
     // and once uid is dropped the process can no longer call setgroups()/setgid() (both
     // require privileges we'd have already given away) — clear groups, then gid, then
-    // uid, all while the child still has the parent's (root) privileges.
+    // uid, all while the child still has the parent's (root) privileges. Resource limits
+    // only ever narrow (never require elevated privilege to set), so their order
+    // relative to the identity drop doesn't matter; applied after for readability.
     //
-    // SAFETY: only async-signal-safe libc calls (setgroups/setgid/setuid) are made, and
-    // this closure runs in the forked child between fork() and exec(), before any other
-    // code (including allocation-heavy Rust runtime machinery) can interfere.
+    // SAFETY: only async-signal-safe libc calls (setgroups/setgid/setuid/setrlimit) are
+    // made, and this closure runs in the forked child between fork() and exec(), before
+    // any other code (including allocation-heavy Rust runtime machinery) can interfere.
     unsafe {
         cmd.pre_exec(move || {
-            nix::unistd::setgroups(&[])?;
-            if let Some(gid) = gid {
-                nix::unistd::setgid(nix::unistd::Gid::from_raw(gid))?;
+            if drop_identity {
+                nix::unistd::setgroups(&[])?;
+                if let Some(gid) = gid {
+                    nix::unistd::setgid(nix::unistd::Gid::from_raw(gid))?;
+                }
+                if let Some(uid) = uid {
+                    nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))?;
+                }
             }
-            if let Some(uid) = uid {
-                nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))?;
+            if let Some(bytes) = max_memory_bytes {
+                set_rlimit(rustix::process::Resource::As, bytes)?;
+            }
+            if let Some(seconds) = max_cpu_seconds {
+                set_rlimit(rustix::process::Resource::Cpu, seconds)?;
+            }
+            if let Some(count) = max_processes {
+                set_rlimit(rustix::process::Resource::Nproc, count)?;
             }
             Ok(())
         });
     }
 }
 
+#[cfg(target_os = "linux")]
+fn set_rlimit(resource: rustix::process::Resource, value: u64) -> std::io::Result<()> {
+    let limit = rustix::process::Rlimit {
+        current: Some(value),
+        maximum: Some(value),
+    };
+    rustix::process::setrlimit(resource, limit).map_err(std::io::Error::from)
+}
+
 #[cfg(not(target_os = "linux"))]
-fn apply_privilege_drop(_cmd: &mut Command, _cfg: &Config) {}
+fn apply_process_hardening(_cmd: &mut Command, _cfg: &Config) {}
 
 pub async fn sample(cfg: &Config, manifest: &PluginManifest) -> SensorSample {
     let sensor_id = manifest
@@ -208,7 +277,7 @@ pub async fn sample(cfg: &Config, manifest: &PluginManifest) -> SensorSample {
     cmd.args(&manifest.args)
         .env("ZYVOR_PLUGIN_PROTOCOL", "v1")
         .kill_on_drop(true);
-    apply_privilege_drop(&mut cmd, cfg);
+    apply_process_hardening(&mut cmd, cfg);
 
     let result = timeout(
         Duration::from_secs(cfg.plugins.timeout_seconds.max(1)),

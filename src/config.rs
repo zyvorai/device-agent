@@ -129,6 +129,19 @@ pub struct PluginConfig {
     pub run_as_uid: Option<u32>,
     /// Drop plugin subprocesses to this gid before exec. None = inherit the daemon's gid.
     pub run_as_gid: Option<u32>,
+    /// Only allow plugin commands owned by one of these uids (numeric, or a username
+    /// resolved via /etc/passwd). Empty = no restriction (today's behavior).
+    pub allowed_owners: Vec<String>,
+    /// Only allow plugin commands whose canonicalized path starts with one of these
+    /// prefixes. Empty = no restriction (today's behavior).
+    pub allowed_directories: Vec<String>,
+    /// RLIMIT_AS (address space) applied to plugin subprocesses. None = no limit.
+    pub max_memory_bytes: Option<u64>,
+    /// RLIMIT_CPU (seconds of CPU time) applied to plugin subprocesses. None = no limit.
+    pub max_cpu_seconds: Option<u64>,
+    /// RLIMIT_NPROC applied to plugin subprocesses, guards against a runaway plugin
+    /// fork-bombing. None = no limit.
+    pub max_processes: Option<u64>,
 }
 
 impl Default for ServerConfig {
@@ -244,6 +257,11 @@ impl Default for PluginConfig {
             max_output_bytes: 262_144,
             run_as_uid: None,
             run_as_gid: None,
+            allowed_owners: Vec::new(),
+            allowed_directories: Vec::new(),
+            max_memory_bytes: None,
+            max_cpu_seconds: None,
+            max_processes: None,
         }
     }
 }

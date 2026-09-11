@@ -37,6 +37,7 @@ pub struct AppState {
     can_capture_frames_total: AtomicU64,
     can_capture_dropped_total: AtomicU64,
     can_capture_decode_errors_total: AtomicU64,
+    bearer_token_hash: Option<[u8; 32]>,
 }
 
 pub fn now_unix_ms() -> u64 {
@@ -53,6 +54,11 @@ impl AppState {
         let (events, _) = broadcast::channel(256);
         let (can_frame_events, _) = broadcast::channel(1024);
         let can_history_limit = config.industrial.can_capture.history_limit.max(1);
+        let bearer_token_hash = if config.auth.mode == "bearer" {
+            crate::auth::bearer::load_token_hash(&config.auth.bearer.token_hash_file)
+        } else {
+            None
+        };
         Self {
             config,
             inventory: RwLock::new(inventory),
@@ -72,7 +78,12 @@ impl AppState {
             can_capture_frames_total: AtomicU64::new(0),
             can_capture_dropped_total: AtomicU64::new(0),
             can_capture_decode_errors_total: AtomicU64::new(0),
+            bearer_token_hash,
         }
+    }
+
+    pub fn bearer_token_hash(&self) -> Option<&[u8; 32]> {
+        self.bearer_token_hash.as_ref()
     }
 
     pub async fn inventory_snapshot(&self) -> Inventory {

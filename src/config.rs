@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub server: ServerConfig,
+    pub auth: AuthConfig,
     pub device: DeviceConfig,
     pub industrial: IndustrialConfig,
     pub nodra: NodraConfig,
@@ -21,6 +22,40 @@ pub struct Config {
 pub struct ServerConfig {
     pub listen: String,
     pub dashboard_dir: String,
+    pub unix_socket: UnixSocketConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UnixSocketConfig {
+    /// Additional API listener over a Unix domain socket, alongside the TCP listener.
+    pub enabled: bool,
+    pub path: String,
+    /// Applied to the socket file after bind.
+    pub file_mode: u32,
+    /// Peer uids allowed to connect. Empty (with allow_gids also empty) denies everyone —
+    /// must be explicitly populated.
+    pub allow_uids: Vec<u32>,
+    /// Peer gids allowed to connect (matched against the peer's primary gid).
+    pub allow_gids: Vec<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AuthConfig {
+    /// "none" | "bearer" — auth mode enforced on the TCP API listener.
+    pub mode: String,
+    /// Route paths that bypass auth entirely (e.g. health probes).
+    pub exempt_paths: Vec<String>,
+    pub bearer: BearerAuthConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BearerAuthConfig {
+    /// Path to a file containing the SHA-256 hash (hex) of the accepted bearer token.
+    /// The raw token itself is never stored by the daemon.
+    pub token_hash_file: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,6 +123,12 @@ pub struct PluginConfig {
     pub require_absolute_command: bool,
     pub reject_world_writable: bool,
     pub max_output_bytes: usize,
+    /// Drop plugin subprocesses to this uid before exec. None = inherit the daemon's uid
+    /// (today's behavior). Opt-in: the target uid must have access to whatever device
+    /// nodes the plugin needs (see docs/HARDWARE_PERMISSIONS.md).
+    pub run_as_uid: Option<u32>,
+    /// Drop plugin subprocesses to this gid before exec. None = inherit the daemon's gid.
+    pub run_as_gid: Option<u32>,
 }
 
 impl Default for ServerConfig {
@@ -95,6 +136,37 @@ impl Default for ServerConfig {
         Self {
             listen: "0.0.0.0:9188".into(),
             dashboard_dir: "/usr/share/zyvor-device-agent/dashboard".into(),
+            unix_socket: UnixSocketConfig::default(),
+        }
+    }
+}
+
+impl Default for UnixSocketConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            path: "/run/zyvor-device-agent/api.sock".into(),
+            file_mode: 0o660,
+            allow_uids: Vec::new(),
+            allow_gids: Vec::new(),
+        }
+    }
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            mode: "none".into(),
+            exempt_paths: vec!["/api/v1/health".into()],
+            bearer: BearerAuthConfig::default(),
+        }
+    }
+}
+
+impl Default for BearerAuthConfig {
+    fn default() -> Self {
+        Self {
+            token_hash_file: "/etc/zyvor/device-agent/auth/bearer.sha256".into(),
         }
     }
 }
@@ -170,6 +242,8 @@ impl Default for PluginConfig {
             require_absolute_command: true,
             reject_world_writable: true,
             max_output_bytes: 262_144,
+            run_as_uid: None,
+            run_as_gid: None,
         }
     }
 }

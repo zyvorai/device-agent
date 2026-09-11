@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod api;
+mod auth;
 mod can_capture;
 mod config;
 mod hardware;
@@ -142,11 +143,36 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
         });
     }
 
+    if cfg.server.unix_socket.enabled {
+        spawn_uds_listener(&cfg, api::router(state.clone()), state.clone())?;
+    }
+
     let app = api::router(state);
     let addr: SocketAddr = cfg.server.listen.parse().context("invalid server.listen")?;
     let listener = TcpListener::bind(addr).await?;
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
     axum::serve(listener, app).await?;
+    Ok(())
+}
+
+fn spawn_uds_listener(
+    cfg: &Config,
+    base_router: axum::Router,
+    state: Arc<AppState>,
+) -> anyhow::Result<()> {
+    let (listener, router) = auth::uds::bind(&cfg.server.unix_socket, base_router, state)?;
+    let path = cfg.server.unix_socket.path.clone();
+    info!(%path, "Zyvor Device Agent Unix socket API listening");
+    tokio::spawn(async move {
+        if let Err(error) = axum::serve(
+            listener,
+            router.into_make_service_with_connect_info::<auth::uds::PeerCred>(),
+        )
+        .await
+        {
+            warn!(?error, "Unix socket listener stopped");
+        }
+    });
     Ok(())
 }
 

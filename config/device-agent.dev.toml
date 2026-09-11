@@ -2,6 +2,20 @@
 listen = "127.0.0.1:9188"
 dashboard_dir = "web/dashboard/dist"
 
+[server.unix_socket]
+enabled = false
+path = "/tmp/zyvor-device-agent-dev.sock"
+file_mode = 0o660
+allow_uids = []
+allow_gids = []
+
+[auth]
+mode = "none"
+exempt_paths = ["/api/v1/health"]
+
+[auth.bearer]
+token_hash_file = "/tmp/zyvor-device-agent-dev-bearer.sha256"
+
 [device]
 vendor = "Development"
 model = "Linux Workstation"

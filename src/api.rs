@@ -5,6 +5,7 @@ use std::{convert::Infallible, fmt::Write as _, sync::Arc, time::Duration};
 use axum::{
     extract::{Path, State},
     http::{header, StatusCode},
+    middleware,
     response::{
         sse::{Event as SseEvent, KeepAlive, Sse},
         IntoResponse, Response,
@@ -15,7 +16,7 @@ use axum::{
 use tokio_stream::{wrappers::BroadcastStream, Stream, StreamExt};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
-use crate::{hardware, model::IntegrationStatus, plugins, state::AppState};
+use crate::{auth, hardware, model::IntegrationStatus, plugins, state::AppState};
 
 pub fn router(state: Arc<AppState>) -> Router {
     let dashboard_dir = state.config.server.dashboard_dir.clone();
@@ -44,6 +45,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/doctor", get(doctor))
         .route("/metrics", get(metrics))
         .fallback_service(ServeDir::new(dashboard_dir).append_index_html_on_directories(true))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::dispatch,
+        ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

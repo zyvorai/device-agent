@@ -5,12 +5,17 @@
 #   HOST defaults to "localhost" (checks run locally, no SSH)
 #   USER defaults to "sus"
 #   PORT defaults to 9188
+#
+# Env: ZYVOR_DEVICE_AGENT_BEARER_TOKEN — pass when auth.mode = "bearer" on the
+#   target, so the inventory/metrics checks authenticate instead of getting 401.
 set -uo pipefail
 
 APP=zyvor-device-agent
 HOST="${1:-localhost}"
 REMOTE_USER="${2:-sus}"
 PORT="${3:-9188}"
+AUTH_HEADER=""
+[[ -n "${ZYVOR_DEVICE_AGENT_BEARER_TOKEN:-}" ]] && AUTH_HEADER="-H 'Authorization: Bearer ${ZYVOR_DEVICE_AGENT_BEARER_TOKEN}'"
 
 CHECKS=0
 PASSED=0
@@ -51,16 +56,16 @@ else
   fail "GET /api/v1/health failed"
 fi
 
-if run "curl -sf --connect-timeout 3 http://127.0.0.1:${PORT}/api/v1/inventory >/dev/null"; then
+if run "curl -sf --connect-timeout 3 ${AUTH_HEADER} http://127.0.0.1:${PORT}/api/v1/inventory >/dev/null"; then
   pass "GET /api/v1/inventory -> 200"
 else
-  fail "GET /api/v1/inventory failed"
+  fail "GET /api/v1/inventory failed (pass ZYVOR_DEVICE_AGENT_BEARER_TOKEN if auth.mode = bearer)"
 fi
 
-if run "curl -sf --connect-timeout 3 http://127.0.0.1:${PORT}/metrics >/dev/null"; then
+if run "curl -sf --connect-timeout 3 ${AUTH_HEADER} http://127.0.0.1:${PORT}/metrics >/dev/null"; then
   pass "GET /metrics -> 200"
 else
-  fail "GET /metrics failed"
+  fail "GET /metrics failed (pass ZYVOR_DEVICE_AGENT_BEARER_TOKEN if auth.mode = bearer)"
 fi
 
 echo

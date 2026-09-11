@@ -2,6 +2,25 @@
 listen = "0.0.0.0:9188"
 dashboard_dir = "/usr/share/zyvor-device-agent/dashboard"
 
+[server.unix_socket]
+# Additional API listener over a Unix socket, alongside the TCP listener above.
+# Peer uid/gid must be explicitly allowlisted below (empty lists deny everyone).
+enabled = false
+path = "/run/zyvor-device-agent/api.sock"
+file_mode = 0o660
+allow_uids = []
+allow_gids = []
+
+[auth]
+# "none" (default, backward compatible) or "bearer". scripts/deploy-remote.sh
+# generates a token and populates auth.bearer.token_hash_file automatically
+# when deploying with --auth-mode bearer.
+mode = "none"
+exempt_paths = ["/api/v1/health"]
+
+[auth.bearer]
+token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"
+
 [device]
 vendor = "Minewing"
 model = "Reference ARM64 Gateway"
@@ -48,3 +67,8 @@ sample_interval_seconds = 5
 require_absolute_command = true
 reject_world_writable = true
 max_output_bytes = 262144
+# Drop plugin subprocesses to a lower-privilege uid/gid (the daemon itself still runs
+# as root). Opt-in: the target account must be in whatever device group (i2c/gpio/spi/
+# dialout) a given plugin needs — see docs/HARDWARE_PERMISSIONS.md.
+# run_as_uid = 1500
+# run_as_gid = 1500

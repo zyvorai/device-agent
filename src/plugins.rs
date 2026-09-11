@@ -10,6 +10,8 @@ use std::{
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(target_os = "linux")]
+use std::os::unix::process::CommandExt;
 
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -150,6 +152,43 @@ pub fn validate(cfg: &Config, manifest: &PluginManifest) -> Vec<String> {
     errors
 }
 
+/// Drops the plugin subprocess to `plugins.run_as_uid`/`run_as_gid` when configured
+/// (both `None` by default — inherits the daemon's own identity, today's behavior).
+/// Also clears supplementary groups so a dropped-privilege child doesn't inherit the
+/// daemon's full group membership (relevant since the daemon itself runs as root).
+#[cfg(target_os = "linux")]
+fn apply_privilege_drop(cmd: &mut Command, cfg: &Config) {
+    let uid = cfg.plugins.run_as_uid;
+    let gid = cfg.plugins.run_as_gid;
+    if uid.is_none() && gid.is_none() {
+        return;
+    }
+    // Deliberately does the whole drop inside one pre_exec closure rather than via
+    // Command::uid()/gid(): those call setuid() internally as soon as they're applied,
+    // and once uid is dropped the process can no longer call setgroups()/setgid() (both
+    // require privileges we'd have already given away) — clear groups, then gid, then
+    // uid, all while the child still has the parent's (root) privileges.
+    //
+    // SAFETY: only async-signal-safe libc calls (setgroups/setgid/setuid) are made, and
+    // this closure runs in the forked child between fork() and exec(), before any other
+    // code (including allocation-heavy Rust runtime machinery) can interfere.
+    unsafe {
+        cmd.pre_exec(move || {
+            nix::unistd::setgroups(&[])?;
+            if let Some(gid) = gid {
+                nix::unistd::setgid(nix::unistd::Gid::from_raw(gid))?;
+            }
+            if let Some(uid) = uid {
+                nix::unistd::setuid(nix::unistd::Uid::from_raw(uid))?;
+            }
+            Ok(())
+        });
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn apply_privilege_drop(_cmd: &mut Command, _cfg: &Config) {}
+
 pub async fn sample(cfg: &Config, manifest: &PluginManifest) -> SensorSample {
     let sensor_id = manifest
         .sensor_id
@@ -169,6 +208,7 @@ pub async fn sample(cfg: &Config, manifest: &PluginManifest) -> SensorSample {
     cmd.args(&manifest.args)
         .env("ZYVOR_PLUGIN_PROTOCOL", "v1")
         .kill_on_drop(true);
+    apply_privilege_drop(&mut cmd, cfg);
 
     let result = timeout(
         Duration::from_secs(cfg.plugins.timeout_seconds.max(1)),

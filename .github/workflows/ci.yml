@@ -67,14 +67,16 @@ jobs:
         run: docker buildx build --platform linux/arm64 -t zyvor-device-agent:arm64 --load .
       - name: Smoke test amd64 image
         run: |
-          docker run --rm zyvor-device-agent:amd64 /usr/bin/zyvor-device-agent --version
+          # ENTRYPOINT is already /usr/bin/zyvor-device-agent - args here are its CLI args,
+          # not another invocation of the binary.
+          docker run --rm zyvor-device-agent:amd64 --version
           # doctor exits non-zero on any failing hardware check, which is expected in a
           # container with no real GPIO/I2C/CAN hardware — assert the process runs and
           # emits valid JSON, not that every check passes.
-          docker run --rm zyvor-device-agent:amd64 /usr/bin/zyvor-device-agent doctor > doctor-amd64.json || true
+          docker run --rm zyvor-device-agent:amd64 doctor > doctor-amd64.json || true
           python3 -m json.tool < doctor-amd64.json > /dev/null
       - name: Smoke test arm64 image under QEMU
         run: |
-          docker run --rm --platform linux/arm64 zyvor-device-agent:arm64 /usr/bin/zyvor-device-agent --version
-          docker run --rm --platform linux/arm64 zyvor-device-agent:arm64 /usr/bin/zyvor-device-agent doctor > doctor-arm64.json || true
+          docker run --rm --platform linux/arm64 zyvor-device-agent:arm64 --version
+          docker run --rm --platform linux/arm64 zyvor-device-agent:arm64 doctor > doctor-arm64.json || true
           python3 -m json.tool < doctor-arm64.json > /dev/null

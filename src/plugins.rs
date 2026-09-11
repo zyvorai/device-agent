@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{fs, path::PathBuf, time::Duration};
+use std::{fs, time::Duration};
 use serde::{Deserialize, Serialize};
 use tokio::{process::Command, time::timeout};
 
@@ -26,7 +26,7 @@ pub struct PluginResult {
 
 pub fn discover(cfg: &Config) -> Vec<PluginManifest> {
     let Ok(entries) = fs::read_dir(&cfg.plugins.directory) else { return vec![]; };
-    let mut out = Vec::new();
+    let mut out: Vec<PluginManifest> = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|v| v.to_str()) != Some("json") { continue; }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{fs, path::Path};
+use std::fs;
 use crate::model::BusInventory;
 
 fn glob_prefix(dir: &str, prefix: &str) -> Vec<String> {

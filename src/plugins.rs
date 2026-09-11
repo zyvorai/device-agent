@@ -20,7 +20,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 use crate::{
-    config::Config,
+    config::{Config, PluginConfig},
     model::{SensorReading, SensorSample},
     state::{now_unix_ms, AppState},
 };
@@ -190,6 +190,21 @@ fn resolve_uid(value: &str) -> Option<u32> {
         .map(|user| user.uid.as_raw())
 }
 
+/// Whether `apply_process_hardening` has anything to do for this config — pulled out
+/// as a pure, platform-independent predicate so it's directly unit-testable without
+/// needing to inspect a `Command`'s internal `pre_exec` state. Only ever called from
+/// the `#[cfg(target_os = "linux")]` half of `apply_process_hardening` (privilege drop
+/// and rlimits are Linux-only), so it has no real caller on other platforms outside
+/// this file's own unix test module.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn hardening_is_needed(cfg: &PluginConfig) -> bool {
+    cfg.run_as_uid.is_some()
+        || cfg.run_as_gid.is_some()
+        || cfg.max_memory_bytes.is_some()
+        || cfg.max_cpu_seconds.is_some()
+        || cfg.max_processes.is_some()
+}
+
 /// Drops the plugin subprocess to `plugins.run_as_uid`/`run_as_gid` when configured
 /// (both `None` by default — inherits the daemon's own identity, today's behavior),
 /// and/or applies `plugins.max_memory_bytes`/`max_cpu_seconds`/`max_processes` resource
@@ -198,17 +213,15 @@ fn resolve_uid(value: &str) -> Option<u32> {
 /// daemon's full group membership (relevant since the daemon itself runs as root).
 #[cfg(target_os = "linux")]
 fn apply_process_hardening(cmd: &mut Command, cfg: &Config) {
+    if !hardening_is_needed(&cfg.plugins) {
+        return;
+    }
     let uid = cfg.plugins.run_as_uid;
     let gid = cfg.plugins.run_as_gid;
     let max_memory_bytes = cfg.plugins.max_memory_bytes;
     let max_cpu_seconds = cfg.plugins.max_cpu_seconds;
     let max_processes = cfg.plugins.max_processes;
     let drop_identity = uid.is_some() || gid.is_some();
-    let apply_limits =
-        max_memory_bytes.is_some() || max_cpu_seconds.is_some() || max_processes.is_some();
-    if !drop_identity && !apply_limits {
-        return;
-    }
     // Deliberately does the whole drop inside one pre_exec closure rather than via
     // Command::uid()/gid(): those call setuid() internally as soon as they're applied,
     // and once uid is dropped the process can no longer call setgroups()/setgid() (both
@@ -457,5 +470,209 @@ fn failed_sample(
         labels: BTreeMap::new(),
         error: Some(error),
         raw: serde_json::Value::Null,
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    fn manifest(command: &str) -> PluginManifest {
+        PluginManifest {
+            name: "test-plugin".into(),
+            version: "0.1.0".into(),
+            command: command.into(),
+            args: vec![],
+            capabilities: vec![],
+            sensor_id: None,
+            description: String::new(),
+            enabled: true,
+            poll_interval_seconds: None,
+            publish_to_nodra: true,
+        }
+    }
+
+    /// A fresh scratch directory per test, cleaned up on drop.
+    struct TempDir(std::path::PathBuf);
+    impl TempDir {
+        fn new() -> Self {
+            static COUNTER: AtomicU64 = AtomicU64::new(0);
+            let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let dir = std::env::temp_dir()
+                .join(format!("zyvor-plugins-test-{}-{id}", std::process::id()));
+            fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+        fn executable(&self, name: &str, mode: u32) -> String {
+            let path = self.0.join(name);
+            fs::write(&path, "#!/bin/sh\nexit 0\n").unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(mode)).unwrap();
+            path.to_string_lossy().into_owned()
+        }
+    }
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn rejects_non_absolute_command_when_required() {
+        let mut cfg = Config::default();
+        cfg.plugins.require_absolute_command = true;
+        let errors = validate(&cfg, &manifest("relative/path.sh"));
+        assert!(errors.iter().any(|e| e.contains("absolute path")));
+    }
+
+    #[test]
+    fn accepts_absolute_executable_command() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o755);
+        let cfg = Config::default();
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(errors.is_empty(), "unexpected errors: {errors:?}");
+    }
+
+    #[test]
+    fn rejects_missing_command() {
+        let cfg = Config::default();
+        let errors = validate(&cfg, &manifest("/nonexistent/zyvor-test-plugin"));
+        assert!(errors.iter().any(|e| e.contains("unavailable")));
+    }
+
+    #[test]
+    fn rejects_non_executable_command() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o644);
+        let cfg = Config::default();
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(errors.iter().any(|e| e.contains("not executable")));
+    }
+
+    #[test]
+    fn rejects_world_writable_command_when_configured() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o777);
+        let mut cfg = Config::default();
+        cfg.plugins.reject_world_writable = true;
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(errors.iter().any(|e| e.contains("world-writable")));
+    }
+
+    #[test]
+    fn allows_world_writable_command_when_not_rejecting() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o777);
+        let mut cfg = Config::default();
+        cfg.plugins.reject_world_writable = false;
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(!errors.iter().any(|e| e.contains("world-writable")));
+    }
+
+    #[test]
+    fn rejects_owner_not_in_allowlist() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o755);
+        let mut cfg = Config::default();
+        // Our own uid is guaranteed not to be this reserved-range value.
+        cfg.plugins.allowed_owners = vec!["1".to_string()];
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(errors.iter().any(|e| e.contains("allowed_owners")));
+    }
+
+    #[test]
+    fn accepts_owner_in_allowlist() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o755);
+        let mut cfg = Config::default();
+        let own_uid = nix::unistd::Uid::current().as_raw();
+        cfg.plugins.allowed_owners = vec![own_uid.to_string()];
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(!errors.iter().any(|e| e.contains("allowed_owners")));
+    }
+
+    #[test]
+    fn rejects_command_outside_allowed_directories() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o755);
+        let mut cfg = Config::default();
+        cfg.plugins.allowed_directories = vec!["/definitely/not/here".to_string()];
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(errors.iter().any(|e| e.contains("allowed_directories")));
+    }
+
+    #[test]
+    fn accepts_command_inside_allowed_directories() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o755);
+        let mut cfg = Config::default();
+        // validate() compares against the canonicalized command path (to defeat symlink
+        // tricks), so the allowlist entry must be canonicalized too - e.g. macOS's /tmp
+        // is itself a symlink to /private/tmp, which would otherwise never match.
+        let canonical_dir = fs::canonicalize(&dir.0).unwrap();
+        cfg.plugins.allowed_directories = vec![canonical_dir.to_string_lossy().into_owned()];
+        let errors = validate(&cfg, &manifest(&path));
+        assert!(
+            !errors.iter().any(|e| e.contains("allowed_directories")),
+            "unexpected errors: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn rejects_empty_name_and_version() {
+        let dir = TempDir::new();
+        let path = dir.executable("plugin.sh", 0o755);
+        let cfg = Config::default();
+        let mut bad = manifest(&path);
+        bad.name = "  ".into();
+        bad.version = "".into();
+        let errors = validate(&cfg, &bad);
+        assert!(errors.iter().any(|e| e.contains("name is empty")));
+        assert!(errors.iter().any(|e| e.contains("version is empty")));
+    }
+
+    #[test]
+    fn hardening_not_needed_when_unconfigured() {
+        assert!(!hardening_is_needed(&PluginConfig::default()));
+    }
+
+    #[test]
+    fn hardening_needed_for_uid_only() {
+        let cfg = PluginConfig {
+            run_as_uid: Some(1500),
+            ..Default::default()
+        };
+        assert!(hardening_is_needed(&cfg));
+    }
+
+    #[test]
+    fn hardening_needed_for_gid_only() {
+        let cfg = PluginConfig {
+            run_as_gid: Some(1500),
+            ..Default::default()
+        };
+        assert!(hardening_is_needed(&cfg));
+    }
+
+    #[test]
+    fn hardening_needed_for_rlimits_only() {
+        let cfg = PluginConfig {
+            max_memory_bytes: Some(1024),
+            ..Default::default()
+        };
+        assert!(hardening_is_needed(&cfg));
+
+        let cfg = PluginConfig {
+            max_cpu_seconds: Some(5),
+            ..Default::default()
+        };
+        assert!(hardening_is_needed(&cfg));
+
+        let cfg = PluginConfig {
+            max_processes: Some(4),
+            ..Default::default()
+        };
+        assert!(hardening_is_needed(&cfg));
     }
 }

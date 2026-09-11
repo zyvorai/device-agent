@@ -53,6 +53,17 @@ fn with_peer_cred_check(base_router: Router, state: Arc<AppState>) -> Router {
     base_router.layer(middleware::from_fn_with_state(state, require_peer_cred))
 }
 
+/// Empty allow-lists mean nobody is allowed yet — the operator must explicitly
+/// opt a uid/gid in. Prevents "I enabled the socket" from silently meaning
+/// "and now anyone who can reach the path can call the API". Pulled out as a
+/// pure function, separate from the `require_peer_cred` handler, so it's
+/// directly unit-testable against a constructed `PeerCred` without needing a
+/// real socket connection.
+fn peer_is_allowed(cfg: &crate::config::UnixSocketConfig, peer: &PeerCred) -> bool {
+    !(cfg.allow_uids.is_empty() && cfg.allow_gids.is_empty())
+        && (cfg.allow_uids.contains(&peer.uid) || cfg.allow_gids.contains(&peer.gid))
+}
+
 async fn require_peer_cred(
     State(state): State<Arc<AppState>>,
     ConnectInfo(peer): ConnectInfo<PeerCred>,
@@ -60,12 +71,7 @@ async fn require_peer_cred(
     next: Next,
 ) -> Response {
     let cfg = &state.config.server.unix_socket;
-    // Empty allow-lists mean nobody is allowed yet — the operator must explicitly
-    // opt a uid/gid in. Prevents "I enabled the socket" from silently meaning
-    // "and now anyone who can reach the path can call the API".
-    let allowed = !(cfg.allow_uids.is_empty() && cfg.allow_gids.is_empty())
-        && (cfg.allow_uids.contains(&peer.uid) || cfg.allow_gids.contains(&peer.gid));
-    if allowed {
+    if peer_is_allowed(cfg, &peer) {
         next.run(request).await
     } else {
         tracing::warn!(
@@ -103,4 +109,67 @@ pub fn bind(
         std::fs::set_permissions(&cfg.path, std::fs::Permissions::from_mode(cfg.file_mode))?;
     }
     Ok((listener, with_peer_cred_check(base_router, state)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::UnixSocketConfig;
+
+    fn peer(uid: u32, gid: u32) -> PeerCred {
+        PeerCred { uid, gid }
+    }
+
+    #[test]
+    fn empty_allow_lists_deny_everyone() {
+        let cfg = UnixSocketConfig::default();
+        assert!(cfg.allow_uids.is_empty() && cfg.allow_gids.is_empty());
+        assert!(!peer_is_allowed(&cfg, &peer(0, 0)));
+        assert!(!peer_is_allowed(&cfg, &peer(1000, 1000)));
+    }
+
+    #[test]
+    fn allows_matching_uid() {
+        let cfg = UnixSocketConfig {
+            allow_uids: vec![1000],
+            ..Default::default()
+        };
+        assert!(peer_is_allowed(&cfg, &peer(1000, 999)));
+        assert!(!peer_is_allowed(&cfg, &peer(1001, 999)));
+    }
+
+    #[test]
+    fn allows_matching_gid() {
+        let cfg = UnixSocketConfig {
+            allow_gids: vec![2000],
+            ..Default::default()
+        };
+        assert!(peer_is_allowed(&cfg, &peer(999, 2000)));
+        assert!(!peer_is_allowed(&cfg, &peer(999, 2001)));
+    }
+
+    #[test]
+    fn allows_when_either_uid_or_gid_matches() {
+        let cfg = UnixSocketConfig {
+            allow_uids: vec![1000],
+            allow_gids: vec![2000],
+            ..Default::default()
+        };
+        assert!(peer_is_allowed(&cfg, &peer(1000, 1))); // uid matches, gid doesn't
+        assert!(peer_is_allowed(&cfg, &peer(1, 2000))); // gid matches, uid doesn't
+        assert!(!peer_is_allowed(&cfg, &peer(1, 1))); // neither matches
+    }
+
+    #[test]
+    fn peer_cred_failure_sentinel_never_matches_a_real_allowlist() {
+        // Connected::connect_info's error path uses u32::MAX for both fields; a
+        // real allowlist entry should never be u32::MAX, so this stays denied
+        // even if an operator accidentally listed it.
+        let cfg = UnixSocketConfig {
+            allow_uids: vec![1000],
+            allow_gids: vec![2000],
+            ..Default::default()
+        };
+        assert!(!peer_is_allowed(&cfg, &peer(u32::MAX, u32::MAX)));
+    }
 }

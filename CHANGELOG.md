@@ -72,6 +72,22 @@
   this release — and that only Linux CI can catch at all, since the import
   is `#[cfg(target_os = "linux")]`-gated and this session's local clippy
   verification runs on macOS.
+- Split `src/main.rs` into a `src/lib.rs` library crate (re-exporting `api`,
+  `auth`, `config`, `hardware`, `integrations`, `model`, `plugins`, `profile`,
+  `state`) plus a thin binary, so `tests/` can build the real `Router` and
+  drive it end-to-end via `tower::ServiceExt::oneshot` - previously every
+  module was private to the binary target and unreachable from outside it.
+- Add unit tests for `plugins::validate()` (owner/directory allowlists,
+  world-writable/non-executable/non-absolute rejection) and the plugin
+  hardening config-gating logic, `auth::check_bearer` (missing/wrong/correct
+  token, non-Bearer scheme, unconfigured-hash fail-closed), and
+  `auth::uds::peer_is_allowed` (uid/gid allow-list matching, the empty-list
+  deny-everyone default) - previously all at zero coverage despite being the
+  highest-risk code (external process execution, network auth).
+- Add `tests/api_auth.rs`: the first true HTTP-level integration test,
+  proving the auth middleware wiring works end-to-end against the real
+  `Router` (health/dashboard-shell reachable without a token, inventory
+  correctly gated in bearer mode) rather than only unit-testing each piece.
 
 ## 0.1.3-dev — 2026-09-11
 

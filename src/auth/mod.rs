@@ -139,12 +139,97 @@ fn unauthorized(message: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        config::Config,
+        model::{DeviceIdentity, Inventory, SystemInfo},
+    };
+    use sha2::{Digest, Sha256};
 
     fn request_with_query(path_and_query: &str) -> Request {
         Request::builder()
             .uri(path_and_query)
             .body(axum::body::Body::empty())
             .unwrap()
+    }
+
+    fn request_with_auth_header(value: Option<&str>) -> Request {
+        let mut builder = Request::builder().uri("/api/v1/inventory");
+        if let Some(value) = value {
+            builder = builder.header(header::AUTHORIZATION, value);
+        }
+        builder.body(axum::body::Body::empty()).unwrap()
+    }
+
+    fn empty_inventory() -> Inventory {
+        Inventory {
+            device: DeviceIdentity {
+                serial: "test".into(),
+                vendor: "test".into(),
+                model: "test".into(),
+                hostname: "test".into(),
+                machine_id: "test".into(),
+            },
+            system: SystemInfo {
+                arch: "test".into(),
+                kernel: "test".into(),
+                os: "test".into(),
+                cpu_model: "test".into(),
+                cpu_cores: 1,
+                memory_bytes: 0,
+                storage_bytes: None,
+                uptime_seconds: 0,
+            },
+            network: vec![],
+            buses: Default::default(),
+            industrial: Default::default(),
+            usb: vec![],
+            thermal: vec![],
+            capabilities: vec![],
+        }
+    }
+
+    /// Builds an AppState in `auth.mode = "bearer"` with a real hash file on disk,
+    /// exercising the same `AppState::new` -> `bearer::load_token_hash` path used
+    /// in production, not a test-only backdoor.
+    struct BearerState {
+        state: AppState,
+        _hash_file: TempHashFile,
+    }
+    struct TempHashFile(std::path::PathBuf);
+    impl Drop for TempHashFile {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+
+    fn state_with_bearer_token(token: &str) -> BearerState {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+
+        let mut hasher = Sha256::new();
+        hasher.update(token.as_bytes());
+        let hash: [u8; 32] = hasher.finalize().into();
+        let hex_hash = hash.iter().map(|b| format!("{b:02x}")).collect::<String>();
+
+        let path = std::env::temp_dir().join(format!(
+            "zyvor-auth-test-bearer-{}-{id}.sha256",
+            std::process::id()
+        ));
+        std::fs::write(&path, &hex_hash).unwrap();
+
+        let mut cfg = Config::default();
+        cfg.auth.mode = "bearer".into();
+        cfg.auth.bearer.token_hash_file = path.to_string_lossy().into_owned();
+        let state = AppState::new(cfg, empty_inventory());
+        assert!(
+            state.bearer_token_hash().is_some(),
+            "test setup: hash file should have loaded"
+        );
+        BearerState {
+            state,
+            _hash_file: TempHashFile(path),
+        }
     }
 
     #[test]
@@ -191,5 +276,57 @@ mod tests {
         assert!(SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/events"));
         assert!(SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/can/frames/stream"));
         assert!(!SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/inventory"));
+    }
+
+    #[test]
+    fn check_bearer_rejects_missing_header() {
+        let bearer = state_with_bearer_token("secret");
+        let request = request_with_auth_header(None);
+        assert_eq!(
+            check_bearer(&bearer.state, &request),
+            Err("missing Authorization header")
+        );
+    }
+
+    #[test]
+    fn check_bearer_rejects_wrong_token() {
+        let bearer = state_with_bearer_token("secret");
+        let request = request_with_auth_header(Some("Bearer wrong-token"));
+        assert_eq!(
+            check_bearer(&bearer.state, &request),
+            Err("invalid bearer token")
+        );
+    }
+
+    #[test]
+    fn check_bearer_rejects_non_bearer_scheme() {
+        let bearer = state_with_bearer_token("secret");
+        let request = request_with_auth_header(Some("Basic dXNlcjpwYXNz"));
+        assert_eq!(
+            check_bearer(&bearer.state, &request),
+            Err("Authorization header must use the Bearer scheme")
+        );
+    }
+
+    #[test]
+    fn check_bearer_accepts_correct_token() {
+        let bearer = state_with_bearer_token("secret");
+        let request = request_with_auth_header(Some("Bearer secret"));
+        assert_eq!(check_bearer(&bearer.state, &request), Ok(()));
+    }
+
+    #[test]
+    fn check_bearer_fails_closed_with_no_hash_configured() {
+        // mode = "bearer" but the hash file doesn't exist / didn't load.
+        let mut cfg = Config::default();
+        cfg.auth.mode = "bearer".into();
+        cfg.auth.bearer.token_hash_file = "/nonexistent/zyvor-test-bearer.sha256".into();
+        let state = AppState::new(cfg, empty_inventory());
+        assert!(state.bearer_token_hash().is_none());
+        let request = request_with_auth_header(Some("Bearer anything"));
+        assert_eq!(
+            check_bearer(&state, &request),
+            Err("bearer auth enabled but no token is configured")
+        );
     }
 }

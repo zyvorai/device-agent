@@ -1,16 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-mod api;
-mod auth;
-mod can_capture;
-mod config;
-mod hardware;
-mod integrations;
-mod model;
-mod plugins;
-mod profile;
-mod state;
-
 use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
@@ -25,8 +14,9 @@ use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
-
-use crate::{config::Config, state::AppState};
+use zyvor_device_agent::{
+    api, auth, can_capture, config::Config, hardware, integrations, plugins, state::AppState,
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -193,7 +183,7 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn build_cors_layer(cfg: &crate::config::CorsConfig) -> Option<CorsLayer> {
+fn build_cors_layer(cfg: &zyvor_device_agent::config::CorsConfig) -> Option<CorsLayer> {
     if !cfg.enabled {
         return None;
     }

@@ -118,6 +118,10 @@ function App() {
   }, [refresh]);
 
   React.useEffect(() => {
+    // Standard fetch-on-mount: refresh() sets a "refreshing" flag synchronously
+    // before its first await, which is what the lint rule below flags - the
+    // actual data-driven state updates all happen after the async API calls.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     const timer = window.setInterval(refresh, 15000);
     return () => window.clearInterval(timer);

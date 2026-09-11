@@ -50,6 +50,17 @@
   path as a CLI argument to itself (`docker run <image> /usr/bin/zyvor-device-agent
   --version` when the image's `ENTRYPOINT` is already that binary), so it had
   been failing since it was added in this release and was never actually green.
+- CI: `rust-native` now runs `cargo fmt --all -- --check` and
+  `cargo clippy --all-features -- -D warnings` (previously `cargo clippy
+  --all-targets` alone, which didn't fail the build on warnings).
+- Add ESLint (flat config, typescript-eslint + react-hooks) to the dashboard,
+  wired into CI; also adds Prettier as an available `npm run format` (not yet
+  enforced in CI — the existing code predates it and a full reformat is a
+  separate decision).
+- Add `docker` to `.github/dependabot.yml` so the `Dockerfile`'s base images
+  get automated update PRs too.
+- Release notes now surface the matching `CHANGELOG.md` section as the GitHub
+  Release body, instead of only the file list.
 
 ## 0.1.3-dev — 2026-09-11
 

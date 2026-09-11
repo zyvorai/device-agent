@@ -70,8 +70,38 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: 'dist/*.tar.gz'
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Matches "## X.Y.Z ..." or "## X.Y.Z-dev ..." (this repo bundles a
+          # release's changes under a single "-dev" heading until it ships) up
+          # to the next "## " heading.
+          NOTES=$(awk -v ver="$VERSION" '
+            /^## / {
+              if (found) exit
+              line = $0
+              sub(/^## /, "", line)
+              split(line, parts, " ")
+              heading_ver = parts[1]
+              sub(/-dev$/, "", heading_ver)
+              if (heading_ver == ver) { found = 1 }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            echo "::warning::No CHANGELOG.md section matched version $VERSION; falling back to the top section"
+            NOTES=$(awk '/^## /{if(found) exit; found=1; next} found{print}' CHANGELOG.md)
+          fi
+          {
+            echo "notes<<ZYVOR_CHANGELOG_EOF"
+            echo "$NOTES"
+            echo "ZYVOR_CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
+          body: ${{ steps.changelog.outputs.notes }}
           files: |
             dist/*.tar.gz
             dist/SHA256SUMS

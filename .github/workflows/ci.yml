@@ -24,7 +24,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - run: cargo clippy --all-targets
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test --all
       - run: cargo build --release
 
@@ -51,6 +52,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - run: npm run lint
       - run: npm test
       - run: npm run build
 

@@ -15,6 +15,34 @@ pub struct Config {
     pub nodra: NodraConfig,
     pub fleet: FleetConfig,
     pub plugins: PluginConfig,
+    pub thresholds: ThresholdConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ThresholdConfig {
+    /// Off by default: purely additive alerting on top of the existing raw
+    /// thermal/CAN-controller-error readings, opt-in like every other
+    /// hardening field in this config.
+    pub enabled: bool,
+    pub thermal_warn_celsius: f64,
+    pub thermal_critical_celsius: f64,
+    /// SocketCAN controller error counters (0-255, standard CAN semantics):
+    /// 96 is the conventional error-warning level, 128 is error-passive.
+    pub can_error_counter_warn: u64,
+    pub can_error_counter_critical: u64,
+}
+
+impl Default for ThresholdConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            thermal_warn_celsius: 75.0,
+            thermal_critical_celsius: 90.0,
+            can_error_counter_warn: 96,
+            can_error_counter_critical: 128,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

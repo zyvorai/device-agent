@@ -59,6 +59,18 @@ max_frames_per_second = 200
 include_error_frames = false
 publish_to_nodra = true
 
+[thresholds]
+# Off by default. When enabled, crossing a level emits threshold.breached /
+# threshold.recovered on the SSE event stream and (if nodra.enabled) the
+# Nodra agent-event topic - evaluated once per inventory-refresh tick.
+enabled = false
+thermal_warn_celsius = 75.0
+thermal_critical_celsius = 90.0
+# SocketCAN controller error counters (0-255): 96/128 are the conventional
+# CAN error-warning/error-passive levels.
+can_error_counter_warn = 96
+can_error_counter_critical = 128
+
 [nodra]
 enabled = false
 broker = "127.0.0.1"

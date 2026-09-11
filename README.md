@@ -205,6 +205,23 @@ CORS is opt-in: only needed for a dashboard/integration served from a different 
 than the agent itself. Rate limiting defaults on with generous limits since it only ever
 affects abusive traffic, not normal usage.
 
+## Configurable health thresholds (v0.1.4)
+
+Off by default. When enabled, thermal zones and SocketCAN controller error counters are
+checked against configured levels once per inventory-refresh tick, emitting
+`threshold.breached`/`threshold.recovered` on the SSE event stream (and the Nodra
+agent-event topic, if `nodra.enabled`) only on the edge transition — not every tick a
+value stays over/under a level:
+
+```toml
+[thresholds]
+enabled = true
+thermal_warn_celsius = 75.0
+thermal_critical_celsius = 90.0
+can_error_counter_warn = 96      # CAN error-warning, per the CAN spec
+can_error_counter_critical = 128 # CAN error-passive, per the CAN spec
+```
+
 ## Product boundary
 
 ```text

@@ -61,6 +61,17 @@
   get automated update PRs too.
 - Release notes now surface the matching `CHANGELOG.md` section as the GitHub
   Release body, instead of only the file list.
+- Add opt-in configurable health thresholds (`[thresholds]`): thermal zones
+  and SocketCAN controller error counters are checked once per inventory
+  refresh, emitting `threshold.breached`/`threshold.recovered` on the SSE
+  event stream (and the Nodra agent-event topic, if enabled) only on the
+  edge transition.
+- Fix: `src/plugins.rs` had an unused `std::os::unix::process::CommandExt`
+  import on Linux (`tokio::process::Command::pre_exec` doesn't need it) that
+  CI's `cargo clippy` never actually caught until `-D warnings` was added in
+  this release — and that only Linux CI can catch at all, since the import
+  is `#[cfg(target_os = "linux")]`-gated and this session's local clippy
+  verification runs on macOS.
 
 ## 0.1.3-dev — 2026-09-11
 

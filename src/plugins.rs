@@ -10,8 +10,6 @@ use std::{
 
 #[cfg(unix)]
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
-#[cfg(target_os = "linux")]
-use std::os::unix::process::CommandExt;
 
 use serde::{Deserialize, Serialize};
 use tokio::{

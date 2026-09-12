@@ -33,6 +33,13 @@ Confirm it's up:
 ZYVOR_DEVICE_AGENT_BEARER_TOKEN=<TOKEN> ./scripts/verify-deployment.sh host user
 ```
 
+This script (and `deploy-remote.sh`'s own built-in checks) only speak plain
+`http://`. If the target has `server.tls.enabled = true` (see
+[3. Securing your agent](03-securing-your-agent.md)), expect every check
+past "service is active" to report failure — that's the daemon correctly
+refusing plain HTTP, not a broken deploy. Verify by hand instead:
+`curl -sSk https://host:9188/api/v1/health`.
+
 ## Option B: signed `.deb`/`.rpm` packages
 
 Attached to every GitHub Release alongside the tarballs (amd64 only for

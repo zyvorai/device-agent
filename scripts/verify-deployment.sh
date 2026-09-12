@@ -8,6 +8,11 @@
 #
 # Env: ZYVOR_DEVICE_AGENT_BEARER_TOKEN — pass when auth.mode = "bearer" on the
 #   target, so the inventory/metrics checks authenticate instead of getting 401.
+#
+# All checks below use plain http://. If the target has `server.tls.enabled = true`
+# (see README's "TLS" section), the three curl-based checks fail closed - that's the
+# daemon correctly speaking TLS-only, not a broken deployment; verify by hand with
+# curl -sSk https://127.0.0.1:PORT/api/v1/health instead.
 set -uo pipefail
 
 APP=zyvor-device-agent

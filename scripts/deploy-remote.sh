@@ -132,6 +132,12 @@ check_remote_health() {
   # INVENTORY/METRICS checks below are *expected* to fail closed; that's the auth
   # working correctly, not a deployment problem. Service-active + HEALTH_OK already
   # confirm the deploy itself succeeded.
+  #
+  # These checks are plain http:// only. If the target has `server.tls.enabled = true`
+  # (see the README's "TLS" section), ALL THREE checks below fail closed the same way -
+  # that's the daemon correctly speaking TLS-only, not a broken deployment. Verify by
+  # hand instead: curl -sSk https://127.0.0.1:PORT/api/v1/health (the -k accepts the
+  # self-signed cert unless a real one was mounted).
   local auth_header=""
   local token="${ZYVOR_DEVICE_AGENT_BEARER_TOKEN:-${BEARER_TOKEN:-}}"
   [[ -n "$token" ]] && auth_header="-H 'Authorization: Bearer ${token}'"

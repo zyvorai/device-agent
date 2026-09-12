@@ -256,6 +256,17 @@ whether the connection is encrypted, so pair `server.tls.enabled = true` with
 takes its own separate TLS path (see the mTLS section above) rather than this one, since
 that mode ties TLS to client-certificate verification.
 
+`scripts/deploy-remote.sh`'s and `scripts/verify-deployment.sh`'s built-in health checks
+only speak plain `http://` — with `server.tls.enabled = true` they report `HEALTH_FAIL`/
+`FAIL` even on a perfectly healthy daemon, because the daemon is now correctly TLS-only.
+That's expected, not a broken deployment; verify by hand instead:
+
+```bash
+curl -sSk https://127.0.0.1:9188/api/v1/health
+```
+
+(`-k` accepts the self-signed cert unless you've mounted a real one).
+
 ## Configurable health thresholds (v0.1.4)
 
 Off by default. When enabled, thermal zones and SocketCAN controller error counters are

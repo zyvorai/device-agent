@@ -105,6 +105,12 @@ real one at the same paths (never overwritten if already present). Compose
 it with `auth.mode = "bearer"` for a non-loopback bind: encrypted transport
 *and* a required token, without needing a full mTLS enrollment flow.
 
+`scripts/deploy-remote.sh`'s and `scripts/verify-deployment.sh`'s built-in
+health checks are plain `http://` only — once `server.tls.enabled = true`,
+expect them to report failure even on a healthy daemon; that's the TLS-only
+listener working correctly. Verify with `curl -sSk https://127.0.0.1:9188/api/v1/health`
+instead (`-k` accepts the self-signed cert unless you've mounted a real one).
+
 ## Same-host Unix socket (additive)
 
 ```toml

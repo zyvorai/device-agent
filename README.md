@@ -233,6 +233,29 @@ CORS is opt-in: only needed for a dashboard/integration served from a different 
 than the agent itself. Rate limiting defaults on with generous limits since it only ever
 affects abusive traffic, not normal usage.
 
+## TLS (v0.1.5, optional)
+
+Off by default. `server.tls.enabled` serves plain HTTPS on the same TCP listener — unlike
+`auth.mode = "mtls"`, no client certificate is ever required, so an ordinary browser can
+reach `https://<host>:9188/` directly with no extra setup:
+
+```toml
+[server.tls]
+enabled = true
+cert_path = "/etc/zyvor/device-agent/tls/server.crt"
+key_path = "/etc/zyvor/device-agent/tls/server.key"
+```
+
+If no cert exists at those paths, one is generated automatically on first start (a
+self-signed cert covering `localhost`/`127.0.0.1`/`::1`/hostname/detected local IP) — a
+browser will show a trust warning until you accept it or replace the cert with a real one
+by mounting it at the same paths, which is never overwritten if already present.
+Independent of `auth.mode`: enabling TLS doesn't change who can call the API, only
+whether the connection is encrypted, so pair `server.tls.enabled = true` with
+`auth.mode = "bearer"` for anything beyond a loopback bind. `auth.mode = "mtls"` still
+takes its own separate TLS path (see the mTLS section above) rather than this one, since
+that mode ties TLS to client-certificate verification.
+
 ## Configurable health thresholds (v0.1.4)
 
 Off by default. When enabled, thermal zones and SocketCAN controller error counters are

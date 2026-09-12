@@ -55,6 +55,33 @@ pub struct ServerConfig {
     pub unix_socket: UnixSocketConfig,
     pub cors: CorsConfig,
     pub rate_limit: RateLimitConfig,
+    pub tls: TlsConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TlsConfig {
+    /// Off by default — a plain `cargo build`/existing deployment keeps
+    /// serving plain HTTP unless this is explicitly turned on. Independent
+    /// of `auth.mode`: unlike `auth.mode = "mtls"`, this never requires a
+    /// client certificate, it only encrypts the connection and proves the
+    /// daemon's own identity. See `src/tls.rs`.
+    pub enabled: bool,
+    /// If missing at startup and `enabled`, a self-signed cert is
+    /// generated here automatically. Mount a real cert at the same path to
+    /// use one instead — an existing cert/key here is never overwritten.
+    pub cert_path: String,
+    pub key_path: String,
+}
+
+impl Default for TlsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            cert_path: "/etc/zyvor/device-agent/tls/server.crt".into(),
+            key_path: "/etc/zyvor/device-agent/tls/server.key".into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -305,6 +332,7 @@ impl Default for ServerConfig {
             unix_socket: UnixSocketConfig::default(),
             cors: CorsConfig::default(),
             rate_limit: RateLimitConfig::default(),
+            tls: TlsConfig::default(),
         }
     }
 }

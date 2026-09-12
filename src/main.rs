@@ -16,7 +16,7 @@ use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 use zyvor_device_agent::{
     api, auth, can_capture, config::Config, hardware, identity::DeviceIdentity, integrations,
-    plugins, state::AppState,
+    plugins, state::AppState, tls,
 };
 
 #[derive(Debug, Parser)]
@@ -217,30 +217,55 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     let addr: SocketAddr = cfg.server.listen.parse().context("invalid server.listen")?;
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
 
-    if cfg.auth.mode == "mtls" {
-        let rustls_config = auth::mtls::load_server_config(&cfg).await?;
-        let handle = axum_server::Handle::new();
-        tokio::spawn({
-            let handle = handle.clone();
-            let shutdown = shutdown.clone();
-            async move {
-                shutdown_signal(shutdown).await;
-                // Matches the systemd unit's TimeoutStopSec=15 for the plain-TCP path.
-                handle.graceful_shutdown(Some(Duration::from_secs(15)));
-            }
-        });
-        axum_server::bind_rustls(addr, rustls_config)
-            .handle(handle)
-            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-            .await?;
-    } else {
-        let listener = TcpListener::bind(addr).await?;
-        axum::serve(
-            listener,
-            app.into_make_service_with_connect_info::<SocketAddr>(),
+    // `auth.mode = "mtls"` and `server.tls.enabled` are independent TLS
+    // sources: the former ties TLS to the mTLS identity/client-verification
+    // system (see `auth::mtls`), the latter is plain server-side TLS (no
+    // client cert ever required) via a self-signed-by-default cert (see
+    // `tls::ensure_self_signed_cert`). At most one applies; `auth.mode =
+    // "mtls"` wins if both are somehow set, since it's the more specific
+    // configuration.
+    let rustls_config = if cfg.auth.mode == "mtls" {
+        Some(auth::mtls::load_server_config(&cfg).await?)
+    } else if cfg.server.tls.enabled {
+        let tls = &cfg.server.tls;
+        tls::ensure_self_signed_cert(&tls.cert_path, &tls.key_path)?;
+        Some(
+            axum_server::tls_rustls::RustlsConfig::from_pem_file(&tls.cert_path, &tls.key_path)
+                .await
+                .with_context(|| {
+                    format!("loading TLS cert {} / key {}", tls.cert_path, tls.key_path)
+                })?,
         )
-        .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
-        .await?;
+    } else {
+        None
+    };
+
+    match rustls_config {
+        Some(rustls_config) => {
+            let handle = axum_server::Handle::new();
+            tokio::spawn({
+                let handle = handle.clone();
+                let shutdown = shutdown.clone();
+                async move {
+                    shutdown_signal(shutdown).await;
+                    // Matches the systemd unit's TimeoutStopSec=15 for the plain-TCP path.
+                    handle.graceful_shutdown(Some(Duration::from_secs(15)));
+                }
+            });
+            axum_server::bind_rustls(addr, rustls_config)
+                .handle(handle)
+                .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+                .await?;
+        }
+        None => {
+            let listener = TcpListener::bind(addr).await?;
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
+            .await?;
+        }
     }
     info!("shutdown complete");
     Ok(())

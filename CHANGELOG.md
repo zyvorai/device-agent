@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.5-dev — 2026-09-12
+
+- Add optional native TLS for the TCP listener: `server.tls.enabled` (off
+  by default) serves plain HTTPS — no client certificate ever required,
+  unlike `auth.mode = "mtls"` — so an ordinary browser can reach
+  `https://<host>:9188/` directly. If no cert exists at
+  `server.tls.cert_path`/`key_path`, one is generated automatically on
+  first start (`src/tls.rs`, `rcgen::generate_simple_self_signed`, SANs:
+  localhost/127.0.0.1/::1/hostname/detected local IP), mirroring
+  `../fabric`'s `zyvor-fabricd::tls` module; a real cert can simply be
+  mounted at the same paths instead, and an existing cert/key there is
+  never overwritten. Independent of `auth.mode`: TLS and bearer/mtls/none
+  auth compose (e.g. `server.tls.enabled = true` + `auth.mode = "bearer"`
+  gives an encrypted transport with a required token, the recommended
+  combination for a non-loopback bind). `auth.mode = "mtls"` still takes
+  its own separate TLS path (`auth::mtls::load_server_config`) when set,
+  since that one ties TLS to client-certificate verification.
+
 ## 0.1.4 — 2026-09-12
 
 - Publish multi-arch (`linux/amd64` + `linux/arm64`) container images to

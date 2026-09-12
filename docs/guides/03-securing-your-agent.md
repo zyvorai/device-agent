@@ -1,16 +1,21 @@
 # 3. Securing your agent
 
-Device Agent supports three auth modes plus an optional same-host Unix
-socket. This guide is a decision tree; each mode's full setup lives in its
-own reference doc, linked below.
+Device Agent supports three auth modes, an optional plain-TLS listener, and
+an optional same-host Unix socket. This guide is a decision tree; each
+mode's full setup lives in its own reference doc, linked below.
+
+Auth (who can call the API) and TLS (whether the connection is encrypted)
+are independent choices — except `auth.mode = "mtls"`, which bundles both
+into one TLS handshake.
 
 ## Which mode do I need?
 
 | Situation | Use |
 |---|---|
-| Local development, bound to `127.0.0.1` only | `auth.mode = "none"` (the default) |
-| Bound to a non-loopback address, single shared secret is fine | `auth.mode = "bearer"` |
-| Bound to a non-loopback address, want per-device certificate identity (fleet of many devices, cert rotation, no shared secret to leak) | `auth.mode = "mtls"` |
+| Local development, bound to `127.0.0.1` only | `auth.mode = "none"` (the default), no TLS needed |
+| Bound to a non-loopback address, single shared secret is fine | `auth.mode = "bearer"` + `server.tls.enabled = true` |
+| Bound to a non-loopback address, want per-device certificate identity (fleet of many devices, cert rotation, no shared secret to leak) | `auth.mode = "mtls"` (bundles its own TLS) |
+| Want `https://` in a browser with no client-cert hassle, auth handled separately or not needed | `server.tls.enabled = true` on its own (self-signed by default) |
 | Fleet/Nodra running on the same host and would rather use kernel peer-credential checks than carry a token | `[server.unix_socket]`, additive to whichever of the above you pick for the TCP listener |
 
 `auth.mode = "none"` on anything but a loopback bind is refused by
@@ -80,6 +85,25 @@ be opened. See [`TPM2_IDENTITY.md`](../TPM2_IDENTITY.md).
 
 `scripts/deploy-remote.sh --auth-mode` only knows `none`/`bearer` today —
 set up mTLS by hand with `enroll` as shown above, then deploy.
+
+## Plain TLS, no client cert (additive, pairs with `bearer` or `none`)
+
+```toml
+[server.tls]
+enabled = true
+```
+
+Unlike `auth.mode = "mtls"`, this never asks the caller for a client
+certificate — it only encrypts the connection and proves the daemon's own
+identity, so `https://<host>:9188/` works in an ordinary browser with zero
+extra setup. If no cert exists at `cert_path`/`key_path` (default
+`/etc/zyvor/device-agent/tls/{server.crt,server.key}`), one is generated
+automatically on first start (self-signed, covering
+`localhost`/`127.0.0.1`/`::1`/hostname/detected local IP) — a browser will
+show a trust warning until you accept it once, or replace the cert with a
+real one at the same paths (never overwritten if already present). Compose
+it with `auth.mode = "bearer"` for a non-loopback bind: encrypted transport
+*and* a required token, without needing a full mTLS enrollment flow.
 
 ## Same-host Unix socket (additive)
 

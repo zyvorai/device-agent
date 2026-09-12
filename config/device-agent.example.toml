@@ -24,6 +24,17 @@ enabled = true
 requests_per_second = 20
 burst = 40
 
+[server.tls]
+# Off by default. Independent of [auth] mode: unlike auth.mode = "mtls", this
+# never requires a client certificate — it only encrypts the connection and
+# proves the daemon's own identity, so an ordinary browser can reach
+# https://<host>:9188/ with no extra setup. If no cert exists at the paths
+# below, one is generated automatically on first start (see src/tls.rs).
+# Mount a real cert at the same paths instead if you have one.
+enabled = false
+cert_path = "/etc/zyvor/device-agent/tls/server.crt"
+key_path = "/etc/zyvor/device-agent/tls/server.key"
+
 [auth]
 # "none" (default, backward compatible), "bearer", or "mtls". scripts/deploy-remote.sh
 # generates a token and populates auth.bearer.token_hash_file automatically

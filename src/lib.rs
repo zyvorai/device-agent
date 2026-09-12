@@ -15,3 +15,4 @@ pub mod model;
 pub mod plugins;
 pub mod profile;
 pub mod state;
+pub mod tls;

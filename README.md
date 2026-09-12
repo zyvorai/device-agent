@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
   <img src="https://img.shields.io/badge/rust-1.85%2B-orange?logo=rust" alt="Rust 1.85+">
   <img src="https://img.shields.io/badge/platform-arm64%20%7C%20amd64-informational" alt="Platforms: arm64 | amd64">
-  <img src="https://img.shields.io/badge/status-v0.1.4%20production--hardening-yellow" alt="Status: v0.1.4 production-hardening">
+  <img src="https://img.shields.io/badge/status-v0.1.5%20production--hardening-yellow" alt="Status: v0.1.5 production-hardening">
 </p>
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
@@ -363,12 +363,16 @@ src/                    Rust daemon
   integrations/         Nodra and Fleet adapters
   api.rs                 REST API
   plugins.rs             external sensor plugin contract
+  tls.rs                 optional plain-TLS listener (self-signed by default)
 web/dashboard/           React + TypeScript + Vite UX
 config/                  runtime configuration
-packaging/systemd/       Linux service
+packaging/systemd/       Linux service (bare-metal)
+packaging/container/     Linux service (container, Podman-based)
 examples/                plugin examples
 scripts/                 packaging helpers
 docs/                    architecture, roadmap, reference-hardware profile
+docs/guides/             numbered tutorial series (getting started -> production/container)
+docs/assets/             README banner/mark and diagrams
 .github/workflows/       CI and tagged release pipeline
 ```
 

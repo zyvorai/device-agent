@@ -52,13 +52,18 @@ rather than duplicated here, since it changes with nearly every milestone.
 
 ## Security model
 
-v0.1 is intended to bind to a trusted management LAN or localhost. As of v0.1.4: bearer-token
+v0.1 is intended to bind to a trusted management LAN or localhost. As of v0.1.5: bearer-token
 and mTLS API auth (`auth.mode = "bearer" | "mtls"`, the latter via client-side CSR
 enrollment — see `docs/MTLS_ENROLLMENT.md`, optionally backed by a TPM2 via
 `identity.backend = "tpm"` — see `docs/TPM2_IDENTITY.md`), Unix-socket mode with
 peer-credential RBAC, opt-in CORS, per-plugin execution policy (owner/directory allowlists,
 resource limits, an opt-in seccomp-bpf denylist) and opt-in privilege separation for plugin
-subprocesses are done — see `docs/BACKLOG.md`. Still open before GA: signed Fleet inventory
+subprocesses are done — see `docs/BACKLOG.md`. Transport encryption is a separate,
+composable control: `server.tls.enabled` (v0.1.5) terminates plain TLS on the TCP listener
+with no client certificate ever required — self-signed automatically on first start if no
+cert is mounted — independent of `auth.mode`, so `server.tls.enabled = true` plus
+`auth.mode = "bearer"` gives an encrypted transport with a required token without the
+enrollment flow `auth.mode = "mtls"` needs. Still open before GA: signed Fleet inventory
 bridge tokens, and privilege separation for the *daemon's own* physical bus access (it
 intentionally still runs as root — see
 `docs/HARDWARE_PERMISSIONS.md`).

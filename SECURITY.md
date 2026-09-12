@@ -18,6 +18,12 @@ Do not open public issues for suspected security vulnerabilities. Report securit
   The mTLS private key can optionally be generated and held inside a TPM2
   (`identity.backend = "tpm"`, `--features tpm2`) rather than as a plaintext
   file — see `docs/TPM2_IDENTITY.md`.
+- Transport encryption is a separate control from `auth.mode`: as of v0.1.5,
+  `server.tls.enabled` terminates plain TLS on the listener (self-signed
+  automatically if no cert is supplied) without requiring a client
+  certificate. It composes with any `auth.mode`, so a bound-beyond-loopback
+  deployment should generally enable it alongside `auth.mode = "bearer"` at
+  minimum.
 - Device Agent does not operate a certificate authority: `zyvor-device-agent
   enroll` is a client submitting a CSR to an operator-run enrollment
   endpoint, never a signer. Building and operating that endpoint (key

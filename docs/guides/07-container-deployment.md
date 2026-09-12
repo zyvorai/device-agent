@@ -92,11 +92,14 @@ Fedora/RHEL-based images — and is harmless where SELinux isn't in play.)
 ## 4. Persistent state
 
 `auth.mode = "bearer"`'s token hash, `auth.mode = "mtls"`'s enrolled
-identity, and any custom plugin manifests all live under
+identity, any custom plugin manifests, and — if `server.tls.enabled = true`
+(see [3. Securing your agent](03-securing-your-agent.md)) the self-signed
+TLS cert/key at `server.tls.cert_path`/`key_path` — all live under
 `/etc/zyvor/device-agent/` inside the container — ordinary container
 filesystem, gone the moment the container is removed. Give it a named
 volume so re-running or updating the container doesn't force
-re-enrollment:
+re-enrollment, and so an enabled TLS cert isn't regenerated (and the
+browser trust exception invalidated) on every restart:
 
 ```bash
 podman volume create zyvor-device-agent-state

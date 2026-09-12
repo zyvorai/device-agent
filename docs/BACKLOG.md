@@ -32,6 +32,9 @@
 ## P1 — Production hardening
 
 - [x] Local bearer protection when binding beyond loopback (v0.1.4).
+- [x] Optional plain-TLS listener, self-signed by default (v0.1.5 —
+  `server.tls.enabled`, no client certificate required, independent of and
+  composable with `auth.mode`; `src/tls.rs`).
 - [x] Enrollment token + mTLS device certs (v0.1.4 — `auth.mode = "mtls"`,
   `zyvor-device-agent enroll`/`identity`; client-side only, see
   `docs/MTLS_ENROLLMENT.md` for why Device Agent doesn't implement a CA).

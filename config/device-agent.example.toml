@@ -25,7 +25,7 @@ requests_per_second = 20
 burst = 40
 
 [auth]
-# "none" (default, backward compatible) or "bearer". scripts/deploy-remote.sh
+# "none" (default, backward compatible), "bearer", or "mtls". scripts/deploy-remote.sh
 # generates a token and populates auth.bearer.token_hash_file automatically
 # when deploying with --auth-mode bearer.
 mode = "none"
@@ -33,6 +33,22 @@ exempt_paths = ["/api/v1/health", "/api/v1/ready"]
 
 [auth.bearer]
 token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"
+
+# mode = "mtls": run `zyvor-device-agent enroll` first (see [enrollment] below
+# and docs/MTLS_ENROLLMENT.md) to populate cert_file/key_file, then set
+# require_client_cert = true once client_ca_file is in place.
+[auth.mtls]
+cert_file = "/etc/zyvor/device-agent/identity/device-cert.pem"
+key_file = "/etc/zyvor/device-agent/identity/device-key.pem"
+client_ca_file = "/etc/zyvor/device-agent/identity/client-ca.pem"
+require_client_cert = false
+
+[enrollment]
+enabled = false
+server_url = ""
+token_file = "/etc/zyvor/device-agent/identity/enrollment-token"
+ca_bundle_file = ""
+common_name = ""
 
 [device]
 vendor = "Generic"

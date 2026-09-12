@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub server: ServerConfig,
     pub auth: AuthConfig,
+    pub enrollment: EnrollmentConfig,
     pub device: DeviceConfig,
     pub industrial: IndustrialConfig,
     pub nodra: NodraConfig,
@@ -94,11 +95,12 @@ pub struct UnixSocketConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AuthConfig {
-    /// "none" | "bearer" — auth mode enforced on the TCP API listener.
+    /// "none" | "bearer" | "mtls" — auth mode enforced on the TCP API listener.
     pub mode: String,
     /// Route paths that bypass auth entirely (e.g. health probes).
     pub exempt_paths: Vec<String>,
     pub bearer: BearerAuthConfig,
+    pub mtls: MtlsAuthConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +109,76 @@ pub struct BearerAuthConfig {
     /// Path to a file containing the SHA-256 hash (hex) of the accepted bearer token.
     /// The raw token itself is never stored by the daemon.
     pub token_hash_file: String,
+}
+
+/// `auth.mode = "mtls"`: the TCP listener terminates TLS itself (via
+/// `axum-server`'s rustls integration) using the identity issued by
+/// `zyvor-device-agent enroll` (see [`EnrollmentConfig`]), and requires an
+/// incoming client certificate signed by `client_ca_file`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MtlsAuthConfig {
+    /// This device's issued identity certificate (PEM), written by `enroll`.
+    pub cert_file: String,
+    /// This device's private key (PEM, PKCS#8), written by `enroll`. Never
+    /// leaves disk in software mode; see `docs/ROADMAP.md` for the optional
+    /// TPM-backed key provider.
+    pub key_file: String,
+    /// CA bundle (PEM) used to verify an *incoming* client's certificate.
+    /// Distinct from `enrollment.ca_bundle_file`, which verifies the
+    /// enrollment *server's* own TLS certificate during `enroll` - the two
+    /// are logically separate trust decisions even when, in a single-CA
+    /// deployment, they happen to be the same bundle.
+    pub client_ca_file: String,
+    /// If false, the listener still terminates TLS with this device's own
+    /// certificate but accepts connections with no client certificate at
+    /// all - effectively TLS without the "m". Off by default like every
+    /// other hardening field; a real deployment sets this true.
+    pub require_client_cert: bool,
+}
+
+impl Default for MtlsAuthConfig {
+    fn default() -> Self {
+        Self {
+            cert_file: "/etc/zyvor/device-agent/identity/device-cert.pem".into(),
+            key_file: "/etc/zyvor/device-agent/identity/device-key.pem".into(),
+            client_ca_file: "/etc/zyvor/device-agent/identity/client-ca.pem".into(),
+            require_client_cert: false,
+        }
+    }
+}
+
+/// Client-side enrollment: generates a CSR, submits it to a Fleet-compatible
+/// enrollment endpoint, and persists the issued certificate/key for
+/// `auth.mode = "mtls"`. Device Agent never issues or signs certificates
+/// itself - see `docs/MTLS_ENROLLMENT.md` for the protocol and why this
+/// deliberately stops at the client side.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EnrollmentConfig {
+    pub enabled: bool,
+    /// Base URL of the enrollment endpoint, e.g. `https://fleet.example:8443/enroll`.
+    pub server_url: String,
+    /// Path to a single-use enrollment token (bearer-style). Deleted on
+    /// successful enrollment so it can't be replayed.
+    pub token_file: String,
+    /// CA bundle (PEM) used to verify the enrollment server's own TLS
+    /// certificate. Empty uses the system trust store.
+    pub ca_bundle_file: String,
+    /// Common Name to request in the CSR. Empty defaults to `device.serial`.
+    pub common_name: String,
+}
+
+impl Default for EnrollmentConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            server_url: String::new(),
+            token_file: "/etc/zyvor/device-agent/identity/enrollment-token".into(),
+            ca_bundle_file: String::new(),
+            common_name: String::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -240,6 +312,7 @@ impl Default for AuthConfig {
             mode: "none".into(),
             exempt_paths: vec!["/api/v1/health".into(), "/api/v1/ready".into()],
             bearer: BearerAuthConfig::default(),
+            mtls: MtlsAuthConfig::default(),
         }
     }
 }

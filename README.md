@@ -186,6 +186,18 @@ allow_gids = []
 
 Empty `allow_uids`/`allow_gids` deny everyone — both must be explicitly populated.
 
+## mTLS enrollment (v0.1.4)
+
+`auth.mode = "mtls"` moves auth to the TLS layer: the daemon terminates TLS with its own
+issued certificate and, with `require_client_cert = true`, rejects any connection whose
+client certificate isn't signed by `auth.mtls.client_ca_file` — at the handshake, before
+the request reaches application code. `zyvor-device-agent enroll` generates a keypair and
+CSR and submits them to `enrollment.server_url`; Device Agent implements only this client
+side of the handshake and never signs certificates itself — see
+`docs/MTLS_ENROLLMENT.md` for the protocol and why. `serve` refuses to start in `mtls` mode
+until `enroll` has run; `zyvor-device-agent identity` prints the current certificate's
+subject, issuer and validity.
+
 ## CORS and rate limiting (v0.1.4)
 
 Both apply only to the TCP listener (not the Unix socket, where neither concept applies):

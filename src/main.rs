@@ -55,6 +55,15 @@ enum Command {
         /// Plugin manifest name.
         name: String,
     },
+    /// Generate a CSR and submit it to `enrollment.server_url`, persisting the
+    /// issued certificate/key for `auth.mode = "mtls"`.
+    Enroll {
+        /// Reissue even if a certificate already exists at `auth.mtls.cert_file`.
+        #[arg(long)]
+        force: bool,
+    },
+    /// Print this device's current mTLS identity (subject, validity, backend).
+    Identity,
 }
 
 #[tokio::main]
@@ -116,11 +125,40 @@ async fn main() -> anyhow::Result<()> {
                 anyhow::bail!("sensor sample failed")
             }
         }
+        Command::Enroll { force } => auth::enroll::run(&cfg, force).await,
+        Command::Identity => print_identity(&cfg),
         Command::Serve => serve(cfg, cli.config).await,
     }
 }
 
+fn print_identity(cfg: &Config) -> anyhow::Result<()> {
+    let cert_path = &cfg.auth.mtls.cert_file;
+    let pem = std::fs::read(cert_path)
+        .with_context(|| format!("reading {cert_path} (run `enroll` first?)"))?;
+    let (_, pem) =
+        x509_parser::pem::parse_x509_pem(&pem).context("parsing device certificate PEM")?;
+    let cert = pem.parse_x509().context("parsing device certificate DER")?;
+    println!("cert_file:  {cert_path}");
+    println!("backend:    software"); // TPM2-backed identity is a future, feature-gated addition.
+    println!("subject:    {}", cert.subject());
+    println!("issuer:     {}", cert.issuer());
+    println!("not_before: {}", cert.validity().not_before);
+    println!("not_after:  {}", cert.validity().not_after);
+    Ok(())
+}
+
 async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
+    if cfg.auth.mode == "mtls"
+        && (!std::path::Path::new(&cfg.auth.mtls.cert_file).exists()
+            || !std::path::Path::new(&cfg.auth.mtls.key_file).exists())
+    {
+        anyhow::bail!(
+            "auth.mode = \"mtls\" but no identity found at {} / {} - run `zyvor-device-agent enroll` first",
+            cfg.auth.mtls.cert_file,
+            cfg.auth.mtls.key_file
+        );
+    }
+
     let inventory = hardware::collect_inventory(&cfg).await;
     let state = Arc::new(AppState::new(cfg.clone(), inventory));
     let shutdown = CancellationToken::new();
@@ -172,14 +210,33 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     }
 
     let addr: SocketAddr = cfg.server.listen.parse().context("invalid server.listen")?;
-    let listener = TcpListener::bind(addr).await?;
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
-    axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
-    .await?;
+
+    if cfg.auth.mode == "mtls" {
+        let rustls_config = auth::mtls::load_server_config(&cfg.auth.mtls).await?;
+        let handle = axum_server::Handle::new();
+        tokio::spawn({
+            let handle = handle.clone();
+            let shutdown = shutdown.clone();
+            async move {
+                shutdown_signal(shutdown).await;
+                // Matches the systemd unit's TimeoutStopSec=15 for the plain-TCP path.
+                handle.graceful_shutdown(Some(Duration::from_secs(15)));
+            }
+        });
+        axum_server::bind_rustls(addr, rustls_config)
+            .handle(handle)
+            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+            .await?;
+    } else {
+        let listener = TcpListener::bind(addr).await?;
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(shutdown_signal(shutdown.clone()))
+        .await?;
+    }
     info!("shutdown complete");
     Ok(())
 }

@@ -32,8 +32,11 @@
 ## P1 — Production hardening
 
 - [x] Local bearer protection when binding beyond loopback (v0.1.4).
-  mTLS is separately scoped (see `docs/ROADMAP.md` v0.2 — enrollment token +
-  mTLS device certs, not yet started).
+- [x] Enrollment token + mTLS device certs (v0.1.4 — `auth.mode = "mtls"`,
+  `zyvor-device-agent enroll`/`identity`; client-side only, see
+  `docs/MTLS_ENROLLMENT.md` for why Device Agent doesn't implement a CA).
+  TPM2/secure-element-backed key storage is a separate, optional follow-up
+  (see `docs/ROADMAP.md`).
 - [x] Unix-domain-socket API mode (v0.1.4).
 - [x] Linux capability/udev policy documentation per bus (v0.1.4 —
   `docs/HARDWARE_PERMISSIONS.md`).

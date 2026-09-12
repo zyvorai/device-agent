@@ -4,7 +4,11 @@
 //! "bearer"` requires `Authorization: Bearer <token>` on every `/api/*` route and on
 //! `/metrics`, except `auth.exempt_paths`. The daemon never generates or stores the raw
 //! token — only its SHA-256 hash, loaded once at startup from `auth.bearer.token_hash_file`
-//! (see scripts/deploy-remote.sh for how that file gets populated).
+//! (see scripts/deploy-remote.sh for how that file gets populated). `mode = "mtls"` moves
+//! authentication to the TLS layer itself (see [`mtls`]): the listener requires a client
+//! certificate signed by `auth.mtls.client_ca_file` before the handshake even completes,
+//! so this middleware has nothing left to check for that mode. See [`enroll`] for how a
+//! device obtains its own certificate in the first place.
 //!
 //! Everything outside `/api/*`/`/metrics` — the bundled dashboard's static shell
 //! (`index.html`, JS, CSS, served via `ServeDir`) — is unconditionally exempt,
@@ -20,6 +24,8 @@
 //! and browser history.
 
 pub mod bearer;
+pub mod enroll;
+pub mod mtls;
 pub mod uds;
 
 use std::sync::Arc;
@@ -71,6 +77,10 @@ pub async fn dispatch(
             Ok(()) => next.run(request).await,
             Err(message) => unauthorized(message),
         },
+        // The TLS layer (see auth::mtls) already required and verified a
+        // client certificate before this request could ever arrive here -
+        // there is nothing left for application-level middleware to check.
+        "mtls" => next.run(request).await,
         other => {
             tracing::error!(
                 mode = other,

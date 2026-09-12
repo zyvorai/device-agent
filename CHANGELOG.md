@@ -2,6 +2,24 @@
 
 ## 0.1.4-dev — 2026-09-12
 
+- Add `auth.mode = "mtls"` and `zyvor-device-agent enroll`/`identity`:
+  client-side enrollment generates a keypair and CSR, submits them to
+  `enrollment.server_url` with a single-use token, and persists the issued
+  certificate/key. `serve` then terminates TLS itself (via `axum-server`'s
+  rustls integration) using that identity and, when
+  `auth.mtls.require_client_cert = true`, rejects any connection without a
+  client certificate signed by `client_ca_file` at the handshake. Device
+  Agent implements only this client side of the protocol - Fleet's
+  enrollment-token system today issues an opaque bearer token, not a signed
+  certificate, and a production CA (key custody, revocation, rotation) is a
+  separate, security-sensitive project of its own; see
+  `docs/MTLS_ENROLLMENT.md`. New dependencies: `rcgen` (CSR generation),
+  `reqwest` (rustls-backed, for submitting the CSR), `axum-server`+`rustls`
+  (serving mTLS), `rustls-pemfile` and `x509-parser` (reading the resulting
+  identity back for `identity`). Automatic rotation and CRL/OCSP revocation
+  are explicit non-goals for this milestone - reissue manually with
+  `enroll --force`. TPM2/secure-element-backed key storage is a separate,
+  optional follow-up.
 - Add signed `.deb`/`.rpm` packages (amd64) to the release pipeline, built
   via `cargo-deb`/`cargo-generate-rpm` from new `[package.metadata.deb]`/
   `[package.metadata.generate-rpm]` tables in `Cargo.toml` (both fully

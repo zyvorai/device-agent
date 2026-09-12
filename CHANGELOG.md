@@ -1,7 +1,20 @@
 # Changelog
 
-## 0.1.4-dev — 2026-09-12
+## 0.1.4 — 2026-09-12
 
+- Publish multi-arch (`linux/amd64` + `linux/arm64`) container images to
+  `ghcr.io/zyvorai/device-agent` on every tagged release, keyless-signed
+  with cosign and attested for build provenance, alongside the existing
+  `.deb`/`.rpm`/tarball artifacts — new `container` job in
+  `.github/workflows/release.yml`. `ci.yml`'s existing per-push build+smoke-test
+  job (`--load`, local only) is unchanged; this is the first job that
+  actually publishes an artifact. Adds a systemd-supervised alternative to
+  the bare-metal deployment path (`packaging/container/zyvor-device-agent-container.service`,
+  Podman-based) and a new tutorial,
+  `docs/guides/07-container-deployment.md`, covering device/bus passthrough
+  flags, config/state volumes, and running it under systemd — aimed at
+  small ARM64 edge devices where an on-device Rust/Node build is
+  impractical and the amd64-only `.deb`/`.rpm` packages don't apply yet.
 - Add a numbered `docs/guides/` tutorial series (getting started;
   configuration and the API; securing the agent; industrial buses; writing
   a sensor plugin; deploying to production) and a README banner/badge

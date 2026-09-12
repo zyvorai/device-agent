@@ -18,3 +18,4 @@ than repeating them.
 | 4 | [Industrial buses](04-industrial-buses.md) | Monitor CAN health, declare RS485 ports, and turn on read-only CAN capture |
 | 5 | [Writing a sensor plugin](05-writing-a-sensor-plugin.md) | Write, register and sample a new sensor plugin end to end |
 | 6 | [Deploying to production](06-deploying-to-production.md) | Ship a package or remote deployment, reload config live, and scrape metrics |
+| 7 | [Container deployment](07-container-deployment.md) | Pull the published image and run it, with or without systemd supervision |

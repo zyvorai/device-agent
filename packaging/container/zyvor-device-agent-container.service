@@ -1,0 +1,39 @@
+# Runs Zyvor Device Agent from the published container image instead of the
+# bare binary — see packaging/systemd/zyvor-device-agent.service for the
+# direct-binary equivalent, and docs/guides/07-container-deployment.md for
+# the full setup walkthrough (device/bus flags, config/state volumes).
+#
+# This template ships with no --device/--network flags: which buses a given
+# board needs varies per device. Copy this file, add the flags your board
+# needs (see the device/bus table in the guide above), then install it.
+
+[Unit]
+Description=Zyvor Device Agent (container)
+Documentation=https://zyvor.dev
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+ExecStartPre=-/usr/bin/podman rm -f zyvor-device-agent
+ExecStart=/usr/bin/podman run --rm --replace --sdnotify=conmon \
+  --name zyvor-device-agent \
+  -p 9188:9188 \
+  -v /etc/zyvor/device-agent.toml:/etc/zyvor/device-agent.toml:ro,Z \
+  -v zyvor-device-agent-state:/etc/zyvor/device-agent:Z \
+  -v zyvor-device-agent-var:/var/lib/zyvor-device-agent:Z \
+  ghcr.io/zyvorai/device-agent:latest
+ExecReload=/usr/bin/podman kill --signal HUP zyvor-device-agent
+ExecStop=/usr/bin/podman stop -t 15 zyvor-device-agent
+# Do not also pass --restart to `podman run` above: systemd's own
+# Restart=always already supervises the container, and the two fight each
+# other (the container manager and systemd both trying to restart it) if
+# both are set.
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

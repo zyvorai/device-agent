@@ -1,0 +1,84 @@
+<svg width="1200" height="300" viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Zyvor Device Agent">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0d12"/>
+      <stop offset="55%" stop-color="#12151d"/>
+      <stop offset="100%" stop-color="#181c26"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff8a3d"/>
+      <stop offset="100%" stop-color="#ff5f1f"/>
+    </linearGradient>
+    <radialGradient id="chipGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#ff5f1f" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ff5f1f" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+
+  <!-- faint circuit grid -->
+  <g stroke="#2a3040" stroke-width="1" opacity="0.5">
+    <path d="M0 60 H1200"/>
+    <path d="M0 240 H1200"/>
+    <path d="M760 0 V300"/>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+    <text x="64" y="128" font-size="54" font-weight="700" letter-spacing="1"><tspan fill="#f4f5f7">ZYVOR </tspan><tspan fill="url(#orange)">DEVICE AGENT</tspan></text>
+    <text x="66" y="168" fill="#9aa3b2" font-size="19" letter-spacing="0.4">Linux hardware edge agent &#8212; discover the box, expose physical interfaces,</text>
+    <text x="66" y="194" fill="#9aa3b2" font-size="19" letter-spacing="0.4">publish to Nodra, expose Fleet-compatible inventory.</text>
+  </g>
+
+  <!-- accent rule -->
+  <rect x="66" y="214" width="120" height="4" rx="2" fill="url(#orange)"/>
+
+  <!-- chip + bus motif -->
+  <g transform="translate(940,150)">
+    <circle r="92" fill="url(#chipGlow)"/>
+    <rect x="-46" y="-46" width="92" height="92" rx="10" fill="#181c26" stroke="url(#orange)" stroke-width="2.5"/>
+    <rect x="-26" y="-26" width="52" height="52" rx="4" fill="#0b0d12" stroke="#3a4152" stroke-width="1.5"/>
+    <g fill="none" stroke="url(#orange)" stroke-width="2.5" stroke-linecap="round">
+      <path d="M-46 -18 H-64"/>
+      <path d="M-46 0 H-64"/>
+      <path d="M-46 18 H-64"/>
+      <path d="M46 -18 H64"/>
+      <path d="M46 0 H64"/>
+      <path d="M46 18 H64"/>
+      <path d="M-18 -46 V-64"/>
+      <path d="M18 -46 V-64"/>
+      <path d="M-18 46 V64"/>
+      <path d="M18 46 V64"/>
+    </g>
+
+    <!-- bus labels around the chip -->
+    <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#c7cddb">
+      <text x="-190" y="-56" text-anchor="middle">GPIO</text>
+      <text x="-190" y="4" text-anchor="middle">I2C</text>
+      <text x="-190" y="64" text-anchor="middle">SPI</text>
+      <text x="190" y="-56" text-anchor="middle">UART</text>
+      <text x="190" y="4" text-anchor="middle">CAN</text>
+      <text x="190" y="64" text-anchor="middle">USB</text>
+    </g>
+    <g stroke="#3a4152" stroke-width="1.5" fill="none">
+      <path d="M-64 -18 L-170 -56"/>
+      <path d="M-64 0 L-170 4"/>
+      <path d="M-64 18 L-170 64"/>
+      <path d="M64 -18 L170 -56"/>
+      <path d="M64 0 L170 4"/>
+      <path d="M64 18 L170 64"/>
+    </g>
+    <g fill="url(#orange)">
+      <circle cx="-170" cy="-56" r="3.5"/>
+      <circle cx="-170" cy="4" r="3.5"/>
+      <circle cx="-170" cy="64" r="3.5"/>
+      <circle cx="170" cy="-56" r="3.5"/>
+      <circle cx="170" cy="4" r="3.5"/>
+      <circle cx="170" cy="64" r="3.5"/>
+    </g>
+  </g>
+</svg>

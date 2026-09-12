@@ -1,25 +1,31 @@
-# Zyvor Device Agent
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Zyvor Device Agent" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/zyvorai/device-agent/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/zyvorai/device-agent/ci.yml?branch=main&label=CI&logo=github" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <img src="https://img.shields.io/badge/rust-1.85%2B-orange?logo=rust" alt="Rust 1.85+">
+  <img src="https://img.shields.io/badge/platform-arm64%20%7C%20amd64-informational" alt="Platforms: arm64 | amd64">
+  <img src="https://img.shields.io/badge/status-v0.1.4%20production--hardening-yellow" alt="Status: v0.1.4 production-hardening">
+</p>
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
 
-**Status:** v0.1.4 production-hardening development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
+## Contents
 
-```text
-Generic reference / Linux edge hardware
-            |
-            v
-     Zyvor Device Agent
- identity · health · GPIO · I2C · SPI · UART · CAN · RX-only capture · USB · watchdog
-            |
-       +----+-------------------+
-       |                        |
-       v                        v
-     Nodra                    Fleet
- protocol + data plane      control plane
-       |
- Modbus / J1939 / OPC-UA
- BLE / serial / LoRaWAN
-```
+- [Why this exists](#why-this-exists)
+- [v0.1 scope](#v01-scope)
+- [Quick start](#quick-start)
+- [API](#api)
+- [Documentation: guides, reference, architecture](#documentation)
+- [Product boundary](#product-boundary)
+- [Repository map](#repository-map)
+- [License](#license)
+
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="Generic reference Linux edge hardware feeds Zyvor Device Agent, which discovers identity, health, GPIO, I2C, SPI, UART, CAN, read-only CAN capture, USB and watchdog state, then hands that off to Nodra for protocol and data-plane work and to Fleet for control-plane/lifecycle. Nodra in turn owns Modbus, J1939, OPC-UA, BLE, serial and LoRaWAN protocol decoding." width="720">
+</p>
 
 ## Why this exists
 
@@ -332,11 +338,41 @@ docs/                    architecture, roadmap, reference-hardware profile
 
 A clean ARM64 reference unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
 
-See `docs/QUICKSTART.md`, `docs/REFERENCE_HARDWARE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`,
-`docs/INDUSTRIAL_BUSES.md`, `docs/INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`,
-`docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md`, `docs/HARDWARE_PERMISSIONS.md`,
-`docs/PLUGIN_PROTOCOL.md`, `docs/MTLS_ENROLLMENT.md`, `docs/TPM2_IDENTITY.md` and
-`docs/ROADMAP.md`.
+See the [Documentation](#documentation) section below for the full walkthrough, from first boot to Fleet enrollment.
+
+## Documentation
+
+New to Device Agent? Start with the tutorials — they're narrative, step-by-step
+walkthroughs. Already know what you're doing and just need a fact? Jump
+straight to the reference doc.
+
+### Tutorials — `docs/guides/`
+
+A numbered series meant to be read in order the first time through; see
+[`docs/guides/README.md`](docs/guides/README.md) for the index.
+
+| # | Guide | Covers |
+|---|---|---|
+| 1 | [Getting started](docs/guides/01-getting-started.md) | Build from source, run `inventory`/`doctor`/`serve`, open the dashboard |
+| 2 | [Configuration & the API](docs/guides/02-configuration-and-api.md) | `device-agent.toml`, REST endpoints, `/metrics`, dashboard ↔ API mapping |
+| 3 | [Securing your agent](docs/guides/03-securing-your-agent.md) | Choosing none / bearer / mTLS / Unix socket, CORS, rate limiting |
+| 4 | [Industrial buses](docs/guides/04-industrial-buses.md) | CAN health, RS485 declaration, enabling read-only CAN capture |
+| 5 | [Writing a sensor plugin](docs/guides/05-writing-a-sensor-plugin.md) | The plugin contract end to end, using the I²C temperature example |
+| 6 | [Deploying to production](docs/guides/06-deploying-to-production.md) | `.deb`/`.rpm`, `deploy-remote.sh`, systemd, `SIGHUP` reload, Prometheus |
+
+### How-to / reference
+
+- **Hardware & acceptance** — [`REFERENCE_HARDWARE.md`](docs/REFERENCE_HARDWARE.md), [`V0.1.1_LIVE_HARDWARE.md`](docs/V0.1.1_LIVE_HARDWARE.md), [`HARDWARE_PERMISSIONS.md`](docs/HARDWARE_PERMISSIONS.md), [`INDUSTRIAL_ACCEPTANCE.md`](docs/INDUSTRIAL_ACCEPTANCE.md)
+- **Industrial buses & protocol hand-off** — [`INDUSTRIAL_BUSES.md`](docs/INDUSTRIAL_BUSES.md), [`CAN_CAPTURE.md`](docs/CAN_CAPTURE.md), [`NODRA_J1939_HANDOFF.md`](docs/NODRA_J1939_HANDOFF.md), [`NODRA_MODBUS_RTU_CONTRACT.md`](docs/NODRA_MODBUS_RTU_CONTRACT.md)
+- **Security & identity** — [`MTLS_ENROLLMENT.md`](docs/MTLS_ENROLLMENT.md), [`TPM2_IDENTITY.md`](docs/TPM2_IDENTITY.md)
+- **Plugins** — [`PLUGIN_PROTOCOL.md`](docs/PLUGIN_PROTOCOL.md)
+- **Operations** — [`QUICKSTART.md`](docs/QUICKSTART.md) (systemd + bearer-auth deployment path)
+
+### Architecture & planning
+
+- [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full security-model picture and what's still open before GA
+- [`ROADMAP.md`](docs/ROADMAP.md) / [`BACKLOG.md`](docs/BACKLOG.md) — where this is headed
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) / [`SECURITY.md`](SECURITY.md) / [`CHANGELOG.md`](CHANGELOG.md)
 
 ## License
 

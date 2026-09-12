@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" role="img" aria-label="Generic reference Linux edge hardware feeds Zyvor Device Agent, which discovers identity, health, GPIO, I2C, SPI, UART, CAN, read-only CAN capture, USB and watchdog state, then hands that off to Nodra for protocol and data-plane work and to Fleet for control-plane/lifecycle. Nodra in turn owns Modbus, J1939, OPC-UA, BLE, serial and LoRaWAN protocol decoding.">
+  <defs>
+    <linearGradient id="arch-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0d12"/>
+      <stop offset="55%" stop-color="#12151d"/>
+      <stop offset="100%" stop-color="#181c26"/>
+    </linearGradient>
+    <linearGradient id="arch-orange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff8a3d"/>
+      <stop offset="100%" stop-color="#ff5f1f"/>
+    </linearGradient>
+    <marker id="arch-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b2"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="460" rx="24" fill="url(#arch-bg)"/>
+
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+    <!-- hardware -->
+    <rect x="280" y="24" width="340" height="56" rx="12" fill="#181c26" stroke="#3a4152" stroke-width="1.5"/>
+    <text x="450" y="58" text-anchor="middle" font-size="15" font-weight="600" fill="#f4f5f7">Generic reference / Linux edge hardware</text>
+
+    <!-- device agent (accent) -->
+    <rect x="210" y="140" width="480" height="92" rx="14" fill="url(#arch-orange)" stroke="#c94a10" stroke-width="1.5"/>
+    <text x="450" y="176" text-anchor="middle" font-size="19" font-weight="700" fill="#181209">Zyvor Device Agent</text>
+    <text x="450" y="198" text-anchor="middle" font-size="12.5" fill="#2a1608">identity &#183; health &#183; GPIO &#183; I2C &#183; SPI &#183; UART</text>
+    <text x="450" y="216" text-anchor="middle" font-size="12.5" fill="#2a1608">CAN &#183; RX-only CAN capture &#183; USB &#183; watchdog</text>
+
+    <!-- nodra / fleet -->
+    <rect x="140" y="300" width="230" height="74" rx="12" fill="#181c26" stroke="url(#arch-orange)" stroke-width="1.5"/>
+    <text x="255" y="332" text-anchor="middle" font-size="16" font-weight="700" fill="#f4f5f7">Nodra</text>
+    <text x="255" y="352" text-anchor="middle" font-size="12" fill="#9aa3b2">protocol + data plane</text>
+
+    <rect x="530" y="300" width="230" height="74" rx="12" fill="#181c26" stroke="#3a4152" stroke-width="1.5"/>
+    <text x="645" y="332" text-anchor="middle" font-size="16" font-weight="700" fill="#f4f5f7">Fleet</text>
+    <text x="645" y="352" text-anchor="middle" font-size="12" fill="#9aa3b2">control plane</text>
+
+    <!-- nodra's protocol adapters -->
+    <text x="255" y="418" text-anchor="middle" font-size="12.5" fill="#c7cddb">Modbus &#183; J1939 &#183; OPC-UA</text>
+    <text x="255" y="436" text-anchor="middle" font-size="12.5" fill="#c7cddb">BLE &#183; serial &#183; LoRaWAN</text>
+  </g>
+
+  <!-- connectors -->
+  <g stroke="#9aa3b2" stroke-width="2" fill="none">
+    <line x1="450" y1="80" x2="450" y2="136" marker-end="url(#arch-arrow)"/>
+    <line x1="390" y1="232" x2="270" y2="296" marker-end="url(#arch-arrow)"/>
+    <line x1="510" y1="232" x2="635" y2="296" marker-end="url(#arch-arrow)"/>
+    <line x1="255" y1="374" x2="255" y2="398" marker-end="url(#arch-arrow)"/>
+  </g>
+</svg>

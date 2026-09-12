@@ -2,6 +2,17 @@
 
 ## 0.1.4-dev — 2026-09-12
 
+- Add a numbered `docs/guides/` tutorial series (getting started;
+  configuration and the API; securing the agent; industrial buses; writing
+  a sensor plugin; deploying to production) and a README banner/badge
+  header, replacing the plain-text architecture diagram with an SVG in the
+  same visual family as the new banner. Docs only — no behavior change.
+  Every command, endpoint, config key, and CLI flag referenced in the new
+  guides was cross-checked against the current source
+  (`src/api.rs`'s route table, `config/device-agent.example.toml`,
+  `scripts/deploy-remote.sh`'s flag parsing) rather than written from
+  memory.
+
 - Add optional Linux hotplug event source: `--features hotplug` (off by
   default) opens a raw `NETLINK_KOBJECT_UEVENT` socket (`netlink-sys`, pure
   Rust) alongside the existing polling inventory refresh, and a kernel

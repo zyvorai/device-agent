@@ -203,6 +203,7 @@ fn hardening_is_needed(cfg: &PluginConfig) -> bool {
         || cfg.max_memory_bytes.is_some()
         || cfg.max_cpu_seconds.is_some()
         || cfg.max_processes.is_some()
+        || cfg.seccomp_enabled
 }
 
 /// Drops the plugin subprocess to `plugins.run_as_uid`/`run_as_gid` when configured
@@ -221,6 +222,7 @@ fn apply_process_hardening(cmd: &mut Command, cfg: &Config) {
     let max_memory_bytes = cfg.plugins.max_memory_bytes;
     let max_cpu_seconds = cfg.plugins.max_cpu_seconds;
     let max_processes = cfg.plugins.max_processes;
+    let seccomp_enabled = cfg.plugins.seccomp_enabled;
     let drop_identity = uid.is_some() || gid.is_some();
     // Deliberately does the whole drop inside one pre_exec closure rather than via
     // Command::uid()/gid(): those call setuid() internally as soon as they're applied,
@@ -253,6 +255,12 @@ fn apply_process_hardening(cmd: &mut Command, cfg: &Config) {
             if let Some(count) = max_processes {
                 set_rlimit(rustix::process::Resource::Nproc, count)?;
             }
+            // Applied last, right before exec: constrains the process's final
+            // state rather than something the identity drop/rlimits above
+            // could still need to work around.
+            if seccomp_enabled {
+                apply_seccomp_denylist()?;
+            }
             Ok(())
         });
     }
@@ -265,6 +273,64 @@ fn set_rlimit(resource: rustix::process::Resource, value: u64) -> std::io::Resul
         maximum: Some(value),
     };
     rustix::process::setrlimit(resource, limit).map_err(std::io::Error::from)
+}
+
+/// Syscalls specifically dangerous for a sandboxed subprocess to have (privilege
+/// escalation, container/namespace escape, kernel-module loading, tracing another
+/// process, ...) - deliberately a denylist, not an allowlist: plugins are arbitrary
+/// external scripts/binaries with unknowable syscall needs, so shipping a strict
+/// allowlist as a default would be unsafe to turn on. Matches how Docker's own
+/// default seccomp profile works (broad allow, block the specifically dangerous
+/// syscalls), layered on top of the uid/gid drop and rlimits above as defense in
+/// depth, not a replacement for them.
+#[cfg(target_os = "linux")]
+const SECCOMP_DENYLIST: &[i64] = &[
+    libc::SYS_ptrace,
+    libc::SYS_mount,
+    libc::SYS_umount2,
+    libc::SYS_pivot_root,
+    libc::SYS_reboot,
+    libc::SYS_kexec_load,
+    libc::SYS_init_module,
+    libc::SYS_finit_module,
+    libc::SYS_delete_module,
+    libc::SYS_acct,
+    libc::SYS_swapon,
+    libc::SYS_swapoff,
+    libc::SYS_bpf,
+    libc::SYS_perf_event_open,
+    libc::SYS_keyctl,
+    libc::SYS_add_key,
+    libc::SYS_request_key,
+    libc::SYS_setns,
+    libc::SYS_unshare,
+];
+
+/// Installs a seccomp-bpf filter on the calling (post-fork, pre-exec) process that
+/// returns EPERM for every syscall in `SECCOMP_DENYLIST` and allows everything else -
+/// a clean, loggable syscall failure for a blocked plugin rather than an opaque
+/// SIGSYS kill.
+#[cfg(target_os = "linux")]
+fn apply_seccomp_denylist() -> std::io::Result<()> {
+    use seccompiler::{BpfProgram, SeccompAction, SeccompFilter, TargetArch};
+    use std::collections::BTreeMap;
+
+    let rules: BTreeMap<i64, Vec<seccompiler::SeccompRule>> = SECCOMP_DENYLIST
+        .iter()
+        .map(|&syscall| (syscall, Vec::new()))
+        .collect();
+    let target_arch: TargetArch = std::env::consts::ARCH
+        .try_into()
+        .map_err(std::io::Error::other)?;
+    let filter = SeccompFilter::new(
+        rules,
+        SeccompAction::Allow,
+        SeccompAction::Errno(libc::EPERM as u32),
+        target_arch,
+    )
+    .map_err(std::io::Error::other)?;
+    let program: BpfProgram = filter.try_into().map_err(std::io::Error::other)?;
+    seccompiler::apply_filter(&program).map_err(std::io::Error::other)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -675,5 +741,37 @@ mod tests {
             ..Default::default()
         };
         assert!(hardening_is_needed(&cfg));
+    }
+
+    #[test]
+    fn hardening_needed_for_seccomp_only() {
+        let cfg = PluginConfig {
+            seccomp_enabled: true,
+            ..Default::default()
+        };
+        assert!(hardening_is_needed(&cfg));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn seccomp_denylist_allows_normal_command_execution() {
+        // Real child process (not calling apply_seccomp_denylist() in this test
+        // process itself, which would poison the whole multi-threaded test
+        // runner with a seccomp filter it can never remove) - proves the
+        // denylist doesn't break the ordinary exec/write/exit path a plugin
+        // needs, only the specifically dangerous syscalls it targets.
+        // Fully qualified: this file's own `Command` import is tokio's async
+        // variant (needed by apply_process_hardening's real callers), but this
+        // test only needs a plain synchronous child process - which needs the
+        // std (not tokio) CommandExt trait in scope for pre_exec.
+        use std::os::unix::process::CommandExt as _;
+        let mut cmd = std::process::Command::new("/bin/sh");
+        cmd.arg("-c").arg("echo seccomp-ok");
+        unsafe {
+            cmd.pre_exec(apply_seccomp_denylist);
+        }
+        let output = cmd.output().unwrap();
+        assert!(output.status.success(), "status: {:?}", output.status);
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "seccomp-ok");
     }
 }

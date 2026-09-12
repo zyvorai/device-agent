@@ -105,3 +105,6 @@ allowed_directories = []
 # max_memory_bytes = 67108864
 # max_cpu_seconds = 5
 # max_processes = 4
+# Linux only: seccomp-bpf denylist blocking ptrace/mount/module-loading/etc. with EPERM,
+# on top of the identity drop and rlimits above. See docs/PLUGIN_PROTOCOL.md.
+seccomp_enabled = false

@@ -75,6 +75,7 @@ allowed_directories = ["/usr/lib/zyvor-device-agent/plugins"]
 max_memory_bytes = 67108864
 max_cpu_seconds = 5
 max_processes = 4
+seccomp_enabled = true
 ```
 
 - `run_as_uid`/`run_as_gid` (Linux only): drop the plugin subprocess to this
@@ -88,5 +89,16 @@ max_processes = 4
 - `max_memory_bytes`/`max_cpu_seconds`/`max_processes` (Linux only):
   `RLIMIT_AS`/`RLIMIT_CPU`/`RLIMIT_NPROC` applied to the subprocess — the
   last one in particular guards against a plugin that fork-bombs.
+- `seccomp_enabled` (Linux only): installs a seccomp-bpf filter in the
+  subprocess that returns `EPERM` for a fixed denylist of dangerous syscalls
+  (`ptrace`, `mount`/`umount2`/`pivot_root`, `reboot`/`kexec_load`,
+  `init_module`/`finit_module`/`delete_module`, `acct`, `swapon`/`swapoff`,
+  `bpf`, `perf_event_open`, `keyctl`/`add_key`/`request_key`, `setns`,
+  `unshare`) and allows everything else. Deliberately a denylist, not an
+  allowlist — plugins are arbitrary external scripts/binaries with
+  unknowable syscall needs, so a strict allowlist isn't safe to ship as a
+  default. Layered on top of the identity drop and rlimits above as
+  defense-in-depth, not a replacement for them.
 
-All of these default to unrestricted/unlimited, matching pre-v0.1.4 behavior.
+All of these default to unrestricted/unlimited/disabled, matching pre-v0.1.4
+behavior.

@@ -58,3 +58,6 @@ on inherited supplementary groups.
   cannot regain privileges even if its binary is later replaced with something
   setuid-root, which is the property that makes the privilege drop meaningful defense
   in depth rather than cosmetic.
+- `plugins.seccomp_enabled = true` adds a further layer: even a plugin binary that's
+  compromised or malicious can't `ptrace` another process, load a kernel module, or
+  remount/pivot the filesystem — see `docs/PLUGIN_PROTOCOL.md` for the exact denylist.

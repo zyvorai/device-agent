@@ -48,9 +48,9 @@
 - [x] Graceful config reload without a full restart (v0.1.4 — `SIGHUP`;
   `server.listen`/`unix_socket`/`dashboard_dir` and the Nodra/CAN-capture
   connections still need a restart, everything else applies live).
-- [ ] `seccomp` profiles for plugin subprocess execution — mentioned in
-  `docs/ARCHITECTURE.md`'s security-model list but never tracked here until
-  now; needs its own investigation into which syscalls plugins actually need.
+- [x] `seccomp` profiles for plugin subprocess execution (v0.1.4 —
+  `plugins.seccomp_enabled`, a denylist of dangerous syscalls rather than a
+  strict allowlist, since plugins have unknowable syscall needs).
 
 ## Explicitly outside Device Agent v0.x
 

@@ -193,6 +193,11 @@ pub struct PluginConfig {
     /// RLIMIT_NPROC applied to plugin subprocesses, guards against a runaway plugin
     /// fork-bombing. None = no limit.
     pub max_processes: Option<u64>,
+    /// Linux only: installs a seccomp-bpf denylist in the plugin subprocess blocking a
+    /// fixed set of dangerous syscalls (ptrace, mount, module loading, ...) with EPERM,
+    /// layered on top of run_as_uid/run_as_gid and the rlimits above as defense-in-depth
+    /// - not a replacement for them. Off by default like every other hardening field.
+    pub seccomp_enabled: bool,
 }
 
 impl Default for ServerConfig {
@@ -325,6 +330,7 @@ impl Default for PluginConfig {
             max_memory_bytes: None,
             max_cpu_seconds: None,
             max_processes: None,
+            seccomp_enabled: false,
         }
     }
 }

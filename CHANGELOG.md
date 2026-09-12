@@ -11,6 +11,13 @@
   those changed. A config file that fails to parse is logged and ignored,
   keeping the daemon on its last-known-good config. `AppState.config` moves
   from a plain field to an `arc_swap::ArcSwap<Config>` to make this possible.
+- Add opt-in `plugins.seccomp_enabled` (Linux only): installs a seccomp-bpf
+  denylist in the plugin subprocess (`ptrace`, `mount`/`umount2`/
+  `pivot_root`, `reboot`/`kexec_load`, module loading/unloading, `acct`,
+  `swapon`/`swapoff`, `bpf`, `perf_event_open`, `keyctl`/`add_key`/
+  `request_key`, `setns`, `unshare` → `EPERM`, everything else allowed) on
+  top of the existing identity drop and rlimits, as defense-in-depth against
+  a compromised or malicious plugin binary.
 
 - Add bearer-token API auth (`auth.mode = "bearer"`); every route except
   `/api/v1/health` is unauthenticated by default (`mode = "none"`) — same as before.

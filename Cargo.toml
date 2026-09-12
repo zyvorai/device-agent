@@ -20,6 +20,7 @@ anyhow = "1.0"
 arc-swap = "1.9"
 axum = { version = "0.8", features = ["json", "macros"] }
 clap = { version = "4.5", features = ["derive", "env"] }
+libc = "0.2"
 nix = { version = "0.29", features = ["process", "user"] }
 rumqttc = "0.24"
 rustix = { version = "0.38", features = ["process"] }
@@ -35,6 +36,12 @@ tower-http = { version = "0.6", features = ["trace", "fs", "cors"] }
 tower_governor = "0.7"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Linux-only: seccompiler's own libc bindings (SECCOMP_RET_*, prctl PR_SET_NO_NEW_PRIVS,
+# SYS_seccomp) simply don't exist in the libc crate on other platforms - not just unused,
+# an actual compile failure - so this must stay out of the default dependency set entirely.
+[target.'cfg(target_os = "linux")'.dependencies]
+seccompiler = "0.5"
 
 [dev-dependencies]
 http-body-util = "0.1"

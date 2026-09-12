@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.5-dev — 2026-09-12
+## 0.1.5 — 2026-09-12
 
 - Add optional camera support (`--features camera`, off by default like
   `hotplug`/`tpm2`): live snapshot and live MJPEG video stream from an

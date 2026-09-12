@@ -81,7 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build amd64 image
         run: docker buildx build --platform linux/amd64 -t zyvor-device-agent:amd64 --load .
       - name: Build arm64 image

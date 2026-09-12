@@ -196,7 +196,11 @@ CSR and submits them to `enrollment.server_url`; Device Agent implements only th
 side of the handshake and never signs certificates itself — see
 `docs/MTLS_ENROLLMENT.md` for the protocol and why. `serve` refuses to start in `mtls` mode
 until `enroll` has run; `zyvor-device-agent identity` prints the current certificate's
-subject, issuer and validity.
+subject, issuer and validity, plus which key backend produced it.
+
+`identity.backend = "tpm"` (optional, `--features tpm2`) generates and signs that private
+key inside a TPM2 instead of a PKCS#8 file, falling back to software at runtime if the TPM
+can't be opened — see `docs/TPM2_IDENTITY.md`.
 
 ## CORS and rate limiting (v0.1.4)
 

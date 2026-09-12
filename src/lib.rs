@@ -9,6 +9,7 @@ pub mod auth;
 pub mod can_capture;
 pub mod config;
 pub mod hardware;
+pub mod identity;
 pub mod integrations;
 pub mod model;
 pub mod plugins;

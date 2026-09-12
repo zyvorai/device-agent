@@ -15,7 +15,8 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 use zyvor_device_agent::{
-    api, auth, can_capture, config::Config, hardware, integrations, plugins, state::AppState,
+    api, auth, can_capture, config::Config, hardware, identity::DeviceIdentity, integrations,
+    plugins, state::AppState,
 };
 
 #[derive(Debug, Parser)]
@@ -138,8 +139,11 @@ fn print_identity(cfg: &Config) -> anyhow::Result<()> {
     let (_, pem) =
         x509_parser::pem::parse_x509_pem(&pem).context("parsing device certificate PEM")?;
     let cert = pem.parse_x509().context("parsing device certificate DER")?;
+    let backend = DeviceIdentity::load(cfg, &cfg.auth.mtls.key_file)
+        .map(|identity| identity.backend_name())
+        .unwrap_or("unknown (key file unreadable)");
     println!("cert_file:  {cert_path}");
-    println!("backend:    software"); // TPM2-backed identity is a future, feature-gated addition.
+    println!("backend:    {backend}");
     println!("subject:    {}", cert.subject());
     println!("issuer:     {}", cert.issuer());
     println!("not_before: {}", cert.validity().not_before);
@@ -213,7 +217,7 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     info!(%addr, "Zyvor Device Agent v{} listening", env!("CARGO_PKG_VERSION"));
 
     if cfg.auth.mode == "mtls" {
-        let rustls_config = auth::mtls::load_server_config(&cfg.auth.mtls).await?;
+        let rustls_config = auth::mtls::load_server_config(&cfg).await?;
         let handle = axum_server::Handle::new();
         tokio::spawn({
             let handle = handle.clone();

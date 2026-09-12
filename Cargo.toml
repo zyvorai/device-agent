@@ -15,6 +15,12 @@ categories = ["hardware-support", "network-programming"]
 name = "zyvor-device-agent"
 path = "src/main.rs"
 
+# Off by default: must never affect a plain `cargo build`. tss-esapi needs
+# libtss2-dev at build time (via pkg-config) - fine for CI's dedicated
+# `--features tpm2` leg, not something to impose on every build.
+[features]
+tpm2 = ["dep:tss-esapi"]
+
 [dependencies]
 anyhow = "1.0"
 arc-swap = "1.9"
@@ -41,6 +47,7 @@ tower-http = { version = "0.6", features = ["trace", "fs", "cors"] }
 tower_governor = "0.7"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tss-esapi = { version = "7.7", optional = true }
 x509-parser = "0.18.1"
 
 # Linux-only: seccompiler's own libc bindings (SECCOMP_RET_*, prctl PR_SET_NO_NEW_PRIVS,

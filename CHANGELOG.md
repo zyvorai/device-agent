@@ -2,6 +2,32 @@
 
 ## 0.1.4-dev — 2026-09-12
 
+- Add optional TPM2-backed mTLS identity: `identity.backend = "tpm"`
+  (`--features tpm2`, off by default, must never affect a plain `cargo
+  build`) generates and signs the mTLS private key inside a TPM2 via
+  `tss-esapi`'s `TransientKeyContext` instead of a PKCS#8 file on disk -
+  what's persisted to `auth.mtls.key_file` is a small JSON envelope (the
+  TPM's public key plus an encrypted private-key blob only that TPM can
+  unwrap), and every signature (CSR at enroll time, every TLS handshake
+  while serving) re-opens a TPM session rather than loading a private key
+  into process memory. Falls back to a software key at runtime (with a
+  warning) if the TPM can't be opened, since most dev/test boxes have none.
+  Fixed to ECC P-256/ECDSA-SHA256, the combination every TPM2 chip and
+  `swtpm` support well. New `src/identity` module: `DeviceIdentity` wraps
+  either backend behind the same `rcgen::SigningKey` (CSR generation) and
+  `rustls::sign::SigningKey` (TLS handshake signing) interfaces the
+  existing enroll/mtls code already used, so neither needed a rewrite -
+  only a backend behind them changed. CI gains a dedicated `rust-tpm2` job
+  (installs `libtss2-dev`, builds/clippies/tests with `--features tpm2`);
+  `rust-native`'s clippy step drops `--all-features` so it no longer
+  silently depends on that job's system library. Live-verified against
+  `swtpm` (the TPM2 emulator used where no physical TPM is available):
+  ran `enroll` for real with `identity.backend = "tpm"`, confirmed the
+  persisted key file is the JSON envelope (not a PKCS#8 key) and `identity`
+  reports `backend: tpm`, then started `serve` in `auth.mode = "mtls"` and
+  confirmed a real mTLS handshake succeeds - i.e. the TLS signature the
+  emulated TPM produced verifies against the certificate's public key. See
+  `docs/TPM2_IDENTITY.md`.
 - Add `auth.mode = "mtls"` and `zyvor-device-agent enroll`/`identity`:
   client-side enrollment generates a keypair and CSR, submits them to
   `enrollment.server_url` with a single-use token, and persists the issued

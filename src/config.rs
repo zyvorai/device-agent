@@ -11,6 +11,7 @@ pub struct Config {
     pub server: ServerConfig,
     pub auth: AuthConfig,
     pub enrollment: EnrollmentConfig,
+    pub identity: IdentityConfig,
     pub device: DeviceConfig,
     pub industrial: IndustrialConfig,
     pub nodra: NodraConfig,
@@ -177,6 +178,30 @@ impl Default for EnrollmentConfig {
             token_file: "/etc/zyvor/device-agent/identity/enrollment-token".into(),
             ca_bundle_file: String::new(),
             common_name: String::new(),
+        }
+    }
+}
+
+/// Where the mTLS private key backing [`MtlsAuthConfig`] actually lives and
+/// signs. Optional and feature-gated - see `docs/TPM2_IDENTITY.md`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct IdentityConfig {
+    /// "software" (default) or "tpm". `tpm` requires the `tpm2` build
+    /// feature; falls back to `software` at runtime (with a warning) if the
+    /// TPM can't be opened - most dev/test boxes have no TPM.
+    pub backend: String,
+    /// TCTI connection string, e.g. "device:/dev/tpmrm0" or
+    /// "swtpm:host=127.0.0.1,port=2321". Empty uses tss-esapi's own
+    /// environment-variable-based default resolution.
+    pub tpm_tcti: String,
+}
+
+impl Default for IdentityConfig {
+    fn default() -> Self {
+        Self {
+            backend: "software".into(),
+            tpm_tcti: String::new(),
         }
     }
 }

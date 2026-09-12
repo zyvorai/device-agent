@@ -32,9 +32,11 @@
 
 ## v0.2 — Production device identity
 
-- mTLS device certificates
-- secure bootstrap/enrollment token
-- TPM2 / secure-element identity when hardware provides it
+- [x] mTLS device certificates (v0.1.4 — client-side enrollment only; see
+  `docs/MTLS_ENROLLMENT.md`)
+- [x] secure bootstrap/enrollment token (v0.1.4)
+- [x] TPM2 / secure-element identity when hardware provides it (v0.1.4 —
+  `identity.backend = "tpm"`, `--features tpm2`; see `docs/TPM2_IDENTITY.md`)
 - [x] Unix socket + local RBAC (v0.1.4)
 - [x] privilege separation for sensor plugin subprocesses (v0.1.4 —
   `plugins.run_as_uid`/`run_as_gid`; the daemon itself intentionally still

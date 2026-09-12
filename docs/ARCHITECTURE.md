@@ -54,10 +54,11 @@ Sensor plugins are separate executables described by JSON manifests under `plugi
 
 v0.1 is intended to bind to a trusted management LAN or localhost. As of v0.1.4: bearer-token
 and mTLS API auth (`auth.mode = "bearer" | "mtls"`, the latter via client-side CSR
-enrollment — see `docs/MTLS_ENROLLMENT.md`), Unix-socket mode with peer-credential RBAC,
-opt-in CORS, per-plugin execution policy (owner/directory allowlists, resource limits, an
-opt-in seccomp-bpf denylist) and opt-in privilege separation for plugin subprocesses are
-done — see `docs/BACKLOG.md`. Still open before GA: signed Fleet inventory bridge tokens,
-TPM2/secure-element-backed key storage for the mTLS identity, and privilege separation for
-the *daemon's own* physical bus access (it intentionally still runs as root — see
+enrollment — see `docs/MTLS_ENROLLMENT.md`, optionally backed by a TPM2 via
+`identity.backend = "tpm"` — see `docs/TPM2_IDENTITY.md`), Unix-socket mode with
+peer-credential RBAC, opt-in CORS, per-plugin execution policy (owner/directory allowlists,
+resource limits, an opt-in seccomp-bpf denylist) and opt-in privilege separation for plugin
+subprocesses are done — see `docs/BACKLOG.md`. Still open before GA: signed Fleet inventory
+bridge tokens, and privilege separation for the *daemon's own* physical bus access (it
+intentionally still runs as root — see
 `docs/HARDWARE_PERMISSIONS.md`).

@@ -20,11 +20,14 @@
 use std::{fs, path::Path};
 
 use anyhow::{bail, Context};
-use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair};
+use rcgen::{CertificateParams, DistinguishedName, DnType};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::config::Config;
+use crate::{
+    config::Config,
+    identity::{write_identity_file, DeviceIdentity},
+};
 
 #[derive(Debug, Serialize)]
 struct EnrollRequest {
@@ -86,13 +89,13 @@ pub async fn run(cfg: &Config, force: bool) -> anyhow::Result<()> {
         bail!("enrollment.common_name is empty and device.serial is not set");
     }
 
-    let key_pair = KeyPair::generate().context("generating device keypair")?;
+    let identity = DeviceIdentity::generate(cfg)?;
     let mut params = CertificateParams::new(Vec::new()).context("building CSR parameters")?;
     let mut dn = DistinguishedName::new();
     dn.push(DnType::CommonName, common_name.as_str());
     params.distinguished_name = dn;
     let csr = params
-        .serialize_request(&key_pair)
+        .serialize_request(&identity.rcgen_signing_key())
         .context("serializing CSR")?;
     let csr_pem = csr.pem().context("PEM-encoding CSR")?;
 
@@ -136,7 +139,7 @@ pub async fn run(cfg: &Config, force: bool) -> anyhow::Result<()> {
         &cfg.auth.mtls.cert_file,
         enrolled.certificate_pem.as_bytes(),
     )?;
-    write_identity_file(&cfg.auth.mtls.key_file, key_pair.serialize_pem().as_bytes())?;
+    identity.persist(&cfg.auth.mtls.key_file)?;
     if !enrolled.ca_bundle_pem.is_empty() && !cfg.auth.mtls.client_ca_file.is_empty() {
         write_identity_file(
             &cfg.auth.mtls.client_ca_file,
@@ -156,26 +159,9 @@ pub async fn run(cfg: &Config, force: bool) -> anyhow::Result<()> {
     info!(
         cert_file = %cfg.auth.mtls.cert_file,
         key_file = %cfg.auth.mtls.key_file,
+        backend = identity.backend_name(),
         "enrollment complete"
     );
-    Ok(())
-}
-
-fn write_identity_file(path: &str, contents: &[u8]) -> anyhow::Result<()> {
-    let path = Path::new(path);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("creating directory {}", parent.display()))?;
-    }
-    fs::write(path, contents).with_context(|| format!("writing {}", path.display()))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        // Private keys and issued certs alike: readable only by the owner
-        // (expected to be the daemon's own uid, today root).
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-            .with_context(|| format!("setting permissions on {}", path.display()))?;
-    }
     Ok(())
 }
 

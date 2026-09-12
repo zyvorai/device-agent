@@ -50,6 +50,14 @@ token_file = "/etc/zyvor/device-agent/identity/enrollment-token"
 ca_bundle_file = ""
 common_name = ""
 
+# Where the mTLS private key above actually lives. "software" (default) is a
+# plain PKCS#8 file. "tpm" (needs the tpm2 build feature) generates and signs
+# with the key inside a TPM2, falling back to "software" at runtime (with a
+# warning) if the TPM can't be opened - see docs/TPM2_IDENTITY.md.
+[identity]
+backend = "software"
+tpm_tcti = ""
+
 [device]
 vendor = "Generic"
 model = "Reference ARM64 Gateway"

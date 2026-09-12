@@ -1,4 +1,8 @@
-# Hardware bus permissions
+---
+hero:
+  eyebrow: HARDWARE PERMISSIONS
+  title: Hardware bus permissions
+---
 
 Device Agent discovers hardware buses read-only over sysfs/procfs and `/dev` device
 nodes (see `docs/ARCHITECTURE.md` and `docs/INDUSTRIAL_BUSES.md` for CAN specifically).

@@ -1,4 +1,8 @@
-# mTLS enrollment (v0.1.4)
+---
+hero:
+  eyebrow: MTLS ENROLLMENT
+  title: mTLS enrollment (v0.1.4)
+---
 
 `auth.mode = "mtls"` moves API authentication to the TLS layer itself: the
 daemon terminates TLS using its own issued certificate and (when

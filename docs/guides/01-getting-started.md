@@ -1,4 +1,8 @@
-# 1. Getting started
+---
+hero:
+  eyebrow: GUIDES
+  title: 1. Getting started
+---
 
 This is the from-source path: clone the repo, build the daemon and the
 dashboard, and see live hardware inventory on screen in a few minutes. If

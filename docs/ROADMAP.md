@@ -1,4 +1,8 @@
-# Roadmap
+---
+hero:
+  eyebrow: ROADMAP
+  title: Roadmap
+---
 
 ## v0.1 — Hardware Edge MVP
 

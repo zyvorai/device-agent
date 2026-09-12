@@ -1,4 +1,8 @@
-# Nodra J1939 hand-off
+---
+hero:
+  eyebrow: NODRA J1939 HANDOFF
+  title: Nodra J1939 hand-off
+---
 
 Device Agent v0.1.3 exposes raw CAN frames without interpreting them. Nodra owns the protocol layer.
 

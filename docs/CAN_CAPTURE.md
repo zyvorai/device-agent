@@ -1,4 +1,8 @@
-# Read-only CAN capture
+---
+hero:
+  eyebrow: CAN CAPTURE
+  title: Read-only CAN capture
+---
 
 v0.1.3 adds an intentionally narrow SocketCAN receive path for diagnostics and Nodra hand-off.
 

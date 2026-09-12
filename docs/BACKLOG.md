@@ -1,4 +1,8 @@
-# Engineering Backlog
+---
+hero:
+  eyebrow: BACKLOG
+  title: Engineering Backlog
+---
 
 ## v0.1.1 — Live hardware increment
 

@@ -1,4 +1,8 @@
-# Tutorials
+---
+hero:
+  eyebrow: GUIDES
+  title: Tutorials
+---
 
 Still deciding whether to adopt Device Agent, rather than already building
 with it? See the main README's

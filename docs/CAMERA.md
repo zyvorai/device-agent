@@ -1,4 +1,8 @@
-# Camera: live snapshot + live MJPEG stream
+---
+hero:
+  eyebrow: CAMERA
+  title: 'Camera: live snapshot + live MJPEG stream'
+---
 
 Starts the "Edge AI bridge" line item in `docs/ROADMAP.md`, scoped
 deliberately to its device-discovery and live-viewing half — local

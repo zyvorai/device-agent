@@ -1,4 +1,8 @@
-# Industrial acceptance — v0.1.2
+---
+hero:
+  eyebrow: INDUSTRIAL ACCEPTANCE
+  title: Industrial acceptance — v0.1.2
+---
 
 Run on the selected ARM64 board after installing Device Agent.
 

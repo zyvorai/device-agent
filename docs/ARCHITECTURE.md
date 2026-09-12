@@ -1,4 +1,20 @@
-# Architecture
+---
+hero:
+  eyebrow: ARCHITECTURE
+  title: Architecture
+  lead: >-
+    The full security-model picture, and what's still open before GA.
+  highlights:
+    - {value: "9", label: "CLI subcommands in one binary", footnote: "1"}
+    - {value: "3", label: "Auth modes shipped by v0.1.5 — none, bearer, mTLS"}
+    - {value: "3", label: "Downstream planes — Nodra, Fleet, Aether"}
+    - {value: "2", label: "mTLS key backends — software or TPM2"}
+footnotes:
+  - marker: "1"
+    text: "serve, inventory, industrial, doctor, fleet-inventory, plugins, sample, enroll, identity."
+    href: "#processes"
+    href_label: "See Processes, above."
+---
 
 ## Responsibility boundary
 
@@ -67,3 +83,42 @@ enrollment flow `auth.mode = "mtls"` needs. Still open before GA: signed Fleet i
 bridge tokens, and privilege separation for the *daemon's own* physical bus access (it
 intentionally still runs as root — see
 `docs/HARDWARE_PERMISSIONS.md`).
+
+## Take a closer look
+
+=== "Industrial buses"
+
+    Device Agent owns **physical-bus visibility**, not industrial protocol
+    meaning. `GET /api/v1/industrial/can` always reads Linux sysfs for
+    SocketCAN interface state and counters, and — when
+    `industrial.can_ip_command` is set (default: `ip`) — a read-only
+    `ip -j -details -statistics` query for controller state, bitrate,
+    CAN-FD data bitrate and error counters. No CAN frames are opened,
+    injected or decoded. RS485 is never guessed from a generic UART: it
+    appears only when declared in `[industrial].rs485_ports` or present in
+    the Linux device tree. See [Industrial buses](INDUSTRIAL_BUSES.md)
+    and [4. Industrial buses](guides/04-industrial-buses.md).
+
+=== "Camera"
+
+    `--features camera` (off by default) adds live snapshot and MJPEG
+    streaming from an explicitly allowlisted `/dev/video*` — the
+    device-discovery and live-viewing half of the "Edge AI bridge" line
+    item in [`ROADMAP.md`](ROADMAP.md); local inference stays a
+    separate, still-unscoped increment. Acquisition only: no control
+    tuning, no daemon-side recording, and only the single newest frame per
+    camera is cached. `publish_to_nodra` sends health/presence only, never
+    frame bytes. See [`docs/CAMERA.md`](CAMERA.md).
+
+=== "Security & identity"
+
+    As of v0.1.5: `auth.mode` is `none` (default), `bearer` (SHA-256 hash
+    only, never the raw token), or `mtls` (client-side CSR enrollment via
+    `enroll`, optionally backed by a TPM2 through
+    `identity.backend = "tpm"`, falling back to software if the TPM can't
+    be opened). `server.tls.enabled` is a separate, composable control —
+    plain TLS with no client certificate required, self-signed on first
+    start. A same-host Unix socket with peer-credential allowlists
+    (`allow_uids`/`allow_gids`) bypasses both. See
+    [`docs/MTLS_ENROLLMENT.md`](MTLS_ENROLLMENT.md) and
+    [`docs/TPM2_IDENTITY.md`](TPM2_IDENTITY.md).

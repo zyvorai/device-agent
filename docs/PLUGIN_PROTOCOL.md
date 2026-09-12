@@ -1,4 +1,8 @@
-# Sensor Plugin Protocol v1
+---
+hero:
+  eyebrow: PLUGIN PROTOCOL
+  title: Sensor Plugin Protocol v1
+---
 
 A plugin is an executable plus a JSON manifest. Device Agent launches the
 command directly (never through a shell) with `ZYVOR_PLUGIN_PROTOCOL=v1` and

@@ -1,4 +1,8 @@
-# Reference Hardware Profile
+---
+hero:
+  eyebrow: REFERENCE HARDWARE
+  title: Reference Hardware Profile
+---
 
 The first board profile remains declarative because exact device-tree aliases and
 device nodes depend on the selected reference-hardware SKU and BSP. v0.1.1 adds a real

@@ -1,4 +1,8 @@
-# Quickstart: packaged install with bearer auth
+---
+hero:
+  eyebrow: QUICKSTART
+  title: 'Quickstart: packaged install with bearer auth'
+---
 
 This walks through the systemd deployment path end to end: install, enable
 bearer auth, connect the dashboard, and scrape Prometheus metrics. For a

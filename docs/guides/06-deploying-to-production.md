@@ -1,4 +1,8 @@
-# 6. Deploying to production
+---
+hero:
+  eyebrow: GUIDES
+  title: 6. Deploying to production
+---
 
 Three ways to get Device Agent onto a real Linux host, from most to least
 automated, plus how to change its config live afterward and get it into

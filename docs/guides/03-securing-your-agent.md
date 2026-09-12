@@ -1,4 +1,8 @@
-# 3. Securing your agent
+---
+hero:
+  eyebrow: GUIDES
+  title: 3. Securing your agent
+---
 
 Device Agent supports three auth modes, an optional plain-TLS listener, and
 an optional same-host Unix socket. This guide is a decision tree; each

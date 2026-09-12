@@ -1,4 +1,8 @@
-# 8. Camera streaming
+---
+hero:
+  eyebrow: GUIDES
+  title: 8. Camera streaming
+---
 
 Live snapshot and live video from a USB or CSI camera, following the same
 opt-in, explicitly-allowlisted posture as

@@ -1,4 +1,8 @@
-# Troubleshooting
+---
+hero:
+  eyebrow: TROUBLESHOOTING
+  title: Troubleshooting
+---
 
 Real issues, with the actual fix — not a generic checklist. If your symptom
 isn't here, check `journalctl -u zyvor-device-agent -f` first (or

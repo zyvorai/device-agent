@@ -1,4 +1,8 @@
-# 7. Container deployment
+---
+hero:
+  eyebrow: GUIDES
+  title: 7. Container deployment
+---
 
 The bare-metal path in
 [6. Deploying to production](06-deploying-to-production.md) builds on the

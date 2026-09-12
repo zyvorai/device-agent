@@ -1,4 +1,8 @@
-# 4. Industrial buses
+---
+hero:
+  eyebrow: GUIDES
+  title: 4. Industrial buses
+---
 
 Device Agent reports the *presence and health* of CAN and serial/RS485
 buses. It deliberately never decodes protocol payloads (Modbus registers,

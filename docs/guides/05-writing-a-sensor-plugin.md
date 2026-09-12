@@ -1,4 +1,8 @@
-# 5. Writing a sensor plugin
+---
+hero:
+  eyebrow: GUIDES
+  title: 5. Writing a sensor plugin
+---
 
 A plugin is just an executable plus a JSON manifest — Device Agent runs the
 command directly (never through a shell), waits for one JSON object on

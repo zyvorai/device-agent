@@ -1,4 +1,8 @@
-# Industrial buses — Device Agent v0.1.2
+---
+hero:
+  eyebrow: INDUSTRIAL BUSES
+  title: Industrial buses — Device Agent v0.1.2
+---
 
 Device Agent owns **physical-bus visibility**, not industrial protocol meaning.
 

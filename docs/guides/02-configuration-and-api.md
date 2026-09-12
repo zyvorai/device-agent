@@ -1,4 +1,8 @@
-# 2. Configuration & the API
+---
+hero:
+  eyebrow: GUIDES
+  title: 2. Configuration & the API
+---
 
 Once the daemon is running (see
 [1. Getting started](01-getting-started.md)), this guide walks through the

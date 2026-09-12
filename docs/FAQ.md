@@ -1,4 +1,8 @@
-# FAQ
+---
+hero:
+  eyebrow: FAQ
+  title: FAQ
+---
 
 Questions people evaluating Device Agent actually ask, before they've
 decided to adopt it. If you're already building with it, the

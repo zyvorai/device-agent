@@ -1,4 +1,8 @@
-# TPM2-backed mTLS identity (v0.1.4, optional)
+---
+hero:
+  eyebrow: TPM2 IDENTITY
+  title: TPM2-backed mTLS identity (v0.1.4, optional)
+---
 
 `identity.backend = "tpm"` moves the mTLS private key introduced in
 `docs/MTLS_ENROLLMENT.md` into a TPM2, so it is generated and signs entirely

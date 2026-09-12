@@ -1,4 +1,8 @@
-# Nodra Modbus RTU adapter contract
+---
+hero:
+  eyebrow: NODRA MODBUS RTU CONTRACT
+  title: Nodra Modbus RTU adapter contract
+---
 
 This file defines the integration seam for extending Nodra's existing `modbus` connector with an RTU transport. Nodra already has a dependency-free Modbus TCP client/poller; RTU should reuse the same connector/event path rather than create a second protocol stack. It is intentionally **not implemented inside Device Agent**.
 

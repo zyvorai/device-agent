@@ -5,7 +5,7 @@ COPY Cargo.toml Cargo.lock* ./
 COPY src ./src
 RUN cargo build --release --locked || cargo build --release
 
-FROM node:22-bookworm-slim AS dashboard
+FROM node:26-bookworm-slim AS dashboard
 WORKDIR /src/web/dashboard
 COPY web/dashboard/package*.json ./
 RUN npm install --no-audit --no-fund

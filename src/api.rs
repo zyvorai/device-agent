@@ -19,7 +19,9 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 use crate::{auth, hardware, model::IntegrationStatus, plugins, state::AppState};
 
 pub fn router(state: Arc<AppState>) -> Router {
-    let dashboard_dir = state.config.server.dashboard_dir.clone();
+    // Captured once at router-build time: ServeDir is wired to this path for the
+    // life of the process, so changing server.dashboard_dir needs a restart.
+    let dashboard_dir = state.config.load().server.dashboard_dir.clone();
     Router::new()
         .route("/api/v1/health", get(health))
         .route("/api/v1/ready", get(ready))
@@ -73,7 +75,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
 /// here means the refresh task has stalled or panicked.
 async fn ready(State(state): State<Arc<AppState>>) -> Response {
     let status = state.status();
-    let refresh_interval_ms = state.config.device.inventory_refresh_seconds.max(1) * 1000;
+    let refresh_interval_ms = state.config.load().device.inventory_refresh_seconds.max(1) * 1000;
     // Allow generous slack over the configured interval before calling the
     // agent unready - a single slow tick under load must not flip probes.
     let staleness_budget_ms = (refresh_interval_ms.saturating_mul(3)).max(30_000);
@@ -102,7 +104,7 @@ async fn inventory(State(state): State<Arc<AppState>>) -> Json<crate::model::Inv
 }
 
 async fn refresh_inventory(State(state): State<Arc<AppState>>) -> Json<crate::model::Inventory> {
-    let current = hardware::collect_inventory(&state.config).await;
+    let current = hardware::collect_inventory(&state.config.load()).await;
     state.update_inventory(current.clone()).await;
     Json(current)
 }
@@ -171,12 +173,12 @@ async fn thermal(State(state): State<Arc<AppState>>) -> Json<Vec<crate::model::T
 }
 
 async fn integrations(State(state): State<Arc<AppState>>) -> Json<IntegrationStatus> {
+    let config = state.config.load();
     Json(IntegrationStatus {
-        nodra_enabled: state.config.nodra.enabled,
+        nodra_enabled: config.nodra.enabled,
         nodra_connected: state.nodra_connected(),
-        fleet_enabled: state.config.fleet.enabled,
-        fleet_projection_ready: state.config.fleet.enabled
-            && state.config.fleet.mode == "projection",
+        fleet_enabled: config.fleet.enabled,
+        fleet_projection_ready: config.fleet.enabled && config.fleet.mode == "projection",
     })
 }
 
@@ -188,11 +190,12 @@ async fn fleet_inventory(
 }
 
 async fn list_plugins(State(state): State<Arc<AppState>>) -> Json<Vec<plugins::PluginStatus>> {
-    Json(plugins::statuses(&state.config))
+    Json(plugins::statuses(&state.config.load()))
 }
 
 async fn sample_plugin(Path(name): Path<String>, State(state): State<Arc<AppState>>) -> Response {
-    let list = plugins::discover(&state.config);
+    let config = state.config.load_full();
+    let list = plugins::discover(&config);
     let Some(plugin) = list.iter().find(|plugin| plugin.name == name) else {
         return (
             StatusCode::NOT_FOUND,
@@ -200,7 +203,7 @@ async fn sample_plugin(Path(name): Path<String>, State(state): State<Arc<AppStat
         )
             .into_response();
     };
-    let sample = plugins::sample(&state.config, plugin).await;
+    let sample = plugins::sample(&config, plugin).await;
     let status = if sample.ok {
         StatusCode::OK
     } else {
@@ -248,7 +251,7 @@ async fn events(
 }
 
 async fn doctor(State(state): State<Arc<AppState>>) -> Json<crate::model::DoctorReport> {
-    Json(hardware::doctor(&state.config).await)
+    Json(hardware::doctor(&state.config.load()).await)
 }
 
 async fn metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -321,7 +324,10 @@ zyvor_device_agent_fleet_projection_ready {}\n",
         status.can_capture_frames_total,
         status.can_capture_dropped_total,
         u8::from(state.nodra_connected()),
-        u8::from(state.config.fleet.enabled && state.config.fleet.mode == "projection"),
+        u8::from({
+            let config = state.config.load();
+            config.fleet.enabled && config.fleet.mode == "projection"
+        }),
     );
 
     body.push_str(

@@ -88,7 +88,12 @@ unsafe extern "C" {
 }
 
 pub fn spawn(state: Arc<AppState>, shutdown: CancellationToken) {
-    let cfg = state.config.industrial.can_capture.clone();
+    // Captured once at startup: which interfaces to open sockets for is a
+    // structural decision for this capture thread's lifetime. A config
+    // reload (SIGHUP) updates `state.config` for other subsystems, but
+    // changing `industrial.can_capture.*` still needs a restart to take
+    // effect here.
+    let cfg = state.config.load().industrial.can_capture.clone();
     if !cfg.enabled {
         return;
     }

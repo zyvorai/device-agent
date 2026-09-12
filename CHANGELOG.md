@@ -2,6 +2,16 @@
 
 ## 0.1.4-dev — 2026-09-12
 
+- Add config hot-reload: `SIGHUP` re-reads the config file and applies
+  `auth.*`, `thresholds.*`, `plugins.*`, `fleet.*` and the parts of
+  `industrial.*`/`nodra.*` read fresh per-request/tick, without a restart.
+  `server.listen`/`unix_socket`/`dashboard_dir` (bound once at startup) and
+  the Nodra MQTT connection/CAN-capture socket set (opened once at their own
+  startup) still need a restart — `SIGHUP` logs a clear warning when one of
+  those changed. A config file that fails to parse is logged and ignored,
+  keeping the daemon on its last-known-good config. `AppState.config` moves
+  from a plain field to an `arc_swap::ArcSwap<Config>` to make this possible.
+
 - Add bearer-token API auth (`auth.mode = "bearer"`); every route except
   `/api/v1/health` is unauthenticated by default (`mode = "none"`) — same as before.
 - Add an additional Unix-domain-socket API listener with kernel peer-credential

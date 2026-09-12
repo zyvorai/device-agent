@@ -360,14 +360,15 @@ pub async fn scheduler_loop(
             }
             _ = ticker.tick() => {}
         }
-        for manifest in discover(&state.config) {
+        let config = state.config.load_full();
+        for manifest in discover(&config) {
             if !manifest.enabled {
                 continue;
             }
             let cadence = Duration::from_secs(
                 manifest
                     .poll_interval_seconds
-                    .unwrap_or(state.config.plugins.sample_interval_seconds)
+                    .unwrap_or(config.plugins.sample_interval_seconds)
                     .max(1),
             );
             if let Some(last) = last_sampled.get(&manifest.name) {
@@ -376,7 +377,7 @@ pub async fn scheduler_loop(
                 }
             }
 
-            let sample = sample(&state.config, &manifest).await;
+            let sample = sample(&config, &manifest).await;
             if sample.ok {
                 info!(plugin = %manifest.name, sensor = %sample.sensor_id, "sensor sample collected");
             } else {

@@ -13,7 +13,11 @@ pub async fn publisher_loop(
     state: Arc<AppState>,
     shutdown: CancellationToken,
 ) -> anyhow::Result<()> {
-    let cfg = &state.config.nodra;
+    // Captured once at connection setup: broker/port/credentials/client_id and the
+    // telemetry ticker interval below are structural to this MQTT connection and its
+    // loop for its lifetime. A config reload (SIGHUP) won't reconnect or re-time
+    // this loop - restart to pick up changes to `nodra.*`/`device.telemetry_interval_seconds`.
+    let cfg = state.config.load().nodra.clone();
     let initial = state.inventory_snapshot().await;
     let prefix = format!(
         "{}/{}",
@@ -29,7 +33,7 @@ pub async fn publisher_loop(
 
     let (client, mut eventloop) = AsyncClient::new(options, 64);
     let mut ticker = interval(Duration::from_secs(
-        state.config.device.telemetry_interval_seconds.max(1),
+        state.config.load().device.telemetry_interval_seconds.max(1),
     ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut published_samples: BTreeMap<String, u64> = BTreeMap::new();
@@ -60,7 +64,7 @@ pub async fn publisher_loop(
                     publish(&client, topic, false, payload, &state).await;
                 }
             }
-            frame = can_rx.recv(), if state.config.industrial.can_capture.publish_to_nodra => {
+            frame = can_rx.recv(), if state.config.load().industrial.can_capture.publish_to_nodra => {
                 if let Ok(frame) = frame {
                     let topic = format!(
                         "{prefix}/industrial/can/{}/frames",
@@ -94,7 +98,7 @@ pub async fn publisher_loop(
                 }))?;
                 publish(&client, format!("{prefix}/status"), true, health, &state).await;
 
-                if state.config.industrial.publish_to_nodra {
+                if state.config.load().industrial.publish_to_nodra {
                     let industrial = serde_json::to_vec(&inventory.industrial)?;
                     publish(
                         &client,

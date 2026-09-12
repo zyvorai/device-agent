@@ -60,17 +60,12 @@ pub async fn dispatch(
         return next.run(request).await;
     }
 
-    if state
-        .config
-        .auth
-        .exempt_paths
-        .iter()
-        .any(|exempt| exempt == path)
-    {
+    let config = state.config.load();
+    if config.auth.exempt_paths.iter().any(|exempt| exempt == path) {
         return next.run(request).await;
     }
 
-    match state.config.auth.mode.as_str() {
+    match config.auth.mode.as_str() {
         "none" => next.run(request).await,
         "bearer" => match check_bearer(&state, &request) {
             Ok(()) => next.run(request).await,
@@ -102,7 +97,7 @@ fn check_bearer(state: &AppState, request: &Request) -> Result<(), &'static str>
         let Some(token) = value.strip_prefix("Bearer ") else {
             return Err("Authorization header must use the Bearer scheme");
         };
-        return if bearer::verify(token, expected) {
+        return if bearer::verify(token, &expected) {
             Ok(())
         } else {
             Err("invalid bearer token")
@@ -111,7 +106,7 @@ fn check_bearer(state: &AppState, request: &Request) -> Result<(), &'static str>
 
     if SSE_QUERY_TOKEN_PATHS.contains(&request.uri().path()) {
         if let Some(token) = query_token(request) {
-            return if bearer::verify(&token, expected) {
+            return if bearer::verify(&token, &expected) {
                 Ok(())
             } else {
                 Err("invalid bearer token")

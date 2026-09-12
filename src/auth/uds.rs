@@ -70,8 +70,8 @@ async fn require_peer_cred(
     request: Request,
     next: Next,
 ) -> Response {
-    let cfg = &state.config.server.unix_socket;
-    if peer_is_allowed(cfg, &peer) {
+    let config = state.config.load();
+    if peer_is_allowed(&config.server.unix_socket, &peer) {
         next.run(request).await
     } else {
         tracing::warn!(

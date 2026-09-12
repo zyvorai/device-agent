@@ -45,8 +45,9 @@
   `-D warnings` made the CI clippy gate meaningful).
 - [ ] Optional Linux udev/netlink event source to complement polling.
 - [x] Configurable thermal/counter health thresholds and alert events (v0.1.4).
-- [ ] Graceful config reload without a full restart (SIGHUP or a reload
-  endpoint) — every config change today requires `systemctl restart`.
+- [x] Graceful config reload without a full restart (v0.1.4 — `SIGHUP`;
+  `server.listen`/`unix_socket`/`dashboard_dir` and the Nodra/CAN-capture
+  connections still need a restart, everything else applies live).
 - [ ] `seccomp` profiles for plugin subprocess execution — mentioned in
   `docs/ARCHITECTURE.md`'s security-model list but never tracked here until
   now; needs its own investigation into which syscalls plugins actually need.

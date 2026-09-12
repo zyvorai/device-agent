@@ -116,17 +116,18 @@ async fn main() -> anyhow::Result<()> {
                 anyhow::bail!("sensor sample failed")
             }
         }
-        Command::Serve => serve(cfg).await,
+        Command::Serve => serve(cfg, cli.config).await,
     }
 }
 
-async fn serve(cfg: Config) -> anyhow::Result<()> {
+async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     let inventory = hardware::collect_inventory(&cfg).await;
     let state = Arc::new(AppState::new(cfg.clone(), inventory));
     let shutdown = CancellationToken::new();
 
     spawn_inventory_refresh(state.clone(), shutdown.clone());
     spawn_plugin_scheduler(state.clone(), shutdown.clone());
+    spawn_config_reload_listener(state.clone(), config_path, shutdown.clone());
     can_capture::spawn(state.clone(), shutdown.clone());
 
     if cfg.nodra.enabled {
@@ -260,7 +261,11 @@ fn spawn_uds_listener(
 
 fn spawn_inventory_refresh(state: Arc<AppState>, shutdown: CancellationToken) {
     tokio::spawn(async move {
-        let refresh_seconds = state.config.device.inventory_refresh_seconds.max(1);
+        // Ticker cadence is captured once: changing device.inventory_refresh_seconds
+        // needs a restart to re-time it. hardware::collect_inventory below reads the
+        // live config on every tick, so most other device.*/industrial.* fields do
+        // hot-reload correctly.
+        let refresh_seconds = state.config.load().device.inventory_refresh_seconds.max(1);
         let mut ticker = interval(Duration::from_secs(refresh_seconds));
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
@@ -270,7 +275,7 @@ fn spawn_inventory_refresh(state: Arc<AppState>, shutdown: CancellationToken) {
                     break;
                 }
                 _ = ticker.tick() => {
-                    let inventory = hardware::collect_inventory(&state.config).await;
+                    let inventory = hardware::collect_inventory(&state.config.load()).await;
                     state.update_inventory(inventory).await;
                 }
             }
@@ -284,4 +289,59 @@ fn spawn_plugin_scheduler(state: Arc<AppState>, shutdown: CancellationToken) {
             warn!(?error, "sensor plugin scheduler stopped");
         }
     });
+}
+
+/// SIGHUP re-reads the config file and hot-swaps `state.config` - see
+/// `AppState::reload_config` for exactly which fields take effect immediately
+/// versus needing a restart. A config file that fails to parse is logged and
+/// ignored, keeping the daemon on its last-known-good config rather than
+/// crashing or running with a half-applied reload.
+#[cfg(unix)]
+fn spawn_config_reload_listener(
+    state: Arc<AppState>,
+    config_path: PathBuf,
+    shutdown: CancellationToken,
+) {
+    tokio::spawn(async move {
+        let Ok(mut signal) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
+        else {
+            warn!("failed to install SIGHUP handler; config hot-reload unavailable");
+            return;
+        };
+        loop {
+            tokio::select! {
+                _ = shutdown.cancelled() => break,
+                received = signal.recv() => {
+                    if received.is_none() {
+                        break;
+                    }
+                    info!(path = %config_path.display(), "received SIGHUP, reloading config");
+                    match Config::load_or_default(&config_path) {
+                        Ok(new_config) => {
+                            let restart_needed = state.reload_config(new_config);
+                            if restart_needed {
+                                warn!(
+                                    "config reloaded, but server.listen/unix_socket/dashboard_dir \
+                                     changed and need a full restart to take effect"
+                                );
+                            } else {
+                                info!("config reloaded");
+                            }
+                        }
+                        Err(error) => {
+                            warn!(%error, "SIGHUP config reload failed; keeping the current config");
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+#[cfg(not(unix))]
+fn spawn_config_reload_listener(
+    _state: Arc<AppState>,
+    _config_path: PathBuf,
+    _shutdown: CancellationToken,
+) {
 }

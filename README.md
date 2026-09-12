@@ -222,6 +222,27 @@ can_error_counter_warn = 96      # CAN error-warning, per the CAN spec
 can_error_counter_critical = 128 # CAN error-passive, per the CAN spec
 ```
 
+## Config hot-reload (v0.1.4)
+
+`SIGHUP` re-reads the config file and applies `auth.*`, `thresholds.*`,
+`plugins.*`, `fleet.*`, and the parts of `industrial.*`/`nodra.*` that are
+read fresh on each request/tick — without a restart:
+
+```bash
+sudo systemctl kill -s HUP zyvor-device-agent
+```
+
+`server.listen`, `server.unix_socket.*`, and `server.dashboard_dir` are bound
+once at startup and can't be rebound live; changing one of those and sending
+`SIGHUP` applies everything else but logs a warning that a full restart is
+still needed for those specific fields. Likewise, `nodra.*` (the MQTT
+connection itself) and `industrial.can_capture.*` (which interfaces the
+capture threads have open) are only read once at their own startup — a
+reload updates `state.config` for everything else, but reconnecting Nodra or
+re-opening CAN capture sockets still needs a restart. A malformed config file
+is logged and ignored on `SIGHUP`, keeping the daemon on its last-known-good
+config rather than crashing or half-applying a broken reload.
+
 ## Product boundary
 
 ```text

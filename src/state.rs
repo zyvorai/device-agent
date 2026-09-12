@@ -4,11 +4,12 @@ use std::{
     collections::{BTreeMap, HashSet, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
-        Mutex,
+        Arc, Mutex,
     },
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use arc_swap::{ArcSwap, ArcSwapOption};
 use tokio::sync::{broadcast, RwLock};
 
 use crate::{
@@ -19,7 +20,16 @@ use crate::{
 const EVENT_HISTORY_LIMIT: usize = 200;
 
 pub struct AppState {
-    pub config: Config,
+    /// Hot-reloadable: `SIGHUP` re-reads the config file and stores a new
+    /// `Config` here (see `main.rs`'s signal handling). `server.listen`,
+    /// `server.unix_socket`, and `server.dashboard_dir` are captured once at
+    /// listener-bind time in `main.rs::serve` and don't re-apply from a later
+    /// store here — changing those still needs a restart.
+    pub config: ArcSwap<Config>,
+    /// Recomputed alongside `config` on every reload (see `reload_config`),
+    /// since it's derived from `config.auth.bearer.token_hash_file` and would
+    /// otherwise go stale the moment that file or `auth.mode` changes.
+    bearer_token_hash: ArcSwapOption<[u8; 32]>,
     inventory: RwLock<Inventory>,
     samples: RwLock<BTreeMap<String, SensorSample>>,
     events: broadcast::Sender<AgentEvent>,
@@ -37,7 +47,6 @@ pub struct AppState {
     can_capture_frames_total: AtomicU64,
     can_capture_dropped_total: AtomicU64,
     can_capture_decode_errors_total: AtomicU64,
-    bearer_token_hash: Option<[u8; 32]>,
     /// Keys of currently-breached thresholds (e.g. `"thermal:thermal_zone0:critical"`),
     /// used to emit a `threshold.breached`/`threshold.recovered` event only on the
     /// edge transition rather than every refresh tick a value stays over/under.
@@ -53,18 +62,32 @@ pub fn now_unix_ms() -> u64 {
         .unwrap_or(u64::MAX)
 }
 
+fn load_bearer_token_hash(config: &Config) -> Option<[u8; 32]> {
+    if config.auth.mode == "bearer" {
+        crate::auth::bearer::load_token_hash(&config.auth.bearer.token_hash_file)
+    } else {
+        None
+    }
+}
+
+/// Config fields captured once at listener-bind time (`main.rs::serve`) that a
+/// later `reload_config` store can't retroactively apply — used only to warn
+/// the operator that a `SIGHUP` didn't pick up one of these.
+fn restart_required_fields_changed(old: &Config, new: &Config) -> bool {
+    old.server.listen != new.server.listen
+        || old.server.unix_socket != new.server.unix_socket
+        || old.server.dashboard_dir != new.server.dashboard_dir
+}
+
 impl AppState {
     pub fn new(config: Config, inventory: Inventory) -> Self {
         let (events, _) = broadcast::channel(256);
         let (can_frame_events, _) = broadcast::channel(1024);
         let can_history_limit = config.industrial.can_capture.history_limit.max(1);
-        let bearer_token_hash = if config.auth.mode == "bearer" {
-            crate::auth::bearer::load_token_hash(&config.auth.bearer.token_hash_file)
-        } else {
-            None
-        };
+        let bearer_token_hash = load_bearer_token_hash(&config);
         Self {
-            config,
+            config: ArcSwap::new(Arc::new(config)),
+            bearer_token_hash: ArcSwapOption::from(bearer_token_hash.map(Arc::new)),
             inventory: RwLock::new(inventory),
             samples: RwLock::new(BTreeMap::new()),
             events,
@@ -82,13 +105,29 @@ impl AppState {
             can_capture_frames_total: AtomicU64::new(0),
             can_capture_dropped_total: AtomicU64::new(0),
             can_capture_decode_errors_total: AtomicU64::new(0),
-            bearer_token_hash,
             breached_thresholds: Mutex::new(HashSet::new()),
         }
     }
 
-    pub fn bearer_token_hash(&self) -> Option<&[u8; 32]> {
-        self.bearer_token_hash.as_ref()
+    pub fn bearer_token_hash(&self) -> Option<[u8; 32]> {
+        self.bearer_token_hash.load().as_deref().copied()
+    }
+
+    /// Applies a freshly re-read `Config` (from `SIGHUP`): stores it, recomputes
+    /// the bearer-token hash from it, and reports whether a listener-affecting
+    /// field changed (which this call can't apply - the caller should log that
+    /// a restart is needed). Emits a `config.reloaded` event either way.
+    pub fn reload_config(&self, new_config: Config) -> bool {
+        let old_config = self.config.load_full();
+        let restart_needed = restart_required_fields_changed(&old_config, &new_config);
+        self.bearer_token_hash
+            .store(load_bearer_token_hash(&new_config).map(Arc::new));
+        self.config.store(Arc::new(new_config));
+        self.emit_event(
+            "config.reloaded",
+            serde_json::json!({ "restart_required_fields_changed": restart_needed }),
+        );
+        restart_needed
     }
 
     pub async fn inventory_snapshot(&self) -> Inventory {
@@ -131,7 +170,8 @@ impl AppState {
     /// `threshold.breached`/`threshold.recovered` events on edge transitions
     /// only - a value that stays over/under a level doesn't re-emit every tick.
     fn evaluate_thresholds(&self, inventory: &Inventory) {
-        let cfg = &self.config.thresholds;
+        let config = self.config.load();
+        let cfg = &config.thresholds;
         if !cfg.enabled {
             return;
         }
@@ -246,7 +286,13 @@ impl AppState {
         self.can_capture_frames_total
             .fetch_add(1, Ordering::Relaxed);
         if let Ok(mut history) = self.can_frames.lock() {
-            let limit = self.config.industrial.can_capture.history_limit.max(1);
+            let limit = self
+                .config
+                .load()
+                .industrial
+                .can_capture
+                .history_limit
+                .max(1);
             while history.len() >= limit {
                 history.pop_front();
             }
@@ -294,9 +340,10 @@ impl AppState {
     }
 
     pub fn can_capture_status(&self) -> CanCaptureStatus {
+        let config = self.config.load();
         CanCaptureStatus {
-            enabled: self.config.industrial.can_capture.enabled,
-            interfaces: self.config.industrial.can_capture.interfaces.clone(),
+            enabled: config.industrial.can_capture.enabled,
+            interfaces: config.industrial.can_capture.interfaces.clone(),
             frames_total: self.can_capture_frames_total.load(Ordering::Relaxed),
             dropped_total: self.can_capture_dropped_total.load(Ordering::Relaxed),
             decode_errors_total: self.can_capture_decode_errors_total.load(Ordering::Relaxed),
@@ -634,5 +681,71 @@ mod tests {
             .into_iter()
             .any(|event| event.kind == "threshold.recovered" && event.data["target"] == "zone0");
         assert!(recovered);
+    }
+
+    #[test]
+    fn reload_config_applies_hot_reloadable_fields() {
+        let state = AppState::new(Config::default(), empty_inventory());
+        assert!(!state.config.load().thresholds.enabled);
+
+        let mut updated = Config::default();
+        updated.thresholds.enabled = true;
+        updated.thresholds.thermal_warn_celsius = 42.0;
+        let restart_needed = state.reload_config(updated);
+
+        assert!(!restart_needed);
+        assert!(state.config.load().thresholds.enabled);
+        assert_eq!(state.config.load().thresholds.thermal_warn_celsius, 42.0);
+    }
+
+    #[test]
+    fn reload_config_flags_restart_needed_fields() {
+        let state = AppState::new(Config::default(), empty_inventory());
+
+        let mut updated = Config::default();
+        updated.server.listen = "0.0.0.0:1".into();
+        let restart_needed = state.reload_config(updated);
+
+        assert!(restart_needed);
+        // The new value is still stored - the daemon just can't apply it to an
+        // already-bound listener without a restart.
+        assert_eq!(state.config.load().server.listen, "0.0.0.0:1");
+    }
+
+    #[test]
+    fn reload_config_recomputes_bearer_token_hash() {
+        let state = AppState::new(Config::default(), empty_inventory());
+        assert!(state.bearer_token_hash().is_none());
+
+        let dir = TempDir::new();
+        let hash_path = dir.0.join("bearer.sha256");
+        std::fs::write(&hash_path, "a".repeat(64)).unwrap();
+
+        let mut updated = Config::default();
+        updated.auth.mode = "bearer".into();
+        updated.auth.bearer.token_hash_file = hash_path.to_string_lossy().into_owned();
+        state.reload_config(updated);
+
+        assert_eq!(state.bearer_token_hash(), Some([0xaa; 32]));
+    }
+
+    /// Minimal scratch-directory helper, mirroring the one in `plugins.rs`'s
+    /// own test module (kept local rather than shared, to not couple the two
+    /// modules' test setup together for one small helper).
+    struct TempDir(std::path::PathBuf);
+    impl TempDir {
+        fn new() -> Self {
+            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let dir =
+                std::env::temp_dir().join(format!("zyvor-state-test-{}-{id}", std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+    }
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
     }
 }

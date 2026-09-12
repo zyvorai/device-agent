@@ -76,7 +76,7 @@ pub struct RateLimitConfig {
     pub burst: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UnixSocketConfig {
     /// Additional API listener over a Unix domain socket, alongside the TCP listener.

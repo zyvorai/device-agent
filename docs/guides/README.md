@@ -1,5 +1,11 @@
 # Tutorials
 
+Still deciding whether to adopt Device Agent, rather than already building
+with it? See the main README's
+[Is this for you?](../../README.md#is-this-for-you) section, plus
+[`../FAQ.md`](../FAQ.md) and [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)
+first — these guides assume you've already decided.
+
 Narrative, step-by-step walkthroughs for Zyvor Device Agent. Read them in
 order the first time through; after that, jump straight to whichever one
 matches what you're doing.

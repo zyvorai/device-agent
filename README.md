@@ -19,6 +19,7 @@
 ## Contents
 
 - [Why this exists](#why-this-exists)
+- [Is this for you?](#is-this-for-you)
 - [v0.1 scope](#v01-scope)
 - [Quick start](#quick-start)
 - [API](#api)
@@ -36,6 +37,41 @@
 Zyvor already has higher layers for workload/runtime control and fleet/data-plane responsibilities. What was missing was a small Linux-native hardware foundation that can run directly on an ARM64 gateway without Kubernetes. Device Agent provides that boundary.
 
 It intentionally does **not** interpret Modbus registers, CAN/J1939 PGNs or OPC-UA nodes. It reports physical capabilities and gives sensor drivers a stable local contract. Nodra owns industrial protocol semantics, routing and offline store-and-forward. Fleet owns remote lifecycle and desired state. Aether can later consume the node capability model but is not required on the device.
+
+## Is this for you?
+
+Device Agent is a small, single-purpose, open-source (Apache-2.0) hardware
+layer for a Linux edge gateway — not a home-automation hub, not a
+container fleet/OTA platform, and not tied to any one cloud vendor. If you
+need one of those instead, one of the alternatives below is probably a
+better fit; if you need a lightweight, protocol-agnostic hardware/health
+layer that hands industrial protocol semantics and fleet lifecycle to
+purpose-built systems instead of doing everything itself, that's exactly
+this project's scope.
+
+| | **Device Agent** | Home Assistant | balena | AWS IoT Greengrass | Azure IoT Edge |
+|---|---|---|---|---|---|
+| Primary scope | Hardware inventory, health, bounded sensor/bus access | Home automation hub, integrations, local rules | Fleet OS + container deployment/OTA | Cloud-connected edge runtime | Cloud-connected edge runtime |
+| Cloud dependency | None required — Nodra/Fleet integration is optional | None required | balenaCloud (proprietary) for fleet management | AWS IoT Core | Azure IoT Hub |
+| License | Apache-2.0 | Apache-2.0 (core) | Open-source agent + proprietary cloud | Proprietary (free tier) | Proprietary (free tier) |
+| Industrial protocol decoding (Modbus/CAN-J1939/OPC-UA) | Deliberately out of scope — handed to Nodra | Via community integrations, not built for industrial fieldbus | Not built-in | Via custom components | Via custom modules |
+| Fleet/OTA orchestration | Out of scope — handed to Zyvor Fleet | Not built-in | Core feature | Via AWS services | Via Azure services |
+
+*(General characterizations as of writing, not exhaustive — verify current
+details against each project's own docs before deciding.)*
+
+**Supported hardware**: `docs/REFERENCE_HARDWARE.md` defines a capability
+profile, not a certified SKU list — arm64 is first-class, amd64 works for
+development/CI, and any board meeting the minimum bus requirements (1×
+ethernet/I²C/UART/CAN; GPIO/SPI/USB/watchdog recommended) is supported.
+There is no fixed hardware compatibility list to check against; if your
+board exposes standard Linux `/dev`/`/sys` interfaces for these buses, it
+works.
+
+New to Device Agent? [`docs/FAQ.md`](docs/FAQ.md) covers licensing,
+support, production-readiness and data-residency questions, and
+[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) covers the issues
+people actually hit.
 
 ## v0.1 scope
 
@@ -424,6 +460,15 @@ A clean ARM64 reference unit must be able to: install one Zyvor package → star
 See the [Documentation](#documentation) section below for the full walkthrough, from first boot to Fleet enrollment.
 
 ## Documentation
+
+Still deciding whether to adopt Device Agent? Start with
+[Is this for you?](#is-this-for-you) above, then the two docs below.
+Already decided and just need to build/operate it? Skip to the tutorials.
+
+### Evaluating Device Agent
+
+- [`docs/FAQ.md`](docs/FAQ.md) — licensing, support, production-readiness, data/cloud dependency
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — real issues people hit, with the actual fix
 
 New to Device Agent? Start with the tutorials — they're narrative, step-by-step
 walkthroughs. Already know what you're doing and just need a fact? Jump

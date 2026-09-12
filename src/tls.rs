@@ -91,7 +91,8 @@ mod tests {
     use super::*;
 
     fn test_dir(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("zyvor-tls-test-{}-{name}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("zyvor-tls-test-{}-{name}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
@@ -122,7 +123,10 @@ mod tests {
 
         ensure_self_signed_cert(cert_path.to_str().unwrap(), key_path.to_str().unwrap()).unwrap();
 
-        assert_eq!(std::fs::read_to_string(&cert_path).unwrap(), "existing-cert");
+        assert_eq!(
+            std::fs::read_to_string(&cert_path).unwrap(),
+            "existing-cert"
+        );
         assert_eq!(std::fs::read_to_string(&key_path).unwrap(), "existing-key");
 
         std::fs::remove_dir_all(&dir).ok();

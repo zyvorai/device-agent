@@ -86,8 +86,8 @@ header { display: flex; justify-content: space-between; align-items: end; margin
 
 .auth-banner { margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; border-color: rgba(179,38,30,.28); }
 .auth-banner .eyebrow { color: #b3261e; }
-.auth-banner-form { display: flex; gap: 10px; }
-.auth-banner-form input { min-width: 220px; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 13px; }
+.auth-banner-form { display: flex; gap: 10px; flex-wrap: wrap; }
+.auth-banner-form input { flex: 1 1 160px; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 13px; }
 .auth-banner-form button { padding: 11px 18px; border-radius: 12px; border: none; background: var(--ink); color: #fff; font-weight: 650; font-size: 13px; cursor: pointer; }
 .link-button { margin-top: 12px; background: none; border: none; padding: 0; color: var(--muted); font-size: 12px; text-decoration: underline; cursor: pointer; }
 @media (max-width: 700px) { .auth-banner { flex-direction: column; align-items: stretch; } .auth-banner-form { flex-direction: column; } .auth-banner-form input { min-width: 0; } }

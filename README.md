@@ -336,6 +336,36 @@ a runtime library dependency the container image/`.deb`/`.rpm` don't otherwise n
 Off by default; opening the netlink socket is never fatal to the daemon — if it fails for
 any reason, a warning is logged once and the daemon falls back to polling-only.
 
+## Camera (v0.1.5, optional)
+
+`--features camera` adds live snapshot + live MJPEG video streaming from an explicitly
+allowlisted `/dev/video*` — the device-discovery and live-viewing half of the "Edge AI
+bridge" line item in `docs/ROADMAP.md` (local inference/accelerator support is a separate,
+still-unscoped future increment). Same posture as CAN capture: disabled by default, never
+auto-opens an undeclared device, per-camera rate cap, bounded to the single newest frame:
+
+```toml
+[camera]
+devices = []
+
+[[camera.devices]]
+id = "front-dock"
+path = "/dev/video0"
+enabled = true
+max_frames_per_second = 10
+```
+
+```text
+GET /api/v1/camera                    # status per configured camera
+GET /api/v1/camera/{id}/snapshot      # latest frame, image/jpeg
+GET /api/v1/camera/{id}/stream        # multipart/x-mixed-replace MJPEG, works in a plain <img>
+```
+
+Cameras offering native MJPG have those bytes passed straight through; others fall back to
+a pure-Rust YUYV→RGB→JPEG software encode (`jpeg-encoder`, no `libjpeg`/`ffmpeg` dependency).
+`publish_to_nodra` sends only health/presence to Nodra, never frame bytes. See
+[8. Camera streaming](docs/guides/08-camera-streaming.md) and `docs/CAMERA.md`.
+
 ## Product boundary
 
 ```text
@@ -402,6 +432,7 @@ A numbered series meant to be read in order the first time through; see
 | 5 | [Writing a sensor plugin](docs/guides/05-writing-a-sensor-plugin.md) | The plugin contract end to end, using the I²C temperature example |
 | 6 | [Deploying to production](docs/guides/06-deploying-to-production.md) | `.deb`/`.rpm`, `deploy-remote.sh`, systemd, `SIGHUP` reload, Prometheus |
 | 7 | [Container deployment](docs/guides/07-container-deployment.md) | Pull the published multi-arch image and run it, with or without systemd |
+| 8 | [Camera streaming](docs/guides/08-camera-streaming.md) | Live snapshot and MJPEG stream from a USB/CSI camera (`--features camera`) |
 
 ### How-to / reference
 

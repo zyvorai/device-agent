@@ -6,6 +6,7 @@
 
 pub mod api;
 pub mod auth;
+pub mod camera_capture;
 pub mod can_capture;
 pub mod config;
 pub mod hardware;

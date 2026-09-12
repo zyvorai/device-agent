@@ -23,6 +23,11 @@ ReadWritePaths=/var/lib/zyvor-device-agent /run/zyvor-device-agent /etc/zyvor/de
 RuntimeDirectory=zyvor-device-agent
 RuntimeDirectoryMode=0750
 UMask=0077
+# No DeviceAllow= entries: DevicePolicy=auto with zero DeviceAllow= installs
+# no cgroup device-filter BPF program at all, so root's existing /dev/video*
+# access (--features camera) already works with no unit change - do not
+# "fix" this into a DeviceAllow=char-video4linux line believing it's
+# currently blocked. See docs/HARDWARE_PERMISSIONS.md.
 DevicePolicy=auto
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW

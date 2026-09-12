@@ -22,6 +22,16 @@
 //! [`SSE_QUERY_TOKEN_PATHS`], never as a general alternative to the
 //! `Authorization` header, since a query-string token can land in access logs
 //! and browser history.
+//!
+//! `<img src>` has the same header limitation as `EventSource`, so
+//! `/api/v1/camera/{id}/snapshot` and `/api/v1/camera/{id}/stream` get the
+//! same `?token=` treatment via [`QUERY_TOKEN_PATH_PREFIXES`] - kept as a
+//! separate, independently-reasoned prefix list rather than folded into
+//! [`SSE_QUERY_TOKEN_PATHS`] (whose paths are dynamic-segment-free and can
+//! stay an exact-match list) or exempted via `auth.exempt_paths` (which
+//! would let an operator disable auth for camera routes entirely without
+//! meaning to - this stays a narrow, hardcoded browser-capability carve-out
+//! like the SSE one, not a config surface).
 
 pub mod bearer;
 pub mod enroll;
@@ -44,6 +54,10 @@ use crate::state::AppState;
 /// Routes that accept a `?token=` query-string fallback, in addition to the
 /// `Authorization` header, because they are consumed via `EventSource`.
 const SSE_QUERY_TOKEN_PATHS: &[&str] = &["/api/v1/events", "/api/v1/can/frames/stream"];
+
+/// Path prefixes (not exact paths, since camera ids are dynamic) that accept
+/// a `?token=` query-string fallback - see the module doc comment.
+const QUERY_TOKEN_PATH_PREFIXES: &[&str] = &["/api/v1/camera/"];
 
 #[derive(Deserialize)]
 struct TokenQuery {
@@ -114,7 +128,12 @@ fn check_bearer(state: &AppState, request: &Request) -> Result<(), &'static str>
         };
     }
 
-    if SSE_QUERY_TOKEN_PATHS.contains(&request.uri().path()) {
+    let path = request.uri().path();
+    let accepts_query_token = SSE_QUERY_TOKEN_PATHS.contains(&path)
+        || QUERY_TOKEN_PATH_PREFIXES
+            .iter()
+            .any(|prefix| path.starts_with(prefix));
+    if accepts_query_token {
         if let Some(token) = query_token(request) {
             return if bearer::verify(&token, &expected) {
                 Ok(())
@@ -281,6 +300,38 @@ mod tests {
         assert!(SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/events"));
         assert!(SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/can/frames/stream"));
         assert!(!SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/inventory"));
+    }
+
+    #[test]
+    fn camera_query_token_paths_accept_any_camera_id() {
+        let bearer = state_with_bearer_token("secret");
+        for path in [
+            "/api/v1/camera/front-dock/snapshot?token=secret",
+            "/api/v1/camera/back-yard/stream?token=secret",
+        ] {
+            let request = request_with_query(path);
+            assert_eq!(check_bearer(&bearer.state, &request), Ok(()));
+        }
+    }
+
+    #[test]
+    fn camera_query_token_paths_still_reject_wrong_token() {
+        let bearer = state_with_bearer_token("secret");
+        let request = request_with_query("/api/v1/camera/front-dock/snapshot?token=wrong");
+        assert_eq!(
+            check_bearer(&bearer.state, &request),
+            Err("invalid bearer token")
+        );
+    }
+
+    #[test]
+    fn non_camera_paths_do_not_accept_query_tokens() {
+        let bearer = state_with_bearer_token("secret");
+        let request = request_with_query("/api/v1/inventory?token=secret");
+        assert_eq!(
+            check_bearer(&bearer.state, &request),
+            Err("missing Authorization header")
+        );
     }
 
     #[test]

@@ -15,8 +15,8 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 use zyvor_device_agent::{
-    api, auth, can_capture, config::Config, hardware, identity::DeviceIdentity, integrations,
-    plugins, state::AppState, tls,
+    api, auth, camera_capture, can_capture, config::Config, hardware, identity::DeviceIdentity,
+    integrations, plugins, state::AppState, tls,
 };
 
 #[derive(Debug, Parser)]
@@ -171,6 +171,7 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     spawn_plugin_scheduler(state.clone(), shutdown.clone());
     spawn_config_reload_listener(state.clone(), config_path, shutdown.clone());
     can_capture::spawn(state.clone(), shutdown.clone());
+    camera_capture::spawn(state.clone(), shutdown.clone());
     hardware::hotplug::spawn(state.clone(), shutdown.clone());
 
     if cfg.nodra.enabled {

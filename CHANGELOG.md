@@ -2,6 +2,43 @@
 
 ## 0.1.5-dev — 2026-09-12
 
+- Add optional camera support (`--features camera`, off by default like
+  `hotplug`/`tpm2`): live snapshot and live MJPEG video stream from an
+  explicitly-allowlisted `/dev/video*`, following `can_capture.rs`'s
+  opt-in/rate-limited/never-fatal posture — starts the device-discovery and
+  live-viewing half of `docs/ROADMAP.md`'s "Edge AI bridge" line item
+  (local inference/accelerator support stays a separate, still-unscoped
+  future increment). New `[camera]` config (top-level, not nested under
+  `[industrial]`), new `src/camera_capture.rs` (one dedicated thread per
+  configured camera; prefers native MJPG passthrough, falls back to a
+  pure-Rust YUYV→RGB→JPEG software encode via `jpeg-encoder` for cameras
+  without it; bounded retry-with-backoff on error, unlike CAN capture's
+  "fail once" policy, since USB replug is common). New endpoints
+  `GET /api/v1/camera`, `GET /api/v1/camera/{id}/snapshot`,
+  `GET /api/v1/camera/{id}/stream` (`multipart/x-mixed-replace`, renders in
+  a plain `<img>` tag, no WebRTC/signaling) — the latter two get the same
+  `?token=` query-auth carve-out the SSE routes already have, generalized
+  to a path-prefix list (`src/auth/mod.rs`'s new
+  `QUERY_TOKEN_PATH_PREFIXES`) since camera ids are dynamic. Nodra
+  publishing (`camera.devices[].publish_to_nodra`) sends only
+  `CameraCaptureStatus` health/presence, never frame bytes — a deliberate
+  boundary documented with a code comment on `nodra::publisher_loop` so a
+  future contributor doesn't "complete the parallel" with CAN's per-frame
+  forwarding arm. `v4l` (default `v4l2` feature — raw kernel ioctls, no
+  `libv4l.so`) and `jpeg-encoder` are both pure Rust; `v4l` is additionally
+  gated to `target_os = "linux"` (V4L2 itself is Linux-only), with a no-op
+  `spawn()` stub everywhere else mirroring `hardware::hotplug`'s pattern.
+  The YUYV→RGB→JPEG pipeline has real unit-test coverage that runs
+  cross-platform under `--features camera` (no Linux/hardware needed) by
+  gating that one sub-module on `any(target_os = "linux", test)` rather
+  than requiring Linux outright. `packaging/systemd/zyvor-device-agent.service`
+  needed no `DeviceAllow=` change — confirmed `DevicePolicy=auto` with zero
+  entries already permits root's `/dev/video*` access, documented with a
+  comment so nobody "fixes" it unnecessarily. This dev machine is macOS, so
+  the real V4L2 ioctl path (as opposed to the cross-platform encode-pipeline
+  unit tests) is unverified here — it needs a Linux box with either a real
+  camera or a `v4l2loopback` virtual device to test end to end.
+
 - Add optional native TLS for the TCP listener: `server.tls.enabled` (off
   by default) serves plain HTTPS — no client certificate ever required,
   unlike `auth.mode = "mtls"` — so an ordinary browser can reach

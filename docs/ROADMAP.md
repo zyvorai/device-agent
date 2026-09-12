@@ -30,6 +30,17 @@
 - no transmit API and no automatic bus reconfiguration
 - J1939 semantics remain a Nodra connector
 
+## v0.1.5 — Camera device discovery + live streaming
+
+- [x] V4L2 device discovery, live JPEG snapshot, live MJPEG stream
+  (`--features camera`, disabled by default — see `docs/CAMERA.md`) — the
+  device-discovery and live-viewing half of the "Edge AI bridge" item
+  below, deliberately scoped no further than that
+- local inference event contract into Nodra, one accelerator family, and
+  the Fleet health/application-lifecycle story for it remain **not**
+  scoped — see the trimmed "Edge AI bridge" entry under "Later / not yet
+  scoped"
+
 ## v0.2 — Production device identity
 
 - [x] mTLS device certificates (v0.1.4 — client-side enrollment only; see
@@ -70,6 +81,8 @@ either becomes real roadmap work:
 
 - **OTA executor** — signed bundle verification, A/B inactive-slot write,
   reboot + health confirmation, commit/rollback, rollout initiated by Fleet.
-- **Edge AI bridge** — V4L2/RTSP device discovery, one accelerator family
-  first, local inference event contract into Nodra, Fleet health and
-  application lifecycle.
+- **Edge AI bridge (remaining half)** — one accelerator family, a local
+  inference event contract into Nodra, and Fleet health/application
+  lifecycle for it. V4L2 device discovery + live snapshot/stream shipped
+  in v0.1.5 (see above and `docs/CAMERA.md`); RTSP discovery and
+  everything inference-related here is still not scoped.

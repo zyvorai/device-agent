@@ -127,6 +127,24 @@ pub async fn publisher_loop(
                     }
                 }
 
+                // Health/presence only, per-camera, never frame bytes - this is a
+                // deliberate boundary, not an oversight: raw video must never reach
+                // Nodra. Do not add a per-frame arm here mirroring `can_rx` above.
+                for device in &state.config.load().camera.devices {
+                    if !device.publish_to_nodra {
+                        continue;
+                    }
+                    if let Some(camera_status) = state.camera_capture_status(&device.id) {
+                        publish(
+                            &client,
+                            format!("{prefix}/camera/{}/status", topic_segment(&device.id)),
+                            true,
+                            serde_json::to_vec(&camera_status)?,
+                            &state,
+                        ).await;
+                    }
+                }
+
                 for sample in state.latest_samples().await {
                     if !sample.publish_to_nodra {
                         continue;

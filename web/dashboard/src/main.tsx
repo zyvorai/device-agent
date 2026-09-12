@@ -1,15 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {
-  Activity, Box, Cable, CircuitBoard, Cpu, Gauge, Network, Radio, RefreshCw,
+  Activity, Box, Cable, Camera, CircuitBoard, Cpu, Gauge, Network, Radio, RefreshCw,
   Settings2, Thermometer, Usb, Wifi, Workflow
 } from 'lucide-react';
 import {
-  age, AuthRequiredError, bitrate, bytes, duration, getCanCaptureStatus, getDoctor, getIntegrations,
-  getInventory, getRecentCanFrames, getRecentEvents, getSensors, getStatus, getToken, setToken, withTokenParam
+  age, AuthRequiredError, bitrate, bytes, cameraSnapshotUrl, cameraStreamUrl, duration,
+  getCameras, getCanCaptureStatus, getDoctor, getIntegrations, getInventory, getRecentCanFrames,
+  getRecentEvents, getSensors, getStatus, getToken, setToken, withTokenParam
 } from './api';
 import type {
-  AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample
+  AgentEvent, AgentStatus, CameraCaptureStatus, CanCaptureStatus, CanFrame, DoctorReport,
+  IntegrationStatus, Inventory, SensorSample
 } from './types';
 import './styles.css';
 
@@ -54,12 +56,14 @@ const demoFrames: CanFrame[] = [
   { sequence: 18420, interface: 'can0', captured_at_unix_ms: Date.now() - 150, can_id: 0x18ff50e5, extended: true, remote: false, error: false, fd: false, bitrate_switch: false, error_state_indicator: false, dlc: 8, data: [0,82,0,0,0,0,0,0], data_hex: '0052000000000000' },
   { sequence: 18419, interface: 'can0', captured_at_unix_ms: Date.now() - 420, can_id: 0x0cf00400, extended: true, remote: false, error: false, fd: false, bitrate_switch: false, error_state_indicator: false, dlc: 8, data: [255,125,80,0,0,0,0,0], data_hex: 'FF7D500000000000' }
 ];
+const demoCameras: CameraCaptureStatus[] = [];
 
 
-type Page = 'Overview' | 'Hardware' | 'Interfaces' | 'Industrial' | 'Sensors' | 'Integrations' | 'Diagnostics' | 'Settings';
+type Page = 'Overview' | 'Hardware' | 'Interfaces' | 'Industrial' | 'Sensors' | 'Camera' | 'Integrations' | 'Diagnostics' | 'Settings';
 const pages: Array<[Page, React.ReactNode]> = [
   ['Overview', <Gauge size={18} />], ['Hardware', <Cpu size={18} />], ['Interfaces', <Cable size={18} />],
-  ['Industrial', <CircuitBoard size={18} />], ['Sensors', <Thermometer size={18} />], ['Integrations', <Workflow size={18} />], ['Diagnostics', <Activity size={18} />], ['Settings', <Settings2 size={18} />]
+  ['Industrial', <CircuitBoard size={18} />], ['Sensors', <Thermometer size={18} />], ['Camera', <Camera size={18} />],
+  ['Integrations', <Workflow size={18} />], ['Diagnostics', <Activity size={18} />], ['Settings', <Settings2 size={18} />]
 ];
 
 function Dot({ on }: { on: boolean }) { return <span className={`dot ${on ? 'dot-on' : 'dot-off'}`} />; }
@@ -91,6 +95,7 @@ function App() {
   const [events, setEvents] = React.useState<AgentEvent[]>([]);
   const [capture, setCapture] = React.useState<CanCaptureStatus>(demoCapture);
   const [canFrames, setCanFrames] = React.useState<CanFrame[]>(demoFrames);
+  const [cameras, setCameras] = React.useState<CameraCaptureStatus[]>(demoCameras);
   const [live, setLive] = React.useState(false);
   const [streamLive, setStreamLive] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -100,10 +105,10 @@ function App() {
   const refresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const [inv, ints, samples, checks, agent, recent, captureStatus, frames] = await Promise.all([
-        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents(), getCanCaptureStatus(), getRecentCanFrames()
+      const [inv, ints, samples, checks, agent, recent, captureStatus, frames, cameraStatuses] = await Promise.all([
+        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents(), getCanCaptureStatus(), getRecentCanFrames(), getCameras()
       ]);
-      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setLive(true); setAuthRequired(false);
+      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setCameras(cameraStatuses); setLive(true); setAuthRequired(false);
     } catch (error) {
       setLive(false);
       setAuthRequired(error instanceof AuthRequiredError);
@@ -194,6 +199,8 @@ function App() {
       </section>}
 
       {page === 'Sensors' && <section className="sensor-grid">{sensors.length ? sensors.map(sample => <article className="card sensor-card" key={sample.sensor_id}><div className="section-head"><div><span className="eyebrow">{sample.plugin}</span><h3>{sample.sensor_id}</h3></div><StatusPill ok={sample.ok}>{sample.ok ? sample.quality : 'failed'}</StatusPill></div><ReadingValue sample={sample}/><div className="sensor-meta"><span>{age(sample.collected_at_unix_ms)}</span><span>{Object.entries(sample.labels).map(([k,v]) => `${k}=${v}`).join(' · ') || 'no labels'}</span></div>{sample.error && <p className="sensor-error-text">{sample.error}</p>}{sample.readings.slice(1).map(reading => <div className="io-line" key={reading.name}><span>{reading.name}</span><b>{reading.value} {reading.unit}</b></div>)}</article>) : <section className="empty-state card wide"><Thermometer size={32}/><span className="eyebrow">SENSOR SCHEDULER</span><h2>No samples yet.</h2><p>Install a plugin manifest under the configured plugins directory. The included LM75/TMP102 reference plugin reads an explicit I²C bus/address without scanning the bus.</p></section>}</section>}
+
+      {page === 'Camera' && <section className="content-grid">{cameras.length ? cameras.map(camera => <article className="card wide" key={camera.id}><div className="section-head"><div><span className="eyebrow">{camera.id}</span><h3>{camera.capturing ? 'Live' : camera.enabled ? 'Starting…' : 'Disabled'}</h3></div><StatusPill ok={camera.capturing}>{camera.capturing ? 'streaming' : camera.enabled ? 'not yet capturing' : 'off'}</StatusPill></div>{camera.capturing ? <img className="camera-stream" src={cameraStreamUrl(camera.id)} alt={`Live view: ${camera.id}`}/> : <a className="link-button" href={cameraSnapshotUrl(camera.id)} target="_blank" rel="noreferrer">View last snapshot</a>}<div className="spec-grid"><Metric label="Frames" value={camera.frames_total.toLocaleString()}/><Metric label="Rate drops" value={camera.dropped_total.toLocaleString()}/><Metric label="Encode errors" value={camera.encode_errors_total.toLocaleString()}/><Metric label="Viewers" value={`${camera.subscribers}`}/></div>{camera.last_error && <p className="sensor-error-text">{camera.last_error}</p>}</article>) : <section className="empty-state card wide"><Camera size={32}/><span className="eyebrow">CAMERA CAPTURE</span><h2>No cameras configured.</h2><p>Declare a device under <code>[[camera.devices]]</code> in <code>device-agent.toml</code> and build with <code>--features camera</code>. See docs/CAMERA.md.</p></section>}</section>}
 
       {page === 'Integrations' && <section className="integration-grid"><div className="card integration"><div className="integration-icon"><Radio/></div><span className="eyebrow">DATA PLANE</span><h2>Nodra</h2><p>Retained inventory/status, legacy telemetry and new per-sensor MQTT topics. Nodra continues to own WAL, protocol semantics and disconnected delivery.</p><StatusPill ok={integrations.nodra_connected}>{integrations.nodra_connected ? 'Connected' : integrations.nodra_enabled ? 'Configured · offline' : 'Disabled'}</StatusPill></div><div className="card integration"><div className="integration-icon"><Box/></div><span className="eyebrow">CONTROL PLANE</span><h2>Fleet</h2><p>Device Agent projects IP addresses, hardware counts, capabilities and identity into the existing Fleet inventory contract.</p><StatusPill ok={integrations.fleet_projection_ready}>{integrations.fleet_projection_ready ? 'Inventory bridge ready' : 'Disabled'}</StatusPill></div></section>}
 

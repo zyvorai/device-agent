@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::{BTreeMap, HashSet, VecDeque},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
@@ -14,7 +14,10 @@ use tokio::sync::{broadcast, RwLock};
 
 use crate::{
     config::Config,
-    model::{AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, Inventory, SensorSample},
+    model::{
+        AgentEvent, AgentStatus, CameraCaptureStatus, CameraFrame, CanCaptureStatus, CanFrame,
+        Inventory, SensorSample,
+    },
 };
 
 const EVENT_HISTORY_LIMIT: usize = 200;
@@ -51,7 +54,29 @@ pub struct AppState {
     /// used to emit a `threshold.breached`/`threshold.recovered` event only on the
     /// edge transition rather than every refresh tick a value stays over/under.
     breached_thresholds: Mutex<HashSet<String>>,
+    /// Only the single newest frame per camera is ever useful to a live
+    /// viewer - unlike `can_frames`, this is not a bounded history, since
+    /// the daemon never warehouses video frames.
+    camera_latest: Mutex<HashMap<String, Arc<CameraFrame>>>,
+    /// One broadcast channel per *configured* camera id, pre-created in
+    /// `AppState::new` (not lazily on first frame) so `subscribe_camera_frames`
+    /// never races the capture thread's first send. A viewer wants one
+    /// specific camera's feed, not all of them interleaved - unlike CAN,
+    /// where every interface shares a single channel.
+    camera_events: Mutex<HashMap<String, broadcast::Sender<Arc<CameraFrame>>>>,
+    camera_capturing: Mutex<HashMap<String, bool>>,
+    camera_last_error: Mutex<HashMap<String, String>>,
+    camera_frames_total: Mutex<HashMap<String, u64>>,
+    camera_dropped_total: Mutex<HashMap<String, u64>>,
+    camera_encode_errors_total: Mutex<HashMap<String, u64>>,
+    camera_last_frame_at_unix_ms: Mutex<HashMap<String, u64>>,
 }
+
+/// Small on purpose: much smaller than CAN's 1024-frame channel
+/// (`AppState::new`) - JPEG frames are large and only the latest one
+/// matters to a live viewer, so a deep buffer just adds latency rather
+/// than usefully queueing history.
+const CAMERA_CHANNEL_CAPACITY: usize = 4;
 
 pub fn now_unix_ms() -> u64 {
     SystemTime::now()
@@ -85,6 +110,15 @@ impl AppState {
         let (can_frame_events, _) = broadcast::channel(1024);
         let can_history_limit = config.industrial.can_capture.history_limit.max(1);
         let bearer_token_hash = load_bearer_token_hash(&config);
+        let camera_events = config
+            .camera
+            .devices
+            .iter()
+            .map(|device| {
+                let (sender, _) = broadcast::channel(CAMERA_CHANNEL_CAPACITY);
+                (device.id.clone(), sender)
+            })
+            .collect();
         Self {
             config: ArcSwap::new(Arc::new(config)),
             bearer_token_hash: ArcSwapOption::from(bearer_token_hash.map(Arc::new)),
@@ -106,6 +140,14 @@ impl AppState {
             can_capture_dropped_total: AtomicU64::new(0),
             can_capture_decode_errors_total: AtomicU64::new(0),
             breached_thresholds: Mutex::new(HashSet::new()),
+            camera_latest: Mutex::new(HashMap::new()),
+            camera_events: Mutex::new(camera_events),
+            camera_capturing: Mutex::new(HashMap::new()),
+            camera_last_error: Mutex::new(HashMap::new()),
+            camera_frames_total: Mutex::new(HashMap::new()),
+            camera_dropped_total: Mutex::new(HashMap::new()),
+            camera_encode_errors_total: Mutex::new(HashMap::new()),
+            camera_last_frame_at_unix_ms: Mutex::new(HashMap::new()),
         }
     }
 
@@ -359,6 +401,171 @@ impl AppState {
                 .ok()
                 .and_then(|value| value.clone()),
         }
+    }
+
+    /// Assigns a sequence number (reusing the running frame count - every
+    /// accepted frame increments it exactly once, so a separate counter
+    /// would only duplicate it), updates the single-slot latest-frame
+    /// cache, and broadcasts to any live `/stream` subscribers. A no-op if
+    /// `camera_id` isn't a configured camera.
+    pub fn record_camera_frame(&self, camera_id: &str, mut frame: CameraFrame) {
+        let sequence = {
+            let mut totals = match self.camera_frames_total.lock() {
+                Ok(guard) => guard,
+                Err(_) => return,
+            };
+            let entry = totals.entry(camera_id.to_string()).or_insert(0);
+            *entry += 1;
+            *entry
+        };
+        frame.sequence = sequence;
+        let frame = Arc::new(frame);
+
+        if let Ok(mut latest) = self.camera_latest.lock() {
+            latest.insert(camera_id.to_string(), frame.clone());
+        }
+        if let Ok(mut last_frame_at) = self.camera_last_frame_at_unix_ms.lock() {
+            last_frame_at.insert(camera_id.to_string(), now_unix_ms());
+        }
+        if let Ok(events) = self.camera_events.lock() {
+            if let Some(sender) = events.get(camera_id) {
+                let _ = sender.send(frame);
+            }
+        }
+    }
+
+    pub fn latest_camera_frame(&self, camera_id: &str) -> Option<Arc<CameraFrame>> {
+        self.camera_latest
+            .lock()
+            .ok()
+            .and_then(|latest| latest.get(camera_id).cloned())
+    }
+
+    /// `None` only when `camera_id` isn't a configured camera at all - the
+    /// channel itself is pre-created for every configured device at
+    /// `AppState::new`, so this never races the capture thread starting up.
+    pub fn subscribe_camera_frames(
+        &self,
+        camera_id: &str,
+    ) -> Option<broadcast::Receiver<Arc<CameraFrame>>> {
+        self.camera_events
+            .lock()
+            .ok()
+            .and_then(|events| events.get(camera_id).map(broadcast::Sender::subscribe))
+    }
+
+    pub fn camera_stream_subscriber_count(&self, camera_id: &str) -> usize {
+        self.camera_events
+            .lock()
+            .ok()
+            .and_then(|events| events.get(camera_id).map(broadcast::Sender::receiver_count))
+            .unwrap_or(0)
+    }
+
+    pub fn is_configured_camera(&self, camera_id: &str) -> bool {
+        self.camera_events
+            .lock()
+            .map(|events| events.contains_key(camera_id))
+            .unwrap_or(false)
+    }
+
+    pub fn note_camera_capture_dropped(&self, camera_id: &str) {
+        if let Ok(mut dropped) = self.camera_dropped_total.lock() {
+            *dropped.entry(camera_id.to_string()).or_insert(0) += 1;
+        }
+    }
+
+    pub fn note_camera_capture_encode_error(&self, camera_id: &str) {
+        if let Ok(mut errors) = self.camera_encode_errors_total.lock() {
+            *errors.entry(camera_id.to_string()).or_insert(0) += 1;
+        }
+    }
+
+    pub fn note_camera_capture_started(&self, camera_id: &str) {
+        if let Ok(mut capturing) = self.camera_capturing.lock() {
+            capturing.insert(camera_id.to_string(), true);
+        }
+        if let Ok(mut last_error) = self.camera_last_error.lock() {
+            last_error.remove(camera_id);
+        }
+        self.emit_event(
+            "camera.capture.started",
+            serde_json::json!({"camera_id": camera_id}),
+        );
+    }
+
+    pub fn note_camera_capture_error(&self, camera_id: &str, error: &str) {
+        if let Ok(mut capturing) = self.camera_capturing.lock() {
+            capturing.insert(camera_id.to_string(), false);
+        }
+        if let Ok(mut last_error) = self.camera_last_error.lock() {
+            last_error.insert(camera_id.to_string(), error.to_string());
+        }
+        self.emit_event(
+            "camera.capture.error",
+            serde_json::json!({"camera_id": camera_id, "error": error}),
+        );
+    }
+
+    pub fn camera_capture_status(&self, camera_id: &str) -> Option<CameraCaptureStatus> {
+        if !self.is_configured_camera(camera_id) {
+            return None;
+        }
+        let config = self.config.load();
+        let device_config = config
+            .camera
+            .devices
+            .iter()
+            .find(|device| device.id == camera_id)?;
+        Some(CameraCaptureStatus {
+            id: camera_id.to_string(),
+            enabled: device_config.enabled,
+            capturing: self
+                .camera_capturing
+                .lock()
+                .ok()
+                .and_then(|capturing| capturing.get(camera_id).copied())
+                .unwrap_or(false),
+            frames_total: self
+                .camera_frames_total
+                .lock()
+                .ok()
+                .and_then(|totals| totals.get(camera_id).copied())
+                .unwrap_or(0),
+            dropped_total: self
+                .camera_dropped_total
+                .lock()
+                .ok()
+                .and_then(|totals| totals.get(camera_id).copied())
+                .unwrap_or(0),
+            encode_errors_total: self
+                .camera_encode_errors_total
+                .lock()
+                .ok()
+                .and_then(|totals| totals.get(camera_id).copied())
+                .unwrap_or(0),
+            subscribers: self.camera_stream_subscriber_count(camera_id),
+            last_error: self
+                .camera_last_error
+                .lock()
+                .ok()
+                .and_then(|errors| errors.get(camera_id).cloned()),
+            last_frame_at_unix_ms: self
+                .camera_last_frame_at_unix_ms
+                .lock()
+                .ok()
+                .and_then(|frames| frames.get(camera_id).copied()),
+        })
+    }
+
+    pub fn camera_capture_statuses(&self) -> Vec<CameraCaptureStatus> {
+        self.config
+            .load()
+            .camera
+            .devices
+            .iter()
+            .filter_map(|device| self.camera_capture_status(&device.id))
+            .collect()
     }
 
     pub fn subscribe_events(&self) -> broadcast::Receiver<AgentEvent> {

@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample } from './types';
+import type { AgentEvent, AgentStatus, CameraCaptureStatus, CanCaptureStatus, CanFrame, DoctorReport, IntegrationStatus, Inventory, SensorSample } from './types';
 
 const TOKEN_STORAGE_KEY = 'zyvor-device-agent.bearer-token';
 
@@ -71,6 +71,21 @@ export function getCanCaptureStatus(): Promise<CanCaptureStatus> {
 
 export function getRecentCanFrames(): Promise<CanFrame[]> {
   return getJson('/api/v1/can/frames/recent');
+}
+
+export function getCameras(): Promise<CameraCaptureStatus[]> {
+  return getJson('/api/v1/camera');
+}
+
+/** Not a JSON fetch - these back an <img src>, which can't set an
+ *  Authorization header, so the token (when set) travels as `?token=`
+ *  via withTokenParam, same as the CAN/events SSE streams. */
+export function cameraSnapshotUrl(id: string): string {
+  return withTokenParam(`/api/v1/camera/${encodeURIComponent(id)}/snapshot`);
+}
+
+export function cameraStreamUrl(id: string): string {
+  return withTokenParam(`/api/v1/camera/${encodeURIComponent(id)}/stream`);
 }
 
 export function bytes(value: number | null | undefined): string {

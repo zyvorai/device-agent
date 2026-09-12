@@ -35,6 +35,22 @@ enabled = false
 cert_path = "/etc/zyvor/device-agent/tls/server.crt"
 key_path = "/etc/zyvor/device-agent/tls/server.key"
 
+[camera]
+# --features camera build only (off by default, like hotplug/tpm2). No
+# /dev/video* is ever opened unless explicitly declared below - same
+# "never auto-scan" posture as [industrial.can_capture]'s interface
+# allowlist. See docs/CAMERA.md.
+devices = []
+
+# [[camera.devices]]
+# id = "front-dock"
+# path = "/dev/video0"
+# enabled = true
+# max_frames_per_second = 10
+# jpeg_quality = 75
+# max_stream_clients = 4
+# publish_to_nodra = true
+
 [auth]
 # "none" (default, backward compatible), "bearer", or "mtls". scripts/deploy-remote.sh
 # generates a token and populates auth.bearer.token_hash_file automatically

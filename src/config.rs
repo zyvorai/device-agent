@@ -18,6 +18,7 @@ pub struct Config {
     pub fleet: FleetConfig,
     pub plugins: PluginConfig,
     pub thresholds: ThresholdConfig,
+    pub camera: CameraConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -267,6 +268,54 @@ pub struct CanCaptureConfig {
     pub max_frames_per_second: u32,
     pub include_error_frames: bool,
     pub publish_to_nodra: bool,
+}
+
+/// Top-level, not nested under `[industrial]` - a camera isn't a fieldbus
+/// concept, and the future local-inference/accelerator work this seeds
+/// (see `docs/ROADMAP.md`'s "Edge AI bridge" entry) shouldn't have to
+/// retrofit out of an industrial sub-table.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CameraConfig {
+    /// Explicit per-camera declarations. No `/dev/video*` is ever opened
+    /// unless listed here - same "never auto-scan" posture as
+    /// `[industrial.can_capture]`'s interface allowlist.
+    pub devices: Vec<CameraDeviceConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CameraDeviceConfig {
+    /// Stable id used in API paths (`/api/v1/camera/{id}/...`) - not the
+    /// `/dev/videoN` path, whose numbering isn't stable across
+    /// reboots/replugs.
+    pub id: String,
+    pub path: String,
+    pub enabled: bool,
+    pub max_frames_per_second: u32,
+    /// 1-100. Only used on the software YUYV-encode fallback path - ignored
+    /// for devices captured via native MJPG passthrough.
+    pub jpeg_quality: u8,
+    /// 0 = unlimited, matching this config's existing "0/unset = no limit"
+    /// idiom (e.g. `PluginConfig`'s rlimit fields).
+    pub max_stream_clients: u32,
+    /// Publishes only `CameraCaptureStatus` (health/presence) to Nodra,
+    /// never frame bytes - see `docs/CAMERA.md`.
+    pub publish_to_nodra: bool,
+}
+
+impl Default for CameraDeviceConfig {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            path: String::new(),
+            enabled: false,
+            max_frames_per_second: 10,
+            jpeg_quality: 75,
+            max_stream_clients: 4,
+            publish_to_nodra: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

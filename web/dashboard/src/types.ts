@@ -92,6 +92,18 @@ export type CanCaptureStatus = {
   last_error?: string | null;
 };
 
+export type CameraCaptureStatus = {
+  id: string;
+  enabled: boolean;
+  capturing: boolean;
+  frames_total: number;
+  dropped_total: number;
+  encode_errors_total: number;
+  subscribers: number;
+  last_error?: string | null;
+  last_frame_at_unix_ms?: number | null;
+};
+
 export type Inventory = {
   device: { serial: string; vendor: string; model: string; hostname: string; machine_id: string };
   system: { arch: string; kernel: string; os: string; cpu_model: string; cpu_cores: number; memory_bytes: number; storage_bytes: number | null; uptime_seconds: number };

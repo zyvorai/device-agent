@@ -48,6 +48,22 @@ jobs:
       - run: cargo test --all --features tpm2
       - run: cargo build --release --features tpm2
 
+  rust-camera:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      # v4l's default backing crate (v4l2-sys*) bindgens the kernel's V4L2
+      # uapi headers at build time - needs libclang, unlike the rest of this
+      # codebase's dependencies. `jpeg-encoder` (the other half of `camera`)
+      # is pure Rust and needs nothing extra.
+      - run: sudo apt-get update && sudo apt-get install -y libclang-dev
+      - run: cargo clippy --all-targets --features camera -- -D warnings
+      - run: cargo test --all --features camera
+      - run: cargo build --release --features camera
+
   rust-arm64:
     runs-on: ubuntu-latest
     steps:
@@ -76,7 +92,7 @@ jobs:
       - run: npm run build
 
   container:
-    needs: [static, rust-native, rust-arm64, rust-tpm2, dashboard]
+    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, dashboard]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -21,10 +21,15 @@ path = "src/main.rs"
 # is off by default too: it's a pure accelerant on top of the existing
 # polling refresh, and the rest of this codebase has no runtime-library
 # footprint (netlink-sys is pure Rust/libc, unlike udev/libudev.so) worth
-# giving up just for this.
+# giving up just for this. `camera` is the same story: not every deployment
+# has a camera, `v4l` (default `v4l2` feature - raw kernel ioctls, no
+# `libv4l.so` link) and `jpeg-encoder` are both pure Rust with no runtime
+# library footprint, but V4L2 itself is Linux-only and the feature gets its
+# own CI leg like tpm2/hotplug rather than being imposed on every build.
 [features]
 tpm2 = ["dep:tss-esapi"]
 hotplug = ["dep:netlink-sys"]
+camera = ["dep:v4l", "dep:jpeg-encoder"]
 
 [dependencies]
 anyhow = "1.0"
@@ -32,6 +37,7 @@ arc-swap = "1.9"
 axum = { version = "0.8", features = ["json", "macros"] }
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 clap = { version = "4.5", features = ["derive", "env"] }
+jpeg-encoder = { version = "0.6.1", optional = true }
 libc = "0.2"
 netlink-sys = { version = "0.9.0", features = ["tokio_socket"], optional = true }
 nix = { version = "0.29", features = ["process", "user"] }
@@ -61,6 +67,14 @@ x509-parser = "0.18.1"
 # an actual compile failure - so this must stay out of the default dependency set entirely.
 [target.'cfg(target_os = "linux")'.dependencies]
 seccompiler = "0.5"
+# Default features only (`v4l2`): raw V4L2 ioctls via the kernel uapi headers,
+# no `libv4l.so` link. Deliberately not the `libv4l`/`v4l-sys` feature, which
+# links the userspace libv4l wrapper for exotic hardware format conversion -
+# not needed for the MJPG-passthrough / YUYV-software-encode paths this
+# feature actually uses, and it would be a runtime library dependency the
+# container image/.deb/.rpm don't otherwise need (same reasoning as hotplug
+# avoiding libudev.so).
+v4l = { version = "0.14.0", optional = true }
 
 [dev-dependencies]
 http-body-util = "0.1"

@@ -24,6 +24,7 @@ exists for two other cases:
 | SPI | `/dev/spidev*` | `spi` (create if absent) | `SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"` | Discovered (`src/hardware/buses.rs`) but no shipped plugin uses it yet. |
 | CAN | netdevice (`can0`, `vcan0`, …), plus `/dev/can*` on some drivers | n/a — netdevices, not device-node permissions | — | Governed by `CAP_NET_ADMIN`/`CAP_NET_RAW`, already in `AmbientCapabilities`/`CapabilityBoundingSet` in the systemd unit. See `docs/INDUSTRIAL_BUSES.md` and `docs/CAN_CAPTURE.md`. |
 | Watchdog | `/dev/watchdog*` | none by default (root-only, `0600`) | — | Read-only presence check today; no plugin or capability currently touches it. |
+| Camera (`--features camera`) | `/dev/video*` | `video` (create if absent) | `SUBSYSTEM=="video4linux", GROUP="video", MODE="0660"` | Opened directly by the daemon (`src/camera_capture.rs`), not a plugin subprocess — root sidesteps this like every other row above. `packaging/systemd/zyvor-device-agent.service`'s `DevicePolicy=auto` has no `DeviceAllow=` entries, so no cgroup device filter blocks this today; the `video` group only matters for a future de-privileged daemon. |
 
 ## Setting up a dropped-privilege plugin account
 

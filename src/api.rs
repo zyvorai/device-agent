@@ -3,6 +3,7 @@
 use std::{convert::Infallible, fmt::Write as _, sync::Arc, time::Duration};
 
 use axum::{
+    body::Body,
     extract::{Path, State},
     http::{header, StatusCode},
     middleware,
@@ -36,6 +37,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/can/capture", get(can_capture_status))
         .route("/api/v1/can/frames/recent", get(can_frames_recent))
         .route("/api/v1/can/frames/stream", get(can_frames_stream))
+        .route("/api/v1/camera", get(camera_list))
+        .route("/api/v1/camera/{id}/snapshot", get(camera_snapshot))
+        .route("/api/v1/camera/{id}/stream", get(camera_stream))
         .route("/api/v1/thermal", get(thermal))
         .route("/api/v1/integrations", get(integrations))
         .route("/api/v1/integrations/fleet/inventory", get(fleet_inventory))
@@ -166,6 +170,99 @@ async fn can_frames_stream(
             .interval(Duration::from_secs(15))
             .text("keep-alive"),
     )
+}
+
+async fn camera_list(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<crate::model::CameraCaptureStatus>> {
+    Json(state.camera_capture_statuses())
+}
+
+async fn camera_snapshot(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Response {
+    if !state.is_configured_camera(&id) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "camera not configured"})),
+        )
+            .into_response();
+    }
+    match state.latest_camera_frame(&id) {
+        Some(frame) => (
+            [(header::CONTENT_TYPE, frame.content_type)],
+            frame.jpeg.clone(),
+        )
+            .into_response(),
+        None => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({"error": "no frame captured yet"})),
+        )
+            .into_response(),
+    }
+}
+
+/// `multipart/x-mixed-replace` — the same shape a classic IP camera serves,
+/// which every browser already renders natively inside a plain `<img>` tag
+/// with no WebRTC/signaling needed. Capture runs exactly once regardless of
+/// how many viewers connect (`AppState::record_camera_frame` broadcasts to
+/// all subscribers); a lagging viewer skips forward rather than tearing
+/// down the connection, same as the CAN/events SSE handlers above silently
+/// dropping `Err` broadcast results.
+async fn camera_stream(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Response {
+    const BOUNDARY: &str = "zyvorframe";
+
+    let Some(receiver) = state.subscribe_camera_frames(&id) else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "camera not configured"})),
+        )
+            .into_response();
+    };
+
+    let max_clients = state
+        .config
+        .load()
+        .camera
+        .devices
+        .iter()
+        .find(|device| device.id == id)
+        .map(|device| device.max_stream_clients)
+        .unwrap_or(0);
+    // 0 = unlimited, matching this config's existing "0/unset = no limit"
+    // idiom. Checked after subscribing (so the count already includes this
+    // connection) - a brief overshoot on the rejected connection's way back
+    // out is fine for a soft cap like this.
+    if max_clients > 0 && state.camera_stream_subscriber_count(&id) > max_clients as usize {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(serde_json::json!({"error": "too many concurrent stream viewers"})),
+        )
+            .into_response();
+    }
+
+    let stream = BroadcastStream::new(receiver).filter_map(move |message| {
+        let Ok(frame) = message else {
+            // Lagged: skip forward and keep streaming rather than ending it.
+            return None;
+        };
+        let mut chunk = format!(
+            "--{BOUNDARY}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
+            frame.content_type,
+            frame.jpeg.len()
+        )
+        .into_bytes();
+        chunk.extend_from_slice(&frame.jpeg);
+        chunk.extend_from_slice(b"\r\n");
+        Some(Ok::<_, Infallible>(chunk))
+    });
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(
+            header::CONTENT_TYPE,
+            format!("multipart/x-mixed-replace; boundary={BOUNDARY}"),
+        )
+        .body(Body::from_stream(stream))
+        .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
 
 async fn thermal(State(state): State<Arc<AppState>>) -> Json<Vec<crate::model::ThermalZone>> {

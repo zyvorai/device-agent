@@ -146,6 +146,53 @@ pub struct CanCaptureStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CameraDevice {
+    /// Config-assigned stable id, not the `/dev/videoN` path - device-node
+    /// numbering isn't guaranteed stable across reboots/replugs.
+    pub id: String,
+    pub path: String,
+    pub name: String,
+    pub driver: String,
+    /// FourCC strings the device advertises, e.g. `["MJPG", "YUYV"]`.
+    pub formats: Vec<String>,
+    pub active_format: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub capturing: bool,
+    pub last_error: Option<String>,
+}
+
+/// One captured, already-JPEG-encoded frame. Never serialized as JSON - it
+/// goes out raw as an HTTP body (a single `image/jpeg` response, or one
+/// `multipart/x-mixed-replace` part) - so `jpeg` is skipped even though the
+/// rest of the struct derives `Serialize` for consistency with the other
+/// model types.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CameraFrame {
+    pub camera_id: String,
+    pub sequence: u64,
+    pub captured_at_unix_ms: u64,
+    pub width: u32,
+    pub height: u32,
+    pub content_type: &'static str,
+    #[serde(skip)]
+    pub jpeg: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CameraCaptureStatus {
+    pub id: String,
+    pub enabled: bool,
+    pub capturing: bool,
+    pub frames_total: u64,
+    pub dropped_total: u64,
+    pub encode_errors_total: u64,
+    pub subscribers: usize,
+    pub last_error: Option<String>,
+    pub last_frame_at_unix_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsbDevice {
     pub path: String,
     pub vendor_id: Option<String>,

@@ -287,6 +287,17 @@ sudo dpkg -i zyvor-device-agent_*.deb   # or: sudo rpm -i zyvor-device-agent-*.r
 sudo systemctl enable --now zyvor-device-agent
 ```
 
+Multi-arch (`linux/amd64` + `linux/arm64`) container images are published
+to `ghcr.io/zyvorai/device-agent` on every tagged release — the fastest
+path onto a small ARM64 device with no on-device Rust/Node build:
+
+```bash
+podman pull ghcr.io/zyvorai/device-agent:latest
+```
+
+See [7. Container deployment](docs/guides/07-container-deployment.md) for
+device/bus flags, config/state volumes, and running it under systemd.
+
 ## Hotplug (v0.1.4, optional)
 
 `--features hotplug` adds a raw `NETLINK_KOBJECT_UEVENT` socket alongside the existing
@@ -359,6 +370,7 @@ A numbered series meant to be read in order the first time through; see
 | 4 | [Industrial buses](docs/guides/04-industrial-buses.md) | CAN health, RS485 declaration, enabling read-only CAN capture |
 | 5 | [Writing a sensor plugin](docs/guides/05-writing-a-sensor-plugin.md) | The plugin contract end to end, using the I²C temperature example |
 | 6 | [Deploying to production](docs/guides/06-deploying-to-production.md) | `.deb`/`.rpm`, `deploy-remote.sh`, systemd, `SIGHUP` reload, Prometheus |
+| 7 | [Container deployment](docs/guides/07-container-deployment.md) | Pull the published multi-arch image and run it, with or without systemd |
 
 ### How-to / reference
 
@@ -376,4 +388,14 @@ A numbered series meant to be read in order the first time through; see
 
 ## License
 
-Apache License 2.0. See `LICENSE` and `NOTICE`.
+### Open source (Apache-2.0)
+
+This repository is licensed under the [Apache License, Version 2.0](LICENSE).
+You may use, modify, and run it for personal, lab, and commercial production
+use at no charge, subject to Apache-2.0 (preserve notices / NOTICE where required).
+See [NOTICE](NOTICE).
+
+### Enterprise
+
+Production support, SLAs, and Zyvor Enterprise products are licensed separately.
+Contact [sales@zyvor.dev](mailto:sales@zyvor.dev) or see [zyvor.dev](https://zyvor.dev).

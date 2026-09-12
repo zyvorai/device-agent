@@ -11,7 +11,7 @@ fi
 
 install -Dm755 "$BIN_SOURCE" "$ROOT/usr/bin/zyvor-device-agent"
 install -Dm644 packaging/systemd/zyvor-device-agent.service "$ROOT/usr/lib/systemd/system/zyvor-device-agent.service"
-install -d "$ROOT/etc/zyvor/device-agent/profiles" "$ROOT/etc/zyvor/device-agent/plugins.d" "$ROOT/usr/lib/zyvor-device-agent/plugins"
+install -d "$ROOT/etc/zyvor/device-agent/profiles" "$ROOT/etc/zyvor/device-agent/plugins.d" "$ROOT/etc/zyvor/device-agent/tls" "$ROOT/usr/lib/zyvor-device-agent/plugins"
 install -m644 profiles/*.toml "$ROOT/etc/zyvor/device-agent/profiles/"
 install -m755 examples/i2c_temperature.py "$ROOT/usr/lib/zyvor-device-agent/plugins/i2c_temperature.py"
 install -m644 examples/plugins.d/i2c-temperature.json "$ROOT/etc/zyvor/device-agent/plugins.d/i2c-temperature.json"

@@ -243,6 +243,26 @@ re-opening CAN capture sockets still needs a restart. A malformed config file
 is logged and ignored on `SIGHUP`, keeping the daemon on its last-known-good
 config rather than crashing or half-applying a broken reload.
 
+## Packaging (v0.1.4)
+
+Signed `.deb` and `.rpm` packages (amd64) are attached to each GitHub Release,
+alongside the existing tarballs. Both install the same layout as
+`scripts/install.sh` (`/usr/bin/zyvor-device-agent`,
+`/usr/lib/systemd/system/zyvor-device-agent.service`,
+`/etc/zyvor/device-agent.toml`, profiles, and the disabled-by-default I2C
+reference plugin) but deliberately **do not** enable or start the service —
+that stays an explicit `systemctl enable --now zyvor-device-agent` after
+reviewing the config, matching `install.sh`'s own philosophy.
+`/etc/zyvor/device-agent.toml` is a conffile (dpkg)/`%config(noreplace)`
+(rpm): a locally-modified config survives a package upgrade or reinstall, and
+`dpkg -r`/`rpm -e` leave it and the profiles/plugin manifests in place rather
+than deleting them. arm64 packages aren't built yet — see `docs/BACKLOG.md`.
+
+```bash
+sudo dpkg -i zyvor-device-agent_*.deb   # or: sudo rpm -i zyvor-device-agent-*.rpm
+sudo systemctl enable --now zyvor-device-agent
+```
+
 ## Product boundary
 
 ```text

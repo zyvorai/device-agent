@@ -52,3 +52,48 @@ lto = "thin"
 codegen-units = 1
 strip = true
 panic = "abort"
+
+# Asset list mirrors scripts/install.sh's layout so the .deb/.rpm and the
+# manual tarball install end up with an identical on-disk footprint.
+[package.metadata.deb]
+maintainer = "Zyvor <support@zyvor.dev>"
+depends = "$auto"
+section = "utility"
+priority = "optional"
+assets = [
+    { source = "target/release/zyvor-device-agent", dest = "usr/bin/", mode = "755" },
+    { source = "profiles/*.toml", dest = "etc/zyvor/device-agent/profiles/", mode = "644" },
+    { source = "examples/i2c_temperature.py", dest = "usr/lib/zyvor-device-agent/plugins/i2c_temperature.py", mode = "755" },
+    { source = "examples/plugins.d/i2c-temperature.json", dest = "etc/zyvor/device-agent/plugins.d/i2c-temperature.json", mode = "644" },
+    # /etc is auto-detected as conffiles by dpkg, so a locally-modified
+    # config survives an upgrade without needing a conf-files entry here.
+    { source = "config/device-agent.example.toml", dest = "etc/zyvor/device-agent.toml", mode = "640" },
+    { source = "web/dashboard/dist/index.html", dest = "usr/share/zyvor-device-agent/dashboard/index.html", mode = "644" },
+    { source = "web/dashboard/dist/assets/*", dest = "usr/share/zyvor-device-agent/dashboard/assets/", mode = "644" },
+]
+
+# Installing the package must never auto-start a root-capable daemon -
+# matches scripts/install.sh's explicit-step philosophy. `dpkg -i` installs
+# the unit disabled and inactive; the operator runs `systemctl enable --now`
+# after reviewing /etc/zyvor/device-agent.toml.
+[package.metadata.deb.systemd-units]
+unit-scripts = "packaging/systemd"
+unit-name = "zyvor-device-agent"
+enable = false
+start = false
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/zyvor-device-agent", dest = "/usr/bin/zyvor-device-agent", mode = "755" },
+    { source = "packaging/systemd/zyvor-device-agent.service", dest = "/usr/lib/systemd/system/zyvor-device-agent.service", mode = "644" },
+    { source = "profiles/*.toml", dest = "/etc/zyvor/device-agent/profiles/", mode = "644" },
+    { source = "examples/i2c_temperature.py", dest = "/usr/lib/zyvor-device-agent/plugins/i2c_temperature.py", mode = "755" },
+    { source = "examples/plugins.d/i2c-temperature.json", dest = "/etc/zyvor/device-agent/plugins.d/i2c-temperature.json", mode = "644" },
+    { source = "config/device-agent.example.toml", dest = "/etc/zyvor/device-agent.toml", mode = "640", config = "noreplace" },
+    { source = "web/dashboard/dist/index.html", dest = "/usr/share/zyvor-device-agent/dashboard/index.html", mode = "644" },
+    { source = "web/dashboard/dist/assets/*", dest = "/usr/share/zyvor-device-agent/dashboard/assets/", mode = "644" },
+]
+# cargo-generate-rpm has no systemd-units integration like cargo-deb's -
+# reload the unit cache only, never enable/start, matching the .deb behavior.
+post_install_script = "systemctl daemon-reload || true"
+post_uninstall_script = "systemctl daemon-reload || true"

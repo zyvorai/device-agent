@@ -39,7 +39,10 @@
   `docs/HARDWARE_PERMISSIONS.md`).
 - [x] Plugin executable owner allowlist and process resource limits (v0.1.4).
 - [x] Signed release artifacts, SBOM, provenance and cosign workflow (v0.1.4).
-- [ ] Debian/RPM packages and clean uninstall path.
+- [x] Debian/RPM packages and clean uninstall path (v0.1.4 — amd64 only;
+  `cargo-deb`/`cargo-generate-rpm`, both Cargo-metadata-driven; installing
+  never auto-enables/starts the service; config is a conffile/noreplace and
+  survives upgrade/removal). arm64 packages not yet built/validated.
 - [x] ARM64 smoke test under QEMU in CI (v0.1.4 — and its own smoke-test
   command bug, present since it was added, only caught and fixed once
   `-D warnings` made the CI clippy gate meaningful).

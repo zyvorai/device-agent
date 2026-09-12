@@ -27,6 +27,16 @@ jobs:
       - run: python3 scripts/check-static.py
       - run: cd web/dashboard && npm install --no-audit --no-fund && npm test && npm run build
       - run: cargo test --all && cargo build --release
+      - name: Build .deb/.rpm (amd64 only for now)
+        # cargo-deb/cargo-generate-rpm are metadata-driven from
+        # [package.metadata.deb]/[package.metadata.generate-rpm] in Cargo.toml,
+        # so there's no separate packaging manifest to keep in sync. arm64
+        # cross-packaging isn't validated yet (see docs/BACKLOG.md) - amd64
+        # only until that's confirmed, rather than blocking this milestone on it.
+        run: |
+          cargo install cargo-deb cargo-generate-rpm --locked
+          cargo deb -o dist/
+          cargo generate-rpm -o dist/
       - run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
       - run: echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc' >> "$GITHUB_ENV"
       - run: cargo build --release --target aarch64-unknown-linux-gnu
@@ -47,7 +57,7 @@ jobs:
           cp -r web/dashboard/dist/. "$OUT/dashboard/"
           tar -C dist -czf "${OUT}.tar.gz" "$(basename "$OUT")"
       - name: Checksums
-        run: sha256sum dist/*.tar.gz > dist/SHA256SUMS
+        run: sha256sum dist/*.tar.gz dist/*.deb dist/*.rpm > dist/SHA256SUMS
       - name: Generate Rust SBOM
         run: |
           cargo install cargo-cyclonedx --locked
@@ -69,7 +79,7 @@ jobs:
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: 'dist/*.tar.gz'
+          subject-path: 'dist/*.tar.gz,dist/*.deb,dist/*.rpm'
       - name: Extract changelog section
         id: changelog
         run: |
@@ -104,6 +114,8 @@ jobs:
           body: ${{ steps.changelog.outputs.notes }}
           files: |
             dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
             dist/SHA256SUMS
             dist/SHA256SUMS.sig
             dist/SHA256SUMS.pem

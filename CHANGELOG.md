@@ -2,6 +2,28 @@
 
 ## 0.1.4-dev — 2026-09-12
 
+- Add signed `.deb`/`.rpm` packages (amd64) to the release pipeline, built
+  via `cargo-deb`/`cargo-generate-rpm` from new `[package.metadata.deb]`/
+  `[package.metadata.generate-rpm]` tables in `Cargo.toml` (both fully
+  Cargo-metadata-driven, no separate packaging manifest). Asset layout
+  mirrors `scripts/install.sh`. Installing the package never enables or
+  starts the systemd unit — `cargo-deb`'s `systemd-units` integration is
+  configured with `enable = false`/`start = false`, and the generated
+  `.deb` carries no maintainer scripts at all as a result; the rpm's only
+  scriptlet is `systemctl daemon-reload`. `/etc/zyvor/device-agent.toml`
+  is a conffile (dpkg) / `%config(noreplace)` (rpm), so a locally-modified
+  config survives both an upgrade and a straight reinstall, and
+  `dpkg -r`/`rpm -e` leave it and the profiles/plugin manifests on disk —
+  all verified for real: built both packages on the reference Linux host,
+  `dpkg -i`'d the `.deb` on top of an already-running manually-deployed
+  instance (confirmed `--force-confold`'s "Keeping old config file as
+  default" preserves an operator edit), then `dpkg -r`'d it and confirmed
+  the config/profiles remained; the `.rpm` was verified via an isolated
+  `rpm --root` install (file layout, permissions, no enable/start
+  scriptlet) since this host runs a Debian-family package manager, not
+  rpm, day to day. arm64 packages aren't built yet — cross-packaging
+  wasn't validated in this pass, so it's tracked as a follow-up rather
+  than blocking amd64 on it.
 - Add config hot-reload: `SIGHUP` re-reads the config file and applies
   `auth.*`, `thresholds.*`, `plugins.*`, `fleet.*` and the parts of
   `industrial.*`/`nodra.*` read fresh per-request/tick, without a restart.

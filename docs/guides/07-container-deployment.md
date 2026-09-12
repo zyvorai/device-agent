@@ -21,9 +21,14 @@ podman pull ghcr.io/zyvorai/device-agent:latest
 podman run --rm -p 9188:9188 ghcr.io/zyvorai/device-agent:latest
 ```
 
-No config mount needed for this first run — with no config file present the
-daemon falls back to built-in defaults (`Config::load_or_default`), the same
-as running the plain binary with no `--config` file. Confirm it's up from
+No config mount needed for this first run — the image bakes
+`config/device-agent.example.toml` in at `/etc/zyvor/device-agent.toml`
+(`Config::load_or_default`'s default path), so it loads that rather than
+truly running config-less; `ServerConfig::default()`'s `listen` and
+`dashboard_dir` are kept identical to the example config's, so the
+observable behavior matches the plain binary's built-in defaults either
+way. Bind-mount your own file over that path (step 3) to actually run
+config-less-equivalent or with different settings. Confirm it's up from
 another terminal:
 
 ```bash

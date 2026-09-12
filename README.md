@@ -79,6 +79,7 @@ npm run build
 | `GET /api/v1/ready` | readiness — 200 once the background inventory refresh loop is ticking, 503 if it has stalled |
 | `GET /api/v1/status` | agent generation/sample counters |
 | `GET /api/v1/inventory` | cached full device inventory |
+| `GET /api/v1/hardware` | alias for `/api/v1/inventory` |
 | `POST /api/v1/inventory/refresh` | force an immediate Linux inventory refresh |
 | `GET /api/v1/interfaces` | network, buses, industrial state and USB |
 | `GET /api/v1/industrial` | CAN + serial/RS485 hardware state |
@@ -89,6 +90,7 @@ npm run build
 | `GET /api/v1/can/frames/stream` | live Server-Sent Events stream of captured CAN frames |
 | `GET /api/v1/thermal` | Linux thermal zones |
 | `GET /api/v1/integrations` | Nodra/Fleet connection state |
+| `GET /api/v1/integrations/fleet/inventory` | the same projection as the `fleet-inventory` CLI command, over HTTP |
 | `GET /api/v1/plugins` | plugin manifests + validation state |
 | `POST /api/v1/plugins/{name}/sample` | execute one plugin sample |
 | `GET /api/v1/sensors` | latest canonical samples |
@@ -295,7 +297,7 @@ any reason, a warning is logged once and the daemon falls back to polling-only.
 ```text
 Device Agent: "There is a CAN interface named can0."
 Nodra:        "0x18FF50E5 is engine temperature = 82°C."
-Fleet:        "Apply config X to device ZY-MW-0001 and restart workload Y."
+Fleet:        "Apply config X to device ZY-REF-0001 and restart workload Y."
 Aether:       "This application requires CAN + 4 cores; this node is eligible."
 ```
 
@@ -311,7 +313,9 @@ Pages: **Overview · Hardware · Interfaces · Industrial · Sensors · Integrat
 
 ```text
 src/                    Rust daemon
-  hardware/             Linux/sysfs discovery only
+  hardware/             Linux/sysfs discovery only (+ optional hotplug.rs)
+  auth/                 bearer/mTLS auth, enrollment
+  identity/             mTLS private key backends (software, optional tpm)
   integrations/         Nodra and Fleet adapters
   api.rs                 REST API
   plugins.rs             external sensor plugin contract
@@ -328,7 +332,11 @@ docs/                    architecture, roadmap, reference-hardware profile
 
 A clean ARM64 reference unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
 
-See `docs/REFERENCE_HARDWARE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`, `docs/INDUSTRIAL_BUSES.md`, `docs/INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`, `docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md`, `docs/HARDWARE_PERMISSIONS.md` and `docs/ROADMAP.md`.
+See `docs/QUICKSTART.md`, `docs/REFERENCE_HARDWARE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`,
+`docs/INDUSTRIAL_BUSES.md`, `docs/INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`,
+`docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md`, `docs/HARDWARE_PERMISSIONS.md`,
+`docs/PLUGIN_PROTOCOL.md`, `docs/MTLS_ENROLLMENT.md`, `docs/TPM2_IDENTITY.md` and
+`docs/ROADMAP.md`.
 
 ## License
 

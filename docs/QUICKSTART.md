@@ -80,8 +80,15 @@ instead — an external Prometheus can't reach a loopback-only bind.
 ## Next steps
 
 - `docs/HARDWARE_PERMISSIONS.md` — bus permissions for dropped-privilege
-  sensor plugins (`plugins.run_as_uid`/`run_as_gid`).
-- README's "CORS and rate limiting" and "Configurable health thresholds"
-  sections for the other opt-in `[server.*]`/`[thresholds]` settings.
+  sensor plugins (`plugins.run_as_uid`/`run_as_gid`), plus the opt-in
+  seccomp-bpf denylist (`plugins.seccomp_enabled`).
+- `docs/MTLS_ENROLLMENT.md` — `auth.mode = "mtls"` as an alternative to
+  bearer auth: `zyvor-device-agent enroll`/`identity`, and (optionally)
+  `docs/TPM2_IDENTITY.md` for keeping that private key inside a TPM2.
+- README's "CORS and rate limiting", "Configurable health thresholds" and
+  "Config hot-reload" sections for the other opt-in
+  `[server.*]`/`[thresholds]`/`SIGHUP` behavior.
+- README's "Packaging" and "Hotplug" sections if you're installing from a
+  `.deb`/`.rpm` or want faster-than-polling bus-change detection.
 - `docs/ARCHITECTURE.md` for the full security-model picture and what's
   still open before GA.

@@ -28,27 +28,27 @@ Aether may later use the Device Agent as a hardware capability source when decid
 
 ## Processes
 
-`zyvor-device-agent` is one Rust binary with four CLI modes:
+`zyvor-device-agent` is one Rust binary with these CLI subcommands:
 
 - `serve` — REST API + dashboard + Nodra/Fleet background workers
-- `inventory` — one-shot JSON inventory
+- `inventory` — one-shot JSON hardware inventory
+- `industrial` — one-shot CAN/serial-RS485 hardware state
 - `doctor` — diagnostics suitable for manufacturing and field support
-- `enroll` — explicit Fleet inventory projection
+- `fleet-inventory` — explicit Fleet inventory projection
+- `plugins` — list configured sensor plugins and their validation state
+- `sample <name>` — execute one configured sensor plugin immediately
+- `enroll` — mTLS client enrollment: generate a CSR, submit it, persist the
+  issued certificate/key (`auth.mode = "mtls"`) — see `docs/MTLS_ENROLLMENT.md`
+- `identity` — print the current mTLS identity's subject, validity and key
+  backend (`software` or `tpm`)
 
 Sensor plugins are separate executables described by JSON manifests under `plugins.d`. This avoids loading third-party code into the long-running daemon and lets a plugin be implemented in Rust, Go, C, Python or shell for prototypes.
 
 ## API v1
 
-- `GET /api/v1/health`
-- `GET /api/v1/inventory`
-- `GET /api/v1/hardware`
-- `GET /api/v1/interfaces`
-- `GET /api/v1/thermal`
-- `GET /api/v1/integrations`
-- `GET /api/v1/plugins`
-- `POST /api/v1/plugins/{name}/sample`
-- `GET /api/v1/doctor`
-- `GET /metrics`
+See the README's "API" table for the full, current route list (health/ready/status,
+inventory, industrial/CAN, plugins/sensors, events, doctor, metrics) — kept in one place
+rather than duplicated here, since it changes with nearly every milestone.
 
 ## Security model
 

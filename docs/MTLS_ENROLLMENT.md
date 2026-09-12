@@ -48,8 +48,21 @@ server-side TLS only (the daemon still proves its own identity, but accepts
 any client).
 
 `zyvor-device-agent identity` prints the current certificate's subject,
-issuer, and validity window (`backend: software` today; a TPM-backed key
-provider is a future, feature-gated addition - see `docs/ROADMAP.md`).
+issuer, validity window and key backend (`software`, or `tpm` - see
+`docs/TPM2_IDENTITY.md` for keeping the private key inside a TPM2 instead
+of a plain file).
+
+`auth.mode` only governs the TCP listener. `server.unix_socket`, if enabled,
+is a separate plain listener authenticated by kernel peer credentials (see
+the README's "API auth and Unix socket" section) - it bypasses mTLS
+entirely by design, the same way it already bypasses bearer auth.
+
+The bundled dashboard is a plain browser static page with no client
+certificate to present, so with `require_client_cert = true` a browser
+can't load it at all over the mTLS listener (the TLS handshake itself
+fails before any HTTP request, dashboard shell included) - use the Unix
+socket, `curl`/a script with the right certificate, or `require_client_cert
+= false` if you need browser access to a device configured for mTLS.
 
 ## Verifying locally with a throwaway test CA
 

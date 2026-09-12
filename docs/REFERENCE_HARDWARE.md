@@ -45,7 +45,8 @@ sensor address before enabling the installed manifest.
 ## Manufacturing / field test
 
 1. Boot a clean ARM64 Linux image.
-2. Install Device Agent with `scripts/install.sh` or the future native package.
+2. Install Device Agent with `scripts/install.sh`, or the `.deb`/`.rpm` package from a
+   GitHub Release (see README's "Packaging" section).
 3. `zyvor-device-agent inventory` must identify CPU, RAM, OS, IP/network and physical buses.
 4. `zyvor-device-agent doctor` must pass the selected board profile.
 5. Start the service and open `http://DEVICE:9188` on the management network.
@@ -55,4 +56,6 @@ sensor address before enabling the installed manifest.
 9. Enable Nodra and verify inventory, status and per-sensor topics.
 10. Disconnect WAN; local sampling and Nodra local ingestion must continue.
 11. Reconnect WAN; Nodra flushes its own WAL upstream.
-12. Enroll with Fleet and verify projected hardware/address inventory and application lifecycle.
+12. Register the device with Fleet (a separate Fleet-side onboarding step, not
+    `zyvor-device-agent enroll` — see `docs/MTLS_ENROLLMENT.md` for that) and verify
+    projected hardware/address inventory and application lifecycle.

@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/assets/zyvor-mark.svg" alt="Zyvor" width="40" height="40">
+</p>
+
+<p align="center">
   <img src="docs/assets/banner.svg" alt="Zyvor Device Agent" width="100%">
 </p>
 

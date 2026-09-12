@@ -106,5 +106,5 @@ an external Prometheus can't reach a loopback-only bind.
 - [`ROADMAP.md`](../ROADMAP.md) / [`BACKLOG.md`](../BACKLOG.md) — arm64
   packaging and everything else planned past this.
 - You've now been through the full tutorial series — the README's
-  [Documentation](../../README.md#documentation) section is your map back
+  [Documentation](https://github.com/zyvorai/device-agent#documentation) section is your map back
   to any reference doc.

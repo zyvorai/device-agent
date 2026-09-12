@@ -19,14 +19,14 @@ curl -sSk https://127.0.0.1:9188/api/v1/health
 ```
 
 (`-k` accepts the auto-generated self-signed cert; drop it if you've
-mounted a real one.) See the README's [TLS](../README.md#tls-v015-optional)
+mounted a real one.) See the README's [TLS](https://github.com/zyvorai/device-agent#tls-v015-optional)
 section.
 
 ## Browser shows "Your connection is not private" / a certificate warning
 
 Expected the first time you reach a `server.tls.enabled = true` listener —
 the daemon auto-generates a self-signed certificate if none is configured
-(see [`src/tls.rs`](../src/tls.rs)). Either click through the browser's
+(see [`src/tls.rs`](https://github.com/zyvorai/device-agent/blob/main/src/tls.rs)). Either click through the browser's
 warning once, or replace it with a real certificate by mounting it at
 `server.tls.cert_path`/`key_path` (an existing cert/key there is never
 overwritten).
@@ -79,7 +79,7 @@ connection itself and which interfaces `industrial.can_capture` has open
 are also only read once. A reload applies everything else and logs a
 warning naming which of these it couldn't apply — restart the service for
 those. See the README's
-[Config hot-reload](../README.md#config-hot-reload-v014) section.
+[Config hot-reload](https://github.com/zyvorai/device-agent#config-hot-reload-v014) section.
 
 ## `doctor` (or the dashboard's Diagnostics page) reports failing checks
 

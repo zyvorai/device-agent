@@ -2,7 +2,7 @@
 
 Still deciding whether to adopt Device Agent, rather than already building
 with it? See the main README's
-[Is this for you?](../../README.md#is-this-for-you) section, plus
+[Is this for you?](https://github.com/zyvorai/device-agent#is-this-for-you) section, plus
 [`../FAQ.md`](../FAQ.md) and [`../TROUBLESHOOTING.md`](../TROUBLESHOOTING.md)
 first — these guides assume you've already decided.
 
@@ -12,7 +12,7 @@ matches what you're doing.
 
 Looking for a fact instead of a walkthrough (an API field, a config key, a
 protocol detail)? See the reference docs linked from the main
-[README's Documentation section](../../README.md#documentation) instead —
+[README's Documentation section](https://github.com/zyvorai/device-agent#documentation) instead —
 these guides link out to them wherever the two overlap, on purpose, rather
 than repeating them.
 

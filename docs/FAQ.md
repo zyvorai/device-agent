@@ -9,7 +9,7 @@ decided to adopt it. If you're already building with it, the
 **Is it really free?** Yes. The daemon, dashboard, and everything in this
 repository are Apache-2.0 — free to use, modify, and run for personal, lab,
 and commercial production use at no charge, subject to preserving notices
-(see [`NOTICE`](../NOTICE)). See the README's [License](../README.md#license)
+(see [`NOTICE`](https://github.com/zyvorai/device-agent/blob/main/NOTICE)). See the README's [License](https://github.com/zyvorai/device-agent#license)
 section.
 
 **What does "Enterprise" mean, then?** Production support, SLAs, and
@@ -22,7 +22,7 @@ that; nothing in this repository requires it.
 **What if I find a bug?** Open a GitHub issue on this repository.
 
 **What if I find a security vulnerability?** Don't open a public issue —
-see [`SECURITY.md`](../SECURITY.md) for private reporting instructions and
+see [`SECURITY.md`](https://github.com/zyvorai/device-agent/blob/main/SECURITY.md) for private reporting instructions and
 the current v0.1 security boundary list.
 
 **Is there a support SLA?** Not for the open-source project itself —
@@ -65,7 +65,7 @@ both point at endpoints you control, not a Zyvor-operated cloud.
 
 ## Security
 
-**What's the security model?** See [`SECURITY.md`](../SECURITY.md) in
+**What's the security model?** See [`SECURITY.md`](https://github.com/zyvorai/device-agent/blob/main/SECURITY.md) in
 full. In short: the daemon is intended for a trusted Linux edge node,
 plugin manifests must be administrator-provisioned (no arbitrary remote
 code execution), and the REST API supports bearer-token auth, mTLS (with
@@ -92,7 +92,7 @@ still-unscoped work per `docs/ROADMAP.md`'s "Edge AI bridge" entry.
 ## Hardware
 
 **What hardware is supported?** See the README's
-["Is this for you?"](../README.md#is-this-for-you) section and
+["Is this for you?"](https://github.com/zyvorai/device-agent#is-this-for-you) section and
 [`docs/REFERENCE_HARDWARE.md`](REFERENCE_HARDWARE.md) — a capability
 profile (required buses + recommended buses), not a fixed list of
 certified boards.

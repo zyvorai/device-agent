@@ -100,5 +100,5 @@ I²C bus.
   `device-agent.toml` and what each REST endpoint returns.
 - [3. Securing your agent](03-securing-your-agent.md) — before you bind to
   anything other than loopback.
-- The README's [Documentation](../../README.md#documentation) section for
+- The README's [Documentation](https://github.com/zyvorai/device-agent#documentation) section for
   the full reference-doc index.

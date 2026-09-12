@@ -98,7 +98,7 @@ Returns, per configured camera: `capturing`, `frames_total`,
 capturing state and the counters above — to a retained
 `<topic-prefix>/<serial>/camera/<id>/status` topic. Raw frame bytes never
 reach Nodra; this is deliberate, matching the product boundary described in
-the main [README](../../README.md#product-boundary) — Device Agent reports
+the main [README](https://github.com/zyvorai/device-agent#product-boundary) — Device Agent reports
 capabilities, Nodra owns higher-level semantics.
 
 ## Next steps

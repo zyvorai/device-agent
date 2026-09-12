@@ -1,0 +1,77 @@
+site_name: Zyvor Device Agent
+site_description: Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
+site_url: https://zyvorai.github.io/device-agent/
+repo_url: https://github.com/zyvorai/device-agent
+repo_name: zyvorai/device-agent
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+theme:
+  name: material
+  logo: material/chip
+  favicon: material/chip
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: orange
+      toggle: {icon: material/brightness-7, name: Switch to dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: orange
+      toggle: {icon: material/brightness-4, name: Switch to light mode}
+  features: [navigation.tabs, navigation.sections, navigation.top, navigation.footer, content.code.copy, search.suggest, search.highlight, toc.follow]
+plugins: [search]
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - {name: mermaid, class: mermaid, format: !!python/name:pymdownx.superfences.fence_code_format }
+  - pymdownx.tabbed: {alternate_style: true}
+  - pymdownx.tasklist: {custom_checkbox: true}
+  - tables
+  - toc: {permalink: true}
+nav:
+  - Home: index.md
+  - Evaluating:
+      - FAQ: FAQ.md
+      - Troubleshooting: TROUBLESHOOTING.md
+  - Guides:
+      - Overview: guides/README.md
+      - 1. Getting started: guides/01-getting-started.md
+      - 2. Configuration & the API: guides/02-configuration-and-api.md
+      - 3. Securing your agent: guides/03-securing-your-agent.md
+      - 4. Industrial buses: guides/04-industrial-buses.md
+      - 5. Writing a sensor plugin: guides/05-writing-a-sensor-plugin.md
+      - 6. Deploying to production: guides/06-deploying-to-production.md
+      - 7. Container deployment: guides/07-container-deployment.md
+      - 8. Camera streaming: guides/08-camera-streaming.md
+  - Reference:
+      - Hardware & acceptance:
+          - Reference hardware: REFERENCE_HARDWARE.md
+          - Live hardware (v0.1.1): V0.1.1_LIVE_HARDWARE.md
+          - Hardware permissions: HARDWARE_PERMISSIONS.md
+          - Industrial acceptance: INDUSTRIAL_ACCEPTANCE.md
+      - Industrial buses & protocol hand-off:
+          - Industrial buses: INDUSTRIAL_BUSES.md
+          - CAN capture: CAN_CAPTURE.md
+          - Nodra J1939 hand-off: NODRA_J1939_HANDOFF.md
+          - Nodra Modbus RTU contract: NODRA_MODBUS_RTU_CONTRACT.md
+      - Security & identity:
+          - mTLS enrollment: MTLS_ENROLLMENT.md
+          - TPM2 identity: TPM2_IDENTITY.md
+      - Camera: CAMERA.md
+      - Plugins: PLUGIN_PROTOCOL.md
+      - Operations:
+          - Quickstart: QUICKSTART.md
+  - Architecture & planning:
+      - Architecture: ARCHITECTURE.md
+      - Roadmap: ROADMAP.md
+      - Backlog: BACKLOG.md
+extra:
+  social:
+    - {icon: fontawesome/brands/github, link: https://github.com/zyvorai/device-agent}

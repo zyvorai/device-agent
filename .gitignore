@@ -10,3 +10,7 @@ __pycache__/
 *.pyc
 .deploy-last
 .claude/
+
+# MkDocs
+.venv-docs/
+/site/

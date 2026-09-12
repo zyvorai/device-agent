@@ -30,6 +30,11 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test --all
       - run: cargo build --release
+      # `hotplug` is pure Rust (netlink-sys, no system library), so unlike
+      # tpm2 it can just piggyback on this job instead of needing its own.
+      - run: cargo clippy --all-targets --features hotplug -- -D warnings
+      - run: cargo test --all --features hotplug
+      - run: cargo build --release --features hotplug
 
   rust-tpm2:
     runs-on: ubuntu-latest

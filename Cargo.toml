@@ -17,9 +17,14 @@ path = "src/main.rs"
 
 # Off by default: must never affect a plain `cargo build`. tss-esapi needs
 # libtss2-dev at build time (via pkg-config) - fine for CI's dedicated
-# `--features tpm2` leg, not something to impose on every build.
+# `--features tpm2` leg, not something to impose on every build. `hotplug`
+# is off by default too: it's a pure accelerant on top of the existing
+# polling refresh, and the rest of this codebase has no runtime-library
+# footprint (netlink-sys is pure Rust/libc, unlike udev/libudev.so) worth
+# giving up just for this.
 [features]
 tpm2 = ["dep:tss-esapi"]
+hotplug = ["dep:netlink-sys"]
 
 [dependencies]
 anyhow = "1.0"
@@ -28,6 +33,7 @@ axum = { version = "0.8", features = ["json", "macros"] }
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 libc = "0.2"
+netlink-sys = { version = "0.9.0", features = ["tokio_socket"], optional = true }
 nix = { version = "0.29", features = ["process", "user"] }
 rcgen = "0.14.7"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json"] }

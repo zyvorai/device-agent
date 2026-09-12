@@ -1229,6 +1229,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "netlink-sys"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c99d38e00b420df49e940fe0826e667c3dad82ac68eb4c2bbf754c1c14a83a10"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "libc",
+ "log",
+ "tokio",
+]
+
+[[package]]
 name = "nix"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3151,6 +3164,7 @@ dependencies = [
  "clap",
  "http-body-util",
  "libc",
+ "netlink-sys",
  "nix",
  "rcgen",
  "reqwest",

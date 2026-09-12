@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod buses;
+pub mod hotplug;
 mod identity;
 mod industrial;
 mod network;

@@ -279,6 +279,17 @@ sudo dpkg -i zyvor-device-agent_*.deb   # or: sudo rpm -i zyvor-device-agent-*.r
 sudo systemctl enable --now zyvor-device-agent
 ```
 
+## Hotplug (v0.1.4, optional)
+
+`--features hotplug` adds a raw `NETLINK_KOBJECT_UEVENT` socket alongside the existing
+polling inventory refresh (`device.inventory_refresh_seconds`, default 5s): a kernel uevent
+for a bus the inventory tracks (`gpio`/`i2c`/`spidev`/`net`/`usb`/`tty`) triggers an
+immediate re-scan instead of waiting for the next poll tick. Deliberately **not**
+`udev`/`libudev.so` — this reads the same kernel-generated events udev does, without adding
+a runtime library dependency the container image/`.deb`/`.rpm` don't otherwise need.
+Off by default; opening the netlink socket is never fatal to the daemon — if it fails for
+any reason, a warning is logged once and the daemon falls back to polling-only.
+
 ## Product boundary
 
 ```text

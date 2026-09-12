@@ -171,6 +171,7 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     spawn_plugin_scheduler(state.clone(), shutdown.clone());
     spawn_config_reload_listener(state.clone(), config_path, shutdown.clone());
     can_capture::spawn(state.clone(), shutdown.clone());
+    hardware::hotplug::spawn(state.clone(), shutdown.clone());
 
     if cfg.nodra.enabled {
         let state = state.clone();

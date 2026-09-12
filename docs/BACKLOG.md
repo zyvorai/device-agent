@@ -50,7 +50,9 @@
 - [x] ARM64 smoke test under QEMU in CI (v0.1.4 — and its own smoke-test
   command bug, present since it was added, only caught and fixed once
   `-D warnings` made the CI clippy gate meaningful).
-- [ ] Optional Linux udev/netlink event source to complement polling.
+- [x] Optional Linux udev/netlink event source to complement polling (v0.1.4
+  — `--features hotplug`; a raw `NETLINK_KOBJECT_UEVENT` socket, not
+  `udev`/`libudev.so`, so it adds no runtime library dependency).
 - [x] Configurable thermal/counter health thresholds and alert events (v0.1.4).
 - [x] Graceful config reload without a full restart (v0.1.4 — `SIGHUP`;
   `server.listen`/`unix_socket`/`dashboard_dir` and the Nodra/CAN-capture

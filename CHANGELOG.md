@@ -2,6 +2,26 @@
 
 ## 0.1.4-dev — 2026-09-12
 
+- Add optional Linux hotplug event source: `--features hotplug` (off by
+  default) opens a raw `NETLINK_KOBJECT_UEVENT` socket (`netlink-sys`, pure
+  Rust) alongside the existing polling inventory refresh, and a kernel
+  uevent for a tracked bus subsystem (`gpio`/`i2c`/`spidev`/`net`/`usb`/
+  `tty`) triggers an immediate `hardware::collect_inventory` +
+  `state.update_inventory` re-scan instead of waiting for the next poll
+  tick - reusing the existing SSE hardware-change stream and threshold
+  evaluation as-is. Deliberately not `udev`/`tokio-udev`: those need
+  `libudev.so` at runtime, which the container image/`.deb`/`.rpm` don't
+  otherwise depend on. Opening the socket is never fatal - a warning is
+  logged once and the daemon falls back to polling-only. New
+  `src/hardware/hotplug.rs`; `rust-native`'s CI job gains a second
+  clippy/test/build pass with `--features hotplug` (no extra system
+  library needed, unlike `tpm2`, so it didn't need its own job). Verified
+  for real: sent a synthetic but correctly-formatted uevent over the real
+  netlink multicast group and confirmed the daemon's inventory-refresh
+  timestamp jumps immediately (well under the poll interval, which was
+  set to 300s for the test) for a tracked subsystem (`i2c`) and does *not*
+  move for an untracked one (`cpu`), proving both the trigger and the
+  filter are real, not just compiled.
 - Add optional TPM2-backed mTLS identity: `identity.backend = "tpm"`
   (`--features tpm2`, off by default, must never affect a plain `cargo
   build`) generates and signs the mTLS private key inside a TPM2 via

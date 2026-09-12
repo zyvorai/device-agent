@@ -1,4 +1,4 @@
-# Minewing industrial acceptance — v0.1.2
+# Industrial acceptance — v0.1.2
 
 Run on the selected ARM64 board after installing Device Agent.
 
@@ -37,7 +37,7 @@ Do not make Device Agent silently change CAN bitrate on startup.
 
 ## 3. RS485
 
-Once the exact Minewing UART is known, declare it:
+Once the exact board UART is known, declare it:
 
 ```toml
 [industrial]
@@ -55,7 +55,7 @@ WAL should continue; reconnect and verify buffered telemetry is forwarded.
 ## 5. Demo pass condition
 
 ```text
-Minewing ARM64
+Reference ARM64
   ├─ I2C temperature       PASS
   ├─ CAN health/bitrate    PASS
   ├─ RS485 declaration     PASS

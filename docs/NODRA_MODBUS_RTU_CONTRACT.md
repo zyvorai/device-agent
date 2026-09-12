@@ -88,7 +88,7 @@ The Nodra transport extension should:
 ## Safety
 
 Writes (`0x05`, `0x06`, `0x0F`, `0x10`) should be a separate explicit
-capability and disabled by default. The first Minewing demo only needs reads.
+capability and disabled by default. The first reference-hardware demo only needs reads.
 
 
 ## Compatibility with the current Nodra connector

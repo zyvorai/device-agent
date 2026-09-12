@@ -5,7 +5,7 @@
 - Linux hardware identity/inventory, physical buses and thermal discovery
 - REST, Prometheus, external sensor-plugin process contract
 - Nodra MQTT publishing and Fleet inventory projection
-- systemd/OCI packaging, Minewing profile, local Apple-inspired dashboard
+- systemd/OCI packaging, generic reference-hardware profile, local Apple-inspired dashboard
 
 ## v0.1.1 — Live Hardware
 

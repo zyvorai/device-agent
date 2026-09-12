@@ -1,5 +1,5 @@
-name = "minewing-reference-arm64"
-vendor = "Minewing"
+name = "generic-reference-arm64"
+vendor = "Generic"
 arch = "aarch64"
 
 [minimum]

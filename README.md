@@ -5,7 +5,7 @@
 **Status:** v0.1.4 production-hardening development · **License:** Apache-2.0 · **Targets:** Linux `arm64` first, `amd64` for development and CI.
 
 ```text
-Minewing / Linux edge hardware
+Generic reference / Linux edge hardware
             |
             v
      Zyvor Device Agent
@@ -46,7 +46,7 @@ It intentionally does **not** interpret Modbus registers, CAN/J1939 PGNs or OPC-
 - systemd service
 - OCI image with `linux/amd64` + `linux/arm64` CI
 - local Apple-inspired dashboard using the same React/Vite family as Aether
-- Minewing reference-board profile + acceptance test
+- Generic reference-board profile + acceptance test
 
 ## Quick start
 
@@ -273,15 +273,15 @@ config/                  runtime configuration
 packaging/systemd/       Linux service
 examples/                plugin examples
 scripts/                 packaging helpers
-docs/                    architecture, roadmap, Minewing profile
+docs/                    architecture, roadmap, reference-hardware profile
 .github/workflows/       CI and tagged release pipeline
 ```
 
 ## First demo acceptance test
 
-A clean ARM64 Minewing unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
+A clean ARM64 reference unit must be able to: install one Zyvor package → start the agent → auto-detect hardware → read one real sensor through a plugin → publish through Nodra → keep working during WAN loss → sync after reconnect through Nodra WAL → appear in Fleet through the existing fleet-agent → expose health for remote lifecycle operations.
 
-See `docs/MINEWING_REFERENCE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`, `docs/INDUSTRIAL_BUSES.md`, `docs/MINEWING_INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`, `docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md`, `docs/HARDWARE_PERMISSIONS.md` and `docs/ROADMAP.md`.
+See `docs/REFERENCE_HARDWARE.md`, `docs/V0.1.1_LIVE_HARDWARE.md`, `docs/INDUSTRIAL_BUSES.md`, `docs/INDUSTRIAL_ACCEPTANCE.md`, `docs/NODRA_MODBUS_RTU_CONTRACT.md`, `docs/CAN_CAPTURE.md`, `docs/NODRA_J1939_HANDOFF.md`, `docs/HARDWARE_PERMISSIONS.md` and `docs/ROADMAP.md`.
 
 ## License
 

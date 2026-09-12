@@ -3,7 +3,7 @@
 ## Responsibility boundary
 
 ```text
-Linux / Minewing board
+Linux / reference board
         |
         v
 Zyvor Device Agent

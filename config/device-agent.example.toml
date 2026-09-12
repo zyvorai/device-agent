@@ -35,10 +35,10 @@ exempt_paths = ["/api/v1/health", "/api/v1/ready"]
 token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"
 
 [device]
-vendor = "Minewing"
+vendor = "Generic"
 model = "Reference ARM64 Gateway"
 serial = "auto"
-profile = "minewing-reference-arm64"
+profile = "generic-reference-arm64"
 profile_directory = "profiles"
 telemetry_interval_seconds = 10
 inventory_refresh_seconds = 5

@@ -133,7 +133,7 @@
 - Add CAN/RS485 Prometheus metrics and Fleet metadata.
 - Publish retained industrial status into Nodra MQTT topics.
 - Add Apple-style Industrial cockpit page.
-- Add Minewing industrial acceptance guide and Nodra Modbus RTU adapter contract.
+- Add industrial acceptance guide and Nodra Modbus RTU adapter contract.
 
 ## 0.1.1-dev — 2026-09-11
 

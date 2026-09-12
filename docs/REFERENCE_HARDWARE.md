@@ -1,14 +1,14 @@
-# Minewing Reference Profile
+# Reference Hardware Profile
 
 The first board profile remains declarative because exact device-tree aliases and
-device nodes depend on the selected Minewing SKU and BSP. v0.1.1 adds a real
-I2C sensor path without pretending that all Minewing boards expose identical
+device nodes depend on the selected reference-hardware SKU and BSP. v0.1.1 adds a real
+I2C sensor path without pretending that all reference boards expose identical
 bus numbering.
 
 ## MVP acceptance profile
 
 ```yaml
-vendor: Minewing
+vendor: Generic
 arch: arm64
 required:
   ethernet: 1

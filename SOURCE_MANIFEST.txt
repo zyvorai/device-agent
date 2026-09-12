@@ -18,11 +18,11 @@
 ./docs/BACKLOG.md
 ./docs/CAN_CAPTURE.md
 ./docs/INDUSTRIAL_BUSES.md
-./docs/MINEWING_INDUSTRIAL_ACCEPTANCE.md
-./docs/MINEWING_REFERENCE.md
+./docs/INDUSTRIAL_ACCEPTANCE.md
 ./docs/NODRA_J1939_HANDOFF.md
 ./docs/NODRA_MODBUS_RTU_CONTRACT.md
 ./docs/PLUGIN_PROTOCOL.md
+./docs/REFERENCE_HARDWARE.md
 ./docs/ROADMAP.md
 ./docs/V0.1.1_LIVE_HARDWARE.md
 ./examples/i2c_temperature.py
@@ -34,7 +34,7 @@
 ./NOTICE
 ./packaging/systemd/zyvor-device-agent.service
 ./profiles/generic-linux-arm64.toml
-./profiles/minewing-reference-arm64.toml
+./profiles/generic-reference-arm64.toml
 ./README.md
 ./scripts/check-static.py
 ./scripts/deploy-remote.sh

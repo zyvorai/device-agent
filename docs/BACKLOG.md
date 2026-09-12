@@ -20,13 +20,13 @@
 - [x] live Sensors + event Diagnostics UX
 - [x] install script scaffold
 
-## P0 — Physical Minewing acceptance
+## P0 — Physical reference-hardware acceptance
 
-- [ ] Select exact Minewing SKU and freeze expected device-tree nodes. (needs physical hardware)
+- [ ] Select exact reference-hardware SKU and freeze expected device-tree nodes. (needs physical hardware)
 - [ ] Install the reference plugin on the physical unit and confirm the real I2C bus/address. (needs physical hardware)
 - [x] Add the first RS485/Modbus RTU adapter in `zyvorai/nodra` (not Device Agent).
 - [x] Teach the existing `fleet-agent` to merge `/api/v1/integrations/fleet/inventory`.
-- [ ] Hardware-in-loop test on the physical Minewing unit. (needs physical hardware)
+- [ ] Hardware-in-loop test on the physical reference-hardware unit. (needs physical hardware)
 - [ ] WAN-loss/reconnect demo with Nodra WAL replay. (needs physical hardware)
 
 ## P1 — Production hardening

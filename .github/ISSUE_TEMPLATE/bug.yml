@@ -13,7 +13,7 @@ body:
     id: hardware
     attributes:
       label: Hardware / board
-      placeholder: Minewing model, CPU/SoC, RAM
+      placeholder: Device model, CPU/SoC, RAM
   - type: input
     id: version
     attributes:

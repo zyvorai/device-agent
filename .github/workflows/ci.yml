@@ -11,7 +11,7 @@ jobs:
   static:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -20,7 +20,7 @@ jobs:
   rust-native:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -50,7 +50,7 @@ jobs:
   rust-tpm2:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -62,7 +62,7 @@ jobs:
   rust-camera:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -78,7 +78,7 @@ jobs:
   emulator-vcan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y iproute2 can-utils curl "linux-modules-extra-$(uname -r)"
       - name: vcan capture smoke
@@ -91,7 +91,7 @@ jobs:
   emulator-swtpm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y libtss2-dev swtpm swtpm-tools tpm2-tools pkg-config
       - name: swtpm identity smoke
@@ -106,7 +106,7 @@ jobs:
     # Soft-skip when the runner kernel has no matching v4l2loopback module.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y libclang-dev ffmpeg v4l2loopback-dkms linux-headers-$(uname -r) curl file xxd || true
       - name: v4l2loopback camera smoke
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y iproute2 can-utils curl "linux-modules-extra-$(uname -r)"
       - name: CI emulator HIL
@@ -142,7 +142,7 @@ jobs:
     # Advisory noise must not block emulator/HIL CI; report but soft-fail.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo audit
         run: |
@@ -153,7 +153,7 @@ jobs:
     needs: [rust-native, emulator-vcan, emulator-swtpm, hil-ci-emulator, packages-arm64]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Qualify with CI emulator/HIL markers
         env:
@@ -172,7 +172,7 @@ jobs:
   rust-arm64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-unknown-linux-gnu
@@ -184,7 +184,7 @@ jobs:
   packages-amd64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-node@v7
         with:
@@ -200,7 +200,7 @@ jobs:
   packages-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-node@v7
         with:
@@ -223,7 +223,7 @@ jobs:
       run:
         working-directory: web/dashboard
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -236,7 +236,7 @@ jobs:
     needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, emulator-vcan, emulator-swtpm, hil-ci-emulator, packages-amd64, packages-arm64, dashboard]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build amd64 image

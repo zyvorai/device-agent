@@ -1,0 +1,66 @@
+{
+  "product": "zyvor-device-agent",
+  "sku": "minewing-gw1-r1",
+  "environment": "lab-surrogate",
+  "base": "http://127.0.0.1:9188",
+  "profile": "minewing-gw1-r1",
+  "stamp": "20260914T162450Z",
+  "finished_at": "2026-09-14T16:24:51.144775+00:00",
+  "counts": {
+    "pass": 4,
+    "blocked": 6
+  },
+  "minewing_claimable": false,
+  "rows": [
+    {
+      "id": "health",
+      "status": "pass",
+      "detail": "HTTP 200"
+    },
+    {
+      "id": "doctor_profile",
+      "status": "blocked",
+      "detail": "lab-surrogate: doctor ok=False (expected generic-linux-arm64, loaded generic-linux-arm64)"
+    },
+    {
+      "id": "buses",
+      "status": "blocked",
+      "detail": "surrogate arch=x86_64 eth=2 can=0"
+    },
+    {
+      "id": "i2c_plugin",
+      "status": "blocked",
+      "detail": "no i2c/temperature samples"
+    },
+    {
+      "id": "nodra",
+      "status": "blocked",
+      "detail": "nodra not connected"
+    },
+    {
+      "id": "fleet_inventory",
+      "status": "pass",
+      "detail": "fleet inventory served"
+    },
+    {
+      "id": "auth",
+      "status": "blocked",
+      "detail": "open API on loopback (HTTP 200)"
+    },
+    {
+      "id": "ota_health_systemd",
+      "status": "pass",
+      "detail": "unit active"
+    },
+    {
+      "id": "ota_health_http",
+      "status": "pass",
+      "detail": "HTTP 200"
+    },
+    {
+      "id": "wan_loss",
+      "status": "blocked",
+      "detail": "set DA_HIL_WAN_LOSS_LOG to attach evidence"
+    }
+  ]
+}

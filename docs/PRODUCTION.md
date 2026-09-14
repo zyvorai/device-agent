@@ -14,6 +14,7 @@ and [guides/03-securing-your-agent.md](guides/03-securing-your-agent.md).
 | Software matrix + emulator HIL CI | green (`hil-ci-emulator`, packages amd64/arm64) |
 | Hardened Linux agent packages | shippable (`v0.1.6`) with auth/TLS guidance below |
 | Minewing GW1 r1 physical HIL | **unsigned** — lab host is x86 surrogate (`minewing_claimable=false`) |
+| Lab-surrogate HIL evidence | recorded (`evidence/qualification/hil/`) — `minewing_claimable=false` |
 | Hardware checklist | **not signed** — do not claim Minewing GA |
 
 **Verdict:** device-agent is **production-ready as a hardened Linux agent** on supported

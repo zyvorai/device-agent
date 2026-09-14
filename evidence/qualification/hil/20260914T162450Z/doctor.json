@@ -1,0 +1,95 @@
+{
+  "ok": false,
+  "checks": [
+    {
+      "name": "machine-id",
+      "ok": true,
+      "detail": "5206f159c3a444cb95a8e222e09f5239"
+    },
+    {
+      "name": "device-serial",
+      "ok": true,
+      "detail": "ZY-5206F159C3A4"
+    },
+    {
+      "name": "network",
+      "ok": true,
+      "detail": "73 interfaces"
+    },
+    {
+      "name": "network-physical",
+      "ok": true,
+      "detail": "cilium_host:up, cilium_net:up, cilium_vxlan:unknown, cilium_wg0:unknown, cni-podman0:down, eno8303:up, eno8403:down, lxc02e68aa687de:up, lxc0b421c241efe:up, lxc0bee276728a2:up, lxc0d72342dae4f:up, lxc126412670d74:up, lxc1323a73bb960:up, lxc2397b1df7667:up, lxc2c222d78fe46:up, lxc2c4a8dc463e7:up, lxc2e6f6c5f4637:up, lxc30d76692def3:up, lxc3e2fd2c87dd2:up, lxc40b7a0722220:up, lxc46639db8ea13:up, lxc49bc12c87aa2:up, lxc4f2489d387b7:up, lxc545312125c7e:up, lxc56c86598c769:up, lxc59a9887c7eaa:up, lxc5ea9ce6af503:up, lxc651e643a9e4b:up, lxc68521b13c393:up, lxc6dc286cfd90f:up, lxc740e9d737ca1:up, lxc753c97e3a872:up, lxc77d40460142c:up, lxc79fa3aa39346:up, lxc80ce81af15cf:up, lxc85a732e54826:up, lxc8f0270c6d6ee:up, lxc9ad328a21094:up, lxc9fe4d00eb409:up, lxc_health:up, lxca99d2ada64e1:up, lxcae2a45886e64:up, lxcb12e930c6730:up, lxcb1a97781bea7:up, lxcb924b04639cd:up, lxcbd93b01f9963:up, lxcbe29c01066cd:up, lxcc06aef23f8e1:up, lxccffa00728f17:up, lxcd03c5c032b11:up, lxcd2e7c8dd818b:up, lxcd333a033a1ab:up, lxcd5905de53a5a:up, lxcd7045447f815:up, lxce06316c11bf0:up, lxce09ce9cf7d56:up, lxce9b9d9d86785:up, lxcf2e6cbc41d36:up, lxcf75e907c82b5:up, lxcfbb82c40f7aa:up, lxcfcfcdd1fe44d:up, vh62b0a3ac:up, virbr0:up, vnet0:unknown, vnet1:unknown, vnet2:unknown, vnet3:unknown, vnet4:unknown, vnet5:unknown, vnet6:unknown, vnet7:unknown, vnet8:unknown"
+    },
+    {
+      "name": "thermal",
+      "ok": true,
+      "detail": "1 thermal zones"
+    },
+    {
+      "name": "plugin-directory",
+      "ok": true,
+      "detail": "/etc/zyvor/device-agent/plugins.d"
+    },
+    {
+      "name": "plugin.i2c-temperature",
+      "ok": true,
+      "detail": "disabled"
+    },
+    {
+      "name": "profile.name",
+      "ok": true,
+      "detail": "expected generic-linux-arm64, loaded generic-linux-arm64"
+    },
+    {
+      "name": "profile.vendor",
+      "ok": true,
+      "detail": "expected Generic, found Generic"
+    },
+    {
+      "name": "profile.arch",
+      "ok": false,
+      "detail": "expected aarch64, found x86_64"
+    },
+    {
+      "name": "profile.ethernet",
+      "ok": true,
+      "detail": "minimum 1, found 72"
+    },
+    {
+      "name": "profile.gpio",
+      "ok": true,
+      "detail": "minimum 0, found 1"
+    },
+    {
+      "name": "profile.i2c",
+      "ok": true,
+      "detail": "minimum 0, found 2"
+    },
+    {
+      "name": "profile.spi",
+      "ok": true,
+      "detail": "minimum 0, found 0"
+    },
+    {
+      "name": "profile.uart",
+      "ok": true,
+      "detail": "minimum 0, found 32"
+    },
+    {
+      "name": "profile.can",
+      "ok": true,
+      "detail": "minimum 0, found 0"
+    },
+    {
+      "name": "profile.usb",
+      "ok": true,
+      "detail": "minimum 0, found 5"
+    },
+    {
+      "name": "profile.watchdog",
+      "ok": true,
+      "detail": "minimum 0, found 0"
+    }
+  ]
+}

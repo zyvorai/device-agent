@@ -1,0 +1,1376 @@
+{
+  "device": {
+    "serial": "ZY-5206F159C3A4",
+    "vendor": "Generic",
+    "model": "Reference ARM64 Gateway",
+    "hostname": "NLDW4-4-16-36",
+    "machine_id": "5206f159c3a444cb95a8e222e09f5239"
+  },
+  "system": {
+    "arch": "x86_64",
+    "kernel": "6.8.0-139-generic",
+    "os": "Ubuntu 24.04.4 LTS",
+    "cpu_model": "Intel(R) Xeon(R) E-2336 CPU @ 2.90GHz",
+    "cpu_cores": 12,
+    "memory_bytes": 33492701184,
+    "storage_bytes": 982240026624,
+    "uptime_seconds": 460600
+  },
+  "network": [
+    {
+      "name": "cilium_host",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "76:d8:3c:f3:36:b7",
+      "mtu": 1500,
+      "addresses": [
+        "10.42.0.159/32",
+        "fe80::74d8:3cff:fef3:36b7/64"
+      ],
+      "rx_bytes": 9310,
+      "tx_bytes": 49280,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "cilium_net",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "76:38:04:0c:22:9c",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::7438:4ff:fe0c:229c/64"
+      ],
+      "rx_bytes": 49280,
+      "tx_bytes": 9310,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "cilium_vxlan",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "32:2f:0a:e5:69:da",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::302f:aff:fee5:69da/64"
+      ],
+      "rx_bytes": 0,
+      "tx_bytes": 0,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "cilium_wg0",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "",
+      "mtu": 1405,
+      "addresses": [],
+      "rx_bytes": 0,
+      "tx_bytes": 0,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "cni-podman0",
+      "kind": "ethernet",
+      "operstate": "down",
+      "mac": "de:f1:e5:f7:63:95",
+      "mtu": 1500,
+      "addresses": [
+        "10.88.0.1/16",
+        "fe80::dcf1:e5ff:fef7:6395/64"
+      ],
+      "rx_bytes": 317521,
+      "tx_bytes": 70060688,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "eno8303",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "b8:cb:29:ea:42:13",
+      "mtu": 1500,
+      "addresses": [
+        "80.79.5.173/24",
+        "fe80::bacb:29ff:feea:4213/64"
+      ],
+      "rx_bytes": 23446664154,
+      "tx_bytes": 35364645704,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "eno8403",
+      "kind": "ethernet",
+      "operstate": "down",
+      "mac": "b8:cb:29:ea:42:14",
+      "mtu": 1500,
+      "addresses": [],
+      "rx_bytes": 0,
+      "tx_bytes": 0,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lo",
+      "kind": "loopback",
+      "operstate": "unknown",
+      "mac": "00:00:00:00:00:00",
+      "mtu": 65536,
+      "addresses": [
+        "127.0.0.1/8",
+        "::1/128"
+      ],
+      "rx_bytes": 50253012966,
+      "tx_bytes": 50253012966,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc02e68aa687de",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "6e:87:48:d9:f3:e5",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::6c87:48ff:fed9:f3e5/64"
+      ],
+      "rx_bytes": 122760396,
+      "tx_bytes": 136153936,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc0b421c241efe",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "0a:2e:6b:aa:34:e9",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::82e:6bff:feaa:34e9/64"
+      ],
+      "rx_bytes": 12317689815,
+      "tx_bytes": 6087655810,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc0bee276728a2",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "a2:12:4f:63:4d:dd",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::a012:4fff:fe63:4ddd/64"
+      ],
+      "rx_bytes": 803942805,
+      "tx_bytes": 749783617,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc0d72342dae4f",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "ba:17:c9:38:96:08",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::b817:c9ff:fe38:9608/64"
+      ],
+      "rx_bytes": 1266854891,
+      "tx_bytes": 185032639,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc126412670d74",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "ae:e3:98:ee:3a:41",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::ace3:98ff:feee:3a41/64"
+      ],
+      "rx_bytes": 524203707,
+      "tx_bytes": 1587915336,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc1323a73bb960",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "ae:86:83:10:f1:d8",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::ac86:83ff:fe10:f1d8/64"
+      ],
+      "rx_bytes": 324231066,
+      "tx_bytes": 1163037445,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc2397b1df7667",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "a6:67:c6:cb:a9:82",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::a467:c6ff:fecb:a982/64"
+      ],
+      "rx_bytes": 44303748,
+      "tx_bytes": 226681938,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc2c222d78fe46",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "c2:18:45:8b:ef:af",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::c018:45ff:fe8b:efaf/64"
+      ],
+      "rx_bytes": 35576477,
+      "tx_bytes": 34461416,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc2c4a8dc463e7",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "7e:a5:63:ac:26:d7",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::7ca5:63ff:feac:26d7/64"
+      ],
+      "rx_bytes": 171086448,
+      "tx_bytes": 609771150,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc2e6f6c5f4637",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "da:74:55:c9:eb:81",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::d874:55ff:fec9:eb81/64"
+      ],
+      "rx_bytes": 86788095,
+      "tx_bytes": 158578244,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc30d76692def3",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "a6:93:4c:15:6c:70",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::a493:4cff:fe15:6c70/64"
+      ],
+      "rx_bytes": 3558654140,
+      "tx_bytes": 4644661141,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc3e2fd2c87dd2",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "62:e7:7e:60:ba:d8",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::60e7:7eff:fe60:bad8/64"
+      ],
+      "rx_bytes": 831541089,
+      "tx_bytes": 142592057,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc40b7a0722220",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "de:d7:e1:24:b7:87",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::dcd7:e1ff:fe24:b787/64"
+      ],
+      "rx_bytes": 462956584,
+      "tx_bytes": 529170558,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc46639db8ea13",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "92:be:98:79:00:54",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::90be:98ff:fe79:54/64"
+      ],
+      "rx_bytes": 377772710,
+      "tx_bytes": 789787805,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc49bc12c87aa2",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "42:cb:f8:9b:8d:03",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::40cb:f8ff:fe9b:8d03/64"
+      ],
+      "rx_bytes": 380968237,
+      "tx_bytes": 206099000,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc4f2489d387b7",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "66:b3:b3:36:aa:2d",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::64b3:b3ff:fe36:aa2d/64"
+      ],
+      "rx_bytes": 646740670,
+      "tx_bytes": 4546063614,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc545312125c7e",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "02:58:35:8e:1f:20",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::58:35ff:fe8e:1f20/64"
+      ],
+      "rx_bytes": 47391117,
+      "tx_bytes": 449375791,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc56c86598c769",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "0e:6f:23:69:24:bd",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::c6f:23ff:fe69:24bd/64"
+      ],
+      "rx_bytes": 100854633720,
+      "tx_bytes": 36100404106,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc59a9887c7eaa",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "8e:77:2d:ad:25:1a",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::8c77:2dff:fead:251a/64"
+      ],
+      "rx_bytes": 947085154,
+      "tx_bytes": 527900574,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc5ea9ce6af503",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "86:aa:15:09:3c:3c",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::84aa:15ff:fe09:3c3c/64"
+      ],
+      "rx_bytes": 36420207548,
+      "tx_bytes": 14824502,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc651e643a9e4b",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "86:64:ca:61:c0:27",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::8464:caff:fe61:c027/64"
+      ],
+      "rx_bytes": 694545744,
+      "tx_bytes": 8608,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc68521b13c393",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "32:55:d3:45:f3:00",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::3055:d3ff:fe45:f300/64"
+      ],
+      "rx_bytes": 103725182,
+      "tx_bytes": 157904029,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc6dc286cfd90f",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "6e:1e:b6:65:a9:db",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::6c1e:b6ff:fe65:a9db/64"
+      ],
+      "rx_bytes": 73636935,
+      "tx_bytes": 4464663988,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc740e9d737ca1",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "8a:e9:e4:62:e8:70",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::88e9:e4ff:fe62:e870/64"
+      ],
+      "rx_bytes": 10837306053,
+      "tx_bytes": 198869805516,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc753c97e3a872",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "d2:b6:63:95:10:74",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::d0b6:63ff:fe95:1074/64"
+      ],
+      "rx_bytes": 516201176,
+      "tx_bytes": 61273461,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc77d40460142c",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "4a:7f:a9:3f:cd:fc",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::487f:a9ff:fe3f:cdfc/64"
+      ],
+      "rx_bytes": 140112024,
+      "tx_bytes": 7628,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc79fa3aa39346",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "c2:a8:90:ad:b6:38",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::c0a8:90ff:fead:b638/64"
+      ],
+      "rx_bytes": 354995669,
+      "tx_bytes": 1336993716,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc80ce81af15cf",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "46:6a:a3:df:8e:80",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::446a:a3ff:fedf:8e80/64"
+      ],
+      "rx_bytes": 34968051,
+      "tx_bytes": 33963863,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc85a732e54826",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "f2:f0:29:3a:ef:9f",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::f0f0:29ff:fe3a:ef9f/64"
+      ],
+      "rx_bytes": 152782832,
+      "tx_bytes": 1071056767,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc8f0270c6d6ee",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "a2:75:a7:3e:95:66",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::a075:a7ff:fe3e:9566/64"
+      ],
+      "rx_bytes": 127906080,
+      "tx_bytes": 108723159,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc9ad328a21094",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "7a:f7:25:96:17:c9",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::78f7:25ff:fe96:17c9/64"
+      ],
+      "rx_bytes": 13659341169,
+      "tx_bytes": 6422458247,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc9fe4d00eb409",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "66:10:38:f5:3e:42",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::6410:38ff:fef5:3e42/64"
+      ],
+      "rx_bytes": 127853310,
+      "tx_bytes": 108823721,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxc_health",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "c2:d0:f6:2d:14:ea",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::c0d0:f6ff:fe2d:14ea/64"
+      ],
+      "rx_bytes": 4804988,
+      "tx_bytes": 6176654,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxca99d2ada64e1",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "6e:9d:f5:a9:20:0f",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::6c9d:f5ff:fea9:200f/64"
+      ],
+      "rx_bytes": 36188919,
+      "tx_bytes": 65985961,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcae2a45886e64",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "92:14:80:fc:85:bc",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::9014:80ff:fefc:85bc/64"
+      ],
+      "rx_bytes": 279489125,
+      "tx_bytes": 809664374,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcb12e930c6730",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "16:73:c5:2c:d3:89",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::1473:c5ff:fe2c:d389/64"
+      ],
+      "rx_bytes": 63762047,
+      "tx_bytes": 74451946,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcb1a97781bea7",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "42:22:a9:1c:30:c1",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::4022:a9ff:fe1c:30c1/64"
+      ],
+      "rx_bytes": 103364492,
+      "tx_bytes": 157125323,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcb924b04639cd",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "fe:6f:ff:c6:a3:55",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc6f:ffff:fec6:a355/64"
+      ],
+      "rx_bytes": 9097,
+      "tx_bytes": 8538,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcbd93b01f9963",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "4a:c8:9b:bf:99:e4",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::48c8:9bff:febf:99e4/64"
+      ],
+      "rx_bytes": 3369292901,
+      "tx_bytes": 902822270,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcbe29c01066cd",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "62:25:a4:54:74:48",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::6025:a4ff:fe54:7448/64"
+      ],
+      "rx_bytes": 10612,
+      "tx_bytes": 8678,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcc06aef23f8e1",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "fe:7b:52:1f:83:19",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc7b:52ff:fe1f:8319/64"
+      ],
+      "rx_bytes": 42596544,
+      "tx_bytes": 100416823,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxccffa00728f17",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "ba:f4:3a:b5:5e:22",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::b8f4:3aff:feb5:5e22/64"
+      ],
+      "rx_bytes": 1802787643181,
+      "tx_bytes": 1802793201399,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcd03c5c032b11",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "5e:aa:2a:b2:56:67",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::5caa:2aff:feb2:5667/64"
+      ],
+      "rx_bytes": 4394155,
+      "tx_bytes": 6806371,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcd2e7c8dd818b",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "fe:73:18:61:2d:24",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc73:18ff:fe61:2d24/64"
+      ],
+      "rx_bytes": 149956850,
+      "tx_bytes": 8678,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcd333a033a1ab",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "8e:91:0a:15:40:8d",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::8c91:aff:fe15:408d/64"
+      ],
+      "rx_bytes": 232123912,
+      "tx_bytes": 540011743,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcd5905de53a5a",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "62:6b:2f:36:75:f1",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::606b:2fff:fe36:75f1/64"
+      ],
+      "rx_bytes": 4282110509,
+      "tx_bytes": 8269605023,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcd7045447f815",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "96:49:0d:dd:e8:54",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::9449:dff:fedd:e854/64"
+      ],
+      "rx_bytes": 2587,
+      "tx_bytes": 1958,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxce06316c11bf0",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "06:ef:7e:52:8b:57",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::4ef:7eff:fe52:8b57/64"
+      ],
+      "rx_bytes": 62502484,
+      "tx_bytes": 72482658,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxce09ce9cf7d56",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "6a:19:b6:60:f4:50",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::6819:b6ff:fe60:f450/64"
+      ],
+      "rx_bytes": 98549088128,
+      "tx_bytes": 9798,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxce9b9d9d86785",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "b2:66:2b:f8:b9:81",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::b066:2bff:fef8:b981/64"
+      ],
+      "rx_bytes": 2967427,
+      "tx_bytes": 84922,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcf2e6cbc41d36",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "3e:72:aa:25:b4:87",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::3c72:aaff:fe25:b487/64"
+      ],
+      "rx_bytes": 226898276,
+      "tx_bytes": 1174163475,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcf75e907c82b5",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "a6:15:dc:be:b7:57",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::a415:dcff:febe:b757/64"
+      ],
+      "rx_bytes": 344123199,
+      "tx_bytes": 835387866,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcfbb82c40f7aa",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "aa:59:73:ac:7b:28",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::a859:73ff:feac:7b28/64"
+      ],
+      "rx_bytes": 283043755,
+      "tx_bytes": 8608,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "lxcfcfcdd1fe44d",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "de:5d:aa:59:7c:b9",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::dc5d:aaff:fe59:7cb9/64"
+      ],
+      "rx_bytes": 214725866,
+      "tx_bytes": 225253796,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vh62b0a3ac",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "4a:d9:9f:4a:c0:9d",
+      "mtu": 1500,
+      "addresses": [
+        "169.254.0.1/28",
+        "fe80::48d9:9fff:fe4a:c09d/64"
+      ],
+      "rx_bytes": 12066030,
+      "tx_bytes": 2258341,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "virbr0",
+      "kind": "ethernet",
+      "operstate": "up",
+      "mac": "52:54:00:4a:0c:58",
+      "mtu": 1500,
+      "addresses": [
+        "192.168.122.1/24"
+      ],
+      "rx_bytes": 23015876541,
+      "tx_bytes": 1914808483,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet0",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:e3:51:4e",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fee3:514e/64"
+      ],
+      "rx_bytes": 0,
+      "tx_bytes": 90,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet1",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:d8:ab:96",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fed8:ab96/64"
+      ],
+      "rx_bytes": 0,
+      "tx_bytes": 90,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet2",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:96:9e:2f",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fe96:9e2f/64"
+      ],
+      "rx_bytes": 1250,
+      "tx_bytes": 12463634,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet3",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:a6:78:d8",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fea6:78d8/64"
+      ],
+      "rx_bytes": 1250,
+      "tx_bytes": 12463478,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet4",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:46:61:10",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fe46:6110/64"
+      ],
+      "rx_bytes": 30279524770,
+      "tx_bytes": 1869191388,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet5",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:68:f7:5e",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fe68:f75e/64"
+      ],
+      "rx_bytes": 0,
+      "tx_bytes": 90,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet6",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:77:2d:e2",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fe77:2de2/64"
+      ],
+      "rx_bytes": 2180,
+      "tx_bytes": 12462228,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet7",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:1a:cb:17",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fe1a:cb17/64"
+      ],
+      "rx_bytes": 739403,
+      "tx_bytes": 70354973,
+      "rx_errors": 0,
+      "tx_errors": 0
+    },
+    {
+      "name": "vnet8",
+      "kind": "ethernet",
+      "operstate": "unknown",
+      "mac": "fe:54:00:e7:3b:9c",
+      "mtu": 1500,
+      "addresses": [
+        "fe80::fc54:ff:fee7:3b9c/64"
+      ],
+      "rx_bytes": 0,
+      "tx_bytes": 90,
+      "rx_errors": 0,
+      "tx_errors": 0
+    }
+  ],
+  "buses": {
+    "gpio_chips": [
+      "gpiochip0"
+    ],
+    "i2c": [
+      "i2c-0",
+      "i2c-1"
+    ],
+    "spi": [],
+    "uart": [
+      "ttyS0",
+      "ttyS1",
+      "ttyS10",
+      "ttyS11",
+      "ttyS12",
+      "ttyS13",
+      "ttyS14",
+      "ttyS15",
+      "ttyS16",
+      "ttyS17",
+      "ttyS18",
+      "ttyS19",
+      "ttyS2",
+      "ttyS20",
+      "ttyS21",
+      "ttyS22",
+      "ttyS23",
+      "ttyS24",
+      "ttyS25",
+      "ttyS26",
+      "ttyS27",
+      "ttyS28",
+      "ttyS29",
+      "ttyS3",
+      "ttyS30",
+      "ttyS31",
+      "ttyS4",
+      "ttyS5",
+      "ttyS6",
+      "ttyS7",
+      "ttyS8",
+      "ttyS9"
+    ],
+    "can": [],
+    "watchdog": []
+  },
+  "industrial": {
+    "can": [],
+    "serial": [
+      {
+        "name": "ttyS0",
+        "path": "/dev/ttyS0",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS1",
+        "path": "/dev/ttyS1",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS10",
+        "path": "/dev/ttyS10",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS11",
+        "path": "/dev/ttyS11",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS12",
+        "path": "/dev/ttyS12",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS13",
+        "path": "/dev/ttyS13",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS14",
+        "path": "/dev/ttyS14",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS15",
+        "path": "/dev/ttyS15",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS16",
+        "path": "/dev/ttyS16",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS17",
+        "path": "/dev/ttyS17",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS18",
+        "path": "/dev/ttyS18",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS19",
+        "path": "/dev/ttyS19",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS2",
+        "path": "/dev/ttyS2",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS20",
+        "path": "/dev/ttyS20",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS21",
+        "path": "/dev/ttyS21",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS22",
+        "path": "/dev/ttyS22",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS23",
+        "path": "/dev/ttyS23",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS24",
+        "path": "/dev/ttyS24",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS25",
+        "path": "/dev/ttyS25",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS26",
+        "path": "/dev/ttyS26",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS27",
+        "path": "/dev/ttyS27",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS28",
+        "path": "/dev/ttyS28",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS29",
+        "path": "/dev/ttyS29",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS3",
+        "path": "/dev/ttyS3",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS30",
+        "path": "/dev/ttyS30",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS31",
+        "path": "/dev/ttyS31",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS4",
+        "path": "/dev/ttyS4",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS5",
+        "path": "/dev/ttyS5",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS6",
+        "path": "/dev/ttyS6",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS7",
+        "path": "/dev/ttyS7",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS8",
+        "path": "/dev/ttyS8",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      },
+      {
+        "name": "ttyS9",
+        "path": "/dev/ttyS9",
+        "driver": "port",
+        "transport": "soc",
+        "rs485": null
+      }
+    ]
+  },
+  "usb": [
+    {
+      "path": "1-3.4",
+      "vendor_id": "1604",
+      "product_id": "10c0",
+      "manufacturer": null,
+      "product": null
+    },
+    {
+      "path": "usb1",
+      "vendor_id": "1d6b",
+      "product_id": "0002",
+      "manufacturer": "Linux 6.8.0-139-generic xhci-hcd",
+      "product": "xHCI Host Controller"
+    },
+    {
+      "path": "1-3",
+      "vendor_id": "1604",
+      "product_id": "10c0",
+      "manufacturer": null,
+      "product": null
+    },
+    {
+      "path": "usb2",
+      "vendor_id": "1d6b",
+      "product_id": "0003",
+      "manufacturer": "Linux 6.8.0-139-generic xhci-hcd",
+      "product": "xHCI Host Controller"
+    },
+    {
+      "path": "1-3.1",
+      "vendor_id": "1604",
+      "product_id": "10c0",
+      "manufacturer": null,
+      "product": null
+    }
+  ],
+  "thermal": [
+    {
+      "name": "thermal_zone0",
+      "kind": "x86_pkg_temp",
+      "celsius": 56.0
+    }
+  ],
+  "capabilities": [
+    "hardware-inventory",
+    "system-health",
+    "sensor-plugin-api",
+    "sensor-scheduler",
+    "hardware-events",
+    "fleet-inventory-projection",
+    "industrial-inventory",
+    "gpio",
+    "i2c",
+    "uart",
+    "rs485-awareness"
+  ]
+}

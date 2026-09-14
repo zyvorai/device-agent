@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Record lab-surrogate HIL evidence; Minewing still unsigned.
+
 - Document production maturity — Linux agent ready, Minewing HIL still unsigned.
 
 - GitHub CI `hil-ci-emulator` + `qualify-summary` / `cargo-audit` / CodeQL

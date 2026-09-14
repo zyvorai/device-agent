@@ -7,7 +7,7 @@ hero:
   highlights:
     - {value: "9", label: "CLI subcommands in one binary", footnote: "1"}
     - {value: "3", label: "Auth modes shipped by v0.1.5 — none, bearer, mTLS"}
-    - {value: "3", label: "Downstream planes — Nodra, Fleet, Aether"}
+    - {value: "3", label: "Downstream planes — Nodra, Fleet, Axiom"}
     - {value: "2", label: "mTLS key backends — software or TPM2"}
 footnotes:
   - marker: "1"
@@ -34,13 +34,13 @@ Zyvor Device Agent
         +----------------------+----------------------+
         |                      |                      |
         v                      v                      v
-      Nodra                  Fleet                  Aether
- protocol/data plane     fleet/control plane   application/runtime plane
+      Nodra                  Fleet                  Axiom
+ protocol/data plane     fleet/control plane   private-cloud control plane
 ```
 
 The Device Agent must not interpret industrial application protocols. It reports that `can0`, `/dev/i2c-1`, or `/dev/ttyS2` exist and provides safe local primitives. Nodra owns protocol semantics such as Modbus registers, J1939 PGNs, OPC-UA nodes, BLE profiles and store-and-forward behavior.
 
-Aether may later use the Device Agent as a hardware capability source when deciding whether an application can run on a specific edge node. Aether is not a dependency of the Device Agent.
+Axiom may later use the Device Agent as a hardware capability source when deciding whether an application can run on a specific edge node. Axiom is not a dependency of the Device Agent.
 
 ## Processes
 

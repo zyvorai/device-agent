@@ -6,13 +6,13 @@
 #   USER defaults to "sus"
 #   PORT defaults to 9188
 #
-# Env: ZYVOR_DEVICE_AGENT_BEARER_TOKEN — pass when auth.mode = "bearer" on the
-#   target, so the inventory/metrics checks authenticate instead of getting 401.
+# Env:
+#   ZYVOR_DEVICE_AGENT_BEARER_TOKEN — when auth.mode = "bearer"
+#   ZYVOR_DEVICE_AGENT_TLS=1 — force HTTPS (-k for self-signed)
+#   ZYVOR_DEVICE_AGENT_CA=/path/ca.pem — HTTPS with CA verify (implies TLS)
 #
-# All checks below use plain http://. If the target has `server.tls.enabled = true`
-# (see README's "TLS" section), the three curl-based checks fail closed - that's the
-# daemon correctly speaking TLS-only, not a broken deployment; verify by hand with
-# curl -sSk https://127.0.0.1:PORT/api/v1/health instead.
+# HTTP is tried first unless TLS is forced. If HTTP fails, HTTPS with -k is
+# tried automatically so TLS-only deployments do not false-FAIL.
 set -uo pipefail
 
 APP=zyvor-device-agent
@@ -33,6 +33,32 @@ if [[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]]; then
 else
   run() { ssh -o ConnectTimeout=10 -o BatchMode=yes "${REMOTE_USER}@${HOST}" "$1"; }
 fi
+
+curl_api() {
+  # $1 = path including leading slash
+  local path="$1"
+  local auth="${AUTH_HEADER}"
+  local force_tls=0
+  local ca_args=""
+  if [[ -n "${ZYVOR_DEVICE_AGENT_CA:-}" ]]; then
+    force_tls=1
+    ca_args="--cacert '${ZYVOR_DEVICE_AGENT_CA}'"
+  elif [[ "${ZYVOR_DEVICE_AGENT_TLS:-}" == "1" || "${ZYVOR_DEVICE_AGENT_TLS:-}" == "true" ]]; then
+    force_tls=1
+  fi
+  if [[ "$force_tls" -eq 1 ]]; then
+    if [[ -n "$ca_args" ]]; then
+      run "curl -sf --connect-timeout 3 ${ca_args} ${auth} https://127.0.0.1:${PORT}${path} >/dev/null"
+    else
+      run "curl -sSk --connect-timeout 3 ${auth} https://127.0.0.1:${PORT}${path} >/dev/null"
+    fi
+    return $?
+  fi
+  if run "curl -sf --connect-timeout 3 ${auth} http://127.0.0.1:${PORT}${path} >/dev/null"; then
+    return 0
+  fi
+  run "curl -sSk --connect-timeout 3 ${auth} https://127.0.0.1:${PORT}${path} >/dev/null"
+}
 
 echo "Verifying ${APP} on ${HOST}"
 echo
@@ -55,19 +81,19 @@ else
   fail "config file missing"
 fi
 
-if run "curl -sf --connect-timeout 3 http://127.0.0.1:${PORT}/api/v1/health >/dev/null"; then
-  pass "GET /api/v1/health -> 200"
+if curl_api "/api/v1/health"; then
+  pass "GET /api/v1/health -> 200 (http or https)"
 else
   fail "GET /api/v1/health failed"
 fi
 
-if run "curl -sf --connect-timeout 3 ${AUTH_HEADER} http://127.0.0.1:${PORT}/api/v1/inventory >/dev/null"; then
+if curl_api "/api/v1/inventory"; then
   pass "GET /api/v1/inventory -> 200"
 else
   fail "GET /api/v1/inventory failed (pass ZYVOR_DEVICE_AGENT_BEARER_TOKEN if auth.mode = bearer)"
 fi
 
-if run "curl -sf --connect-timeout 3 ${AUTH_HEADER} http://127.0.0.1:${PORT}/metrics >/dev/null"; then
+if curl_api "/metrics"; then
   pass "GET /metrics -> 200"
 else
   fail "GET /metrics failed (pass ZYVOR_DEVICE_AGENT_BEARER_TOKEN if auth.mode = bearer)"
@@ -80,5 +106,6 @@ if [[ "$PASSED" -ne "$CHECKS" ]]; then
   echo
   echo "Debug with:"
   echo "  ssh ${REMOTE_USER}@${HOST} 'systemctl status ${APP} --no-pager; journalctl -u ${APP} -n 20 --no-pager'"
+  echo "TLS tip: ZYVOR_DEVICE_AGENT_TLS=1 or ZYVOR_DEVICE_AGENT_CA=/path/ca.pem"
   exit 1
 fi

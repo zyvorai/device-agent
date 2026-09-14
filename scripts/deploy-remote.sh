@@ -133,18 +133,35 @@ check_remote_health() {
   # working correctly, not a deployment problem. Service-active + HEALTH_OK already
   # confirm the deploy itself succeeded.
   #
-  # These checks are plain http:// only. If the target has `server.tls.enabled = true`
-  # (see the README's "TLS" section), ALL THREE checks below fail closed the same way -
-  # that's the daemon correctly speaking TLS-only, not a broken deployment. Verify by
-  # hand instead: curl -sSk https://127.0.0.1:PORT/api/v1/health (the -k accepts the
-  # self-signed cert unless a real one was mounted).
+  # Tries HTTP first, then HTTPS (-k) so TLS-only deploys do not false-FAIL.
+  # Force HTTPS with ZYVOR_DEVICE_AGENT_TLS=1 or ZYVOR_DEVICE_AGENT_CA=/path/ca.pem.
   local auth_header=""
   local token="${ZYVOR_DEVICE_AGENT_BEARER_TOKEN:-${BEARER_TOKEN:-}}"
   [[ -n "$token" ]] && auth_header="-H 'Authorization: Bearer ${token}'"
+  local force_tls=0
+  local ca_args=""
+  if [[ -n "${ZYVOR_DEVICE_AGENT_CA:-}" ]]; then
+    force_tls=1
+    ca_args="--cacert '${ZYVOR_DEVICE_AGENT_CA}'"
+  elif [[ "${ZYVOR_DEVICE_AGENT_TLS:-}" == "1" || "${ZYVOR_DEVICE_AGENT_TLS:-}" == "true" ]]; then
+    force_tls=1
+  fi
+  curl_one() {
+    local path="$1"
+    if [[ "$force_tls" -eq 1 ]]; then
+      if [[ -n "$ca_args" ]]; then
+        ssh_r "curl -sf --connect-timeout 3 ${ca_args} ${auth_header} https://127.0.0.1:${PORT}${path} >/dev/null && echo OK || echo FAIL"
+      else
+        ssh_r "curl -sSk --connect-timeout 3 ${auth_header} https://127.0.0.1:${PORT}${path} >/dev/null && echo OK || echo FAIL"
+      fi
+      return
+    fi
+    ssh_r "curl -sf --connect-timeout 3 ${auth_header} http://127.0.0.1:${PORT}${path} >/dev/null && echo OK || curl -sSk --connect-timeout 3 ${auth_header} https://127.0.0.1:${PORT}${path} >/dev/null && echo OK || echo FAIL"
+  }
   ssh_r "systemctl is-active ${APP}.service 2>&1 || true; systemctl is-enabled ${APP}.service 2>&1 || true"
-  ssh_r "curl -sf --connect-timeout 3 http://127.0.0.1:${PORT}/api/v1/health && echo && echo HEALTH_OK || echo HEALTH_FAIL"
-  ssh_r "curl -sf --connect-timeout 3 ${auth_header} http://127.0.0.1:${PORT}/api/v1/inventory >/dev/null && echo INVENTORY_OK || echo INVENTORY_FAIL"
-  ssh_r "curl -sf --connect-timeout 3 ${auth_header} http://127.0.0.1:${PORT}/metrics >/dev/null && echo METRICS_OK || echo METRICS_FAIL"
+  echo -n "HEALTH_"; curl_one "/api/v1/health"
+  echo -n "INVENTORY_"; curl_one "/api/v1/inventory"
+  echo -n "METRICS_"; curl_one "/metrics"
 }
 
 if [[ "$MODE" == check ]]; then

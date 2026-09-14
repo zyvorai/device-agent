@@ -30,6 +30,10 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test --all
       - run: cargo build --release
+      - name: Software qualification matrix
+        run: DA_QUALIFY_FAST=1 make qualify
+      - uses: actions/upload-artifact@v4
+        with: {name: qualification-matrix, path: evidence/qualification/software-matrix.json}
       # `hotplug` is pure Rust (netlink-sys, no system library), so unlike
       # tpm2 it can just piggyback on this job instead of needing its own.
       - run: cargo clippy --all-targets --features hotplug -- -D warnings

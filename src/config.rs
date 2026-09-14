@@ -329,6 +329,21 @@ pub struct NodraConfig {
     pub username: Option<String>,
     pub password: Option<String>,
     pub retain_inventory: bool,
+    /// MQTT over TLS (MQTTS). Plain MQTT remains for trusted LAN / loopback only.
+    pub tls: NodraTlsConfig,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NodraTlsConfig {
+    pub enabled: bool,
+    /// PEM CA bundle used to verify the broker. Empty + `enabled` uses the
+    /// rumqttc/webpki default root store.
+    pub ca_file: String,
+    /// Optional client certificate PEM for broker mTLS.
+    pub cert_file: String,
+    /// Optional client private key PEM (required when `cert_file` is set).
+    pub key_file: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -476,6 +491,7 @@ impl Default for NodraConfig {
             username: None,
             password: None,
             retain_inventory: true,
+            tls: NodraTlsConfig::default(),
         }
     }
 }

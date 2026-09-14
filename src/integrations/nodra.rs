@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, fs, sync::Arc, time::Duration};
 
-use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
+use anyhow::{bail, Context};
+use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS, Transport};
 use tokio::time::{interval, sleep, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
+use crate::config::NodraTlsConfig;
 use crate::state::AppState;
 
 pub async fn publisher_loop(
@@ -29,6 +31,9 @@ pub async fn publisher_loop(
     options.set_keep_alive(Duration::from_secs(30));
     if let (Some(username), Some(password)) = (&cfg.username, &cfg.password) {
         options.set_credentials(username.clone(), password.clone());
+    }
+    if let Some(transport) = mqtt_transport(&cfg.tls)? {
+        options.set_transport(transport);
     }
 
     let (client, mut eventloop) = AsyncClient::new(options, 64);
@@ -169,6 +174,41 @@ pub async fn publisher_loop(
     Ok(())
 }
 
+/// Build rumqttc transport for Nodra MQTTS when `[nodra.tls] enabled = true`.
+pub fn mqtt_transport(tls: &NodraTlsConfig) -> anyhow::Result<Option<Transport>> {
+    if !tls.enabled {
+        return Ok(None);
+    }
+    if !tls.cert_file.is_empty() && tls.key_file.is_empty() {
+        bail!("nodra.tls.cert_file set but nodra.tls.key_file is empty");
+    }
+    if tls.ca_file.is_empty() && tls.cert_file.is_empty() {
+        return Ok(Some(Transport::tls_with_default_config()));
+    }
+    let ca = if tls.ca_file.is_empty() {
+        Vec::new()
+    } else {
+        fs::read(&tls.ca_file)
+            .with_context(|| format!("reading nodra.tls.ca_file {}", tls.ca_file))?
+    };
+    let client_auth = if tls.cert_file.is_empty() {
+        None
+    } else {
+        let cert = fs::read(&tls.cert_file)
+            .with_context(|| format!("reading nodra.tls.cert_file {}", tls.cert_file))?;
+        let key = fs::read(&tls.key_file)
+            .with_context(|| format!("reading nodra.tls.key_file {}", tls.key_file))?;
+        Some((cert, key))
+    };
+    if ca.is_empty() {
+        if client_auth.is_some() {
+            bail!("nodra.tls client certificates require nodra.tls.ca_file to be set");
+        }
+        return Ok(Some(Transport::tls_with_default_config()));
+    }
+    Ok(Some(Transport::tls(ca, client_auth, None)))
+}
+
 async fn publish(
     client: &AsyncClient,
     topic: String,
@@ -196,4 +236,44 @@ fn topic_segment(value: &str) -> String {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::NodraConfig;
+
+    #[test]
+    fn mqtt_transport_disabled_is_plain() {
+        let tls = NodraTlsConfig::default();
+        assert!(mqtt_transport(&tls).unwrap().is_none());
+    }
+
+    #[test]
+    fn mqtt_transport_enabled_uses_default_roots() {
+        let tls = NodraTlsConfig {
+            enabled: true,
+            ..NodraTlsConfig::default()
+        };
+        assert!(mqtt_transport(&tls).unwrap().is_some());
+    }
+
+    #[test]
+    fn nodra_tls_deserializes_from_toml() {
+        let raw = r#"
+enabled = true
+broker = "mqtt.example"
+port = 8883
+client_id = "da"
+topic_prefix = "zyvor/device"
+retain_inventory = true
+[tls]
+enabled = true
+ca_file = "/etc/zyvor/mqtt-ca.pem"
+"#;
+        let cfg: NodraConfig = toml::from_str(raw).unwrap();
+        assert!(cfg.tls.enabled);
+        assert_eq!(cfg.tls.ca_file, "/etc/zyvor/mqtt-ca.pem");
+        assert_eq!(cfg.port, 8883);
+    }
 }

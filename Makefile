@@ -1,4 +1,4 @@
-.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check
+.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify
 
 fmt:
 	cargo fmt --all -- --check
@@ -41,6 +41,9 @@ ui-test:
 
 static:
 	python3 scripts/check-static.py
+
+qualify:
+	python3 scripts/qualify-matrix.py
 
 check: static lint test ui-test ui
 

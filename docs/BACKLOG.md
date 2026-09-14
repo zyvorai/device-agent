@@ -26,12 +26,15 @@ hero:
 
 ## P0 — Physical reference-hardware acceptance
 
-- [ ] Select exact reference-hardware SKU and freeze expected device-tree nodes. (needs physical hardware)
+- [ ] Select exact reference-hardware SKU and freeze expected device-tree nodes. (needs physical hardware) — software profile `minewing-gw1-r1` added; HIL still open.
 - [ ] Install the reference plugin on the physical unit and confirm the real I2C bus/address. (needs physical hardware)
 - [x] Add the first RS485/Modbus RTU adapter in `zyvorai/nodra` (not Device Agent).
 - [x] Teach the existing `fleet-agent` to merge `/api/v1/integrations/fleet/inventory`.
 - [ ] Hardware-in-loop test on the physical reference-hardware unit. (needs physical hardware)
 - [ ] WAN-loss/reconnect demo with Nodra WAL replay. (needs physical hardware)
+- [x] Nodra MQTTS scaffolding (`[nodra.tls]`) + HTTPS-aware verify/deploy scripts.
+- [x] `make qualify` + PRODUCTION/QUALIFICATION/TEST-REPORT evidence pack.
+- [x] Document arm64 supported install = tarball + OCI (amd64 `.deb`/`.rpm` only until native packages land).
 
 ## P1 — Production hardening
 

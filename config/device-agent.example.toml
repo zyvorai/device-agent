@@ -131,6 +131,13 @@ topic_prefix = "zyvor/device"
 retain_inventory = true
 # username = ""
 # password = ""
+# Plain MQTT is for trusted LAN / loopback only. For production or any
+# untrusted path, enable MQTTS:
+# [nodra.tls]
+# enabled = true
+# ca_file = "/etc/zyvor/mqtt-ca.pem"   # empty = system/webpki roots
+# cert_file = ""                      # optional client cert
+# key_file = ""
 
 [fleet]
 enabled = true

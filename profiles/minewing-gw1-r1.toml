@@ -1,0 +1,16 @@
+# Minewing GW1 revision r1 — bring-up SKU profile for Zyvor Device Agent.
+# Aligns with zyvor-ota boards/minewing-gw1-r1. Software doctor checks only;
+# physical HIL remains an operator-signed QUALIFICATION row.
+name = "minewing-gw1-r1"
+vendor = "Minewing"
+arch = "aarch64"
+
+[minimum]
+ethernet = 1
+gpio = 1
+i2c = 1
+spi = 0
+uart = 1
+can = 1
+usb = 1
+watchdog = 1

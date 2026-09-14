@@ -72,6 +72,9 @@ nav:
       - Plugins: PLUGIN_PROTOCOL.md
       - Operations:
           - Quickstart: QUICKSTART.md
+          - Production: PRODUCTION.md
+          - Qualification: QUALIFICATION.md
+          - Verification report: TEST-REPORT.md
   - Architecture & planning:
       - Architecture: ARCHITECTURE.md
       - Roadmap: ROADMAP.md

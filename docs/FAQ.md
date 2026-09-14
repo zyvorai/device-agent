@@ -35,18 +35,20 @@ commercial support arrangements.
 
 ## Production readiness
 
-**Is this production-ready?** The README currently states its status as
-"v0.1.5 production-hardening development" — meaning active hardening work
-(auth modes, TLS, TPM2 identity, seccomp sandboxing for plugins) is
-happening, but this is not yet a GA/1.0 release. See
-[`docs/ROADMAP.md`](ROADMAP.md) for what's shipped per version and what's
-still ahead (e.g. local AI inference and hardware-accelerator support are
-explicitly not yet scoped).
+**Is this production-ready?** Status is **v0.1.5 production-hardening** — not
+GA. Run `make qualify` and sign
+[`docs/QUALIFICATION.md`](QUALIFICATION.md) / the hardware checklist before
+field claims. See [`docs/PRODUCTION.md`](PRODUCTION.md) and
+[`docs/TEST-REPORT.md`](TEST-REPORT.md). [`docs/ROADMAP.md`](ROADMAP.md)
+lists what is still ahead (e.g. local AI inference remains unscoped).
 
 **How stable is the API?** Each REST endpoint and config field added is
 documented in the README under its introducing version (e.g. "v0.1.4"). No
 formal API-stability guarantee is made pre-1.0 — check `CHANGELOG.md` when
 upgrading.
+
+**Does Nodra MQTT need TLS?** Prefer `[nodra.tls] enabled = true` (MQTTS)
+whenever the path leaves a trusted LAN. Plain MQTT is loopback/LAN-only.
 
 ## Cloud & data
 

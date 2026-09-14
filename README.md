@@ -36,7 +36,7 @@
 
 Zyvor already has higher layers for workload/runtime control and fleet/data-plane responsibilities. What was missing was a small Linux-native hardware foundation that can run directly on an ARM64 gateway without Kubernetes. Device Agent provides that boundary.
 
-It intentionally does **not** interpret Modbus registers, CAN/J1939 PGNs or OPC-UA nodes. It reports physical capabilities and gives sensor drivers a stable local contract. Nodra owns industrial protocol semantics, routing and offline store-and-forward. Fleet owns remote lifecycle and desired state. Aether can later consume the node capability model but is not required on the device.
+It intentionally does **not** interpret Modbus registers, CAN/J1939 PGNs or OPC-UA nodes. It reports physical capabilities and gives sensor drivers a stable local contract. Nodra owns industrial protocol semantics, routing and offline store-and-forward. Fleet owns remote lifecycle and desired state. Axiom can later consume the node capability model but is not required on the device.
 
 ## Is this for you?
 
@@ -91,7 +91,7 @@ people actually hit.
 - Fleet inventory bridge with hardware metadata and IP addresses
 - systemd service
 - OCI image with `linux/amd64` + `linux/arm64` CI
-- local Apple-inspired dashboard using the same React/Vite family as Aether
+- local Apple-inspired dashboard using the same React/Vite family as Axiom
 - Generic reference-board profile + acceptance test
 
 ## Quick start
@@ -419,7 +419,7 @@ a pure-Rust YUYV→RGB→JPEG software encode (`jpeg-encoder`, no `libjpeg`/`ffm
 Device Agent: "There is a CAN interface named can0."
 Nodra:        "0x18FF50E5 is engine temperature = 82°C."
 Fleet:        "Apply config X to device ZY-REF-0001 and restart workload Y."
-Aether:       "This application requires CAN + 4 cores; this node is eligible."
+Axiom:        "This application requires CAN + 4 cores; this node is eligible."
 ```
 
 This separation is a design rule, not just an implementation detail.

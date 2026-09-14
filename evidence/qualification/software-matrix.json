@@ -1,0 +1,60 @@
+{
+  "generated_at": "2026-09-14T10:55:43.491077+00:00",
+  "finished_at": "2026-09-14T10:55:44.067924+00:00",
+  "product": "zyvor-device-agent",
+  "version": "0.1.5",
+  "host": "Darwin",
+  "results": [
+    {
+      "id": "minewing_profile",
+      "status": "pass",
+      "detail": "",
+      "class": "software"
+    },
+    {
+      "id": "cargo_fmt",
+      "status": "pass",
+      "detail": "",
+      "class": "software"
+    },
+    {
+      "id": "clippy_default",
+      "status": "skip",
+      "detail": "DA_QUALIFY_FAST=1 \u2014 covered by CI rust-native",
+      "class": "software"
+    },
+    {
+      "id": "unit_tests",
+      "status": "skip",
+      "detail": "DA_QUALIFY_FAST=1 \u2014 covered by CI rust-native",
+      "class": "software"
+    },
+    {
+      "id": "nodra_mqtts_config",
+      "status": "pass",
+      "detail": "3 tests",
+      "class": "software"
+    },
+    {
+      "id": "hardware_hil_minewing",
+      "status": "skip",
+      "detail": "operator-signed \u2014 evidence/qualification/hardware-checklist.md",
+      "class": "software"
+    },
+    {
+      "id": "arm64_native_deb_rpm",
+      "status": "skip",
+      "detail": "supported path today: arm64 tarball + multi-arch container; amd64 .deb/.rpm",
+      "class": "software"
+    },
+    {
+      "id": "vcan_camera_swtpm_ci",
+      "status": "skip",
+      "detail": "emulator CI jobs not yet wired",
+      "class": "software"
+    }
+  ],
+  "software_pass": true,
+  "ops_claimed": false,
+  "note": "Hardware rows remain skip until Minewing GW1 r1 HIL is signed."
+}

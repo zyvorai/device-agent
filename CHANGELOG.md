@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Bring-up SKU profile `minewing-gw1-r1` (aligned with Zyvor OTA board profile).
+- Nodra MQTTS via `[nodra.tls]` (CA + optional client cert); plain MQTT documented as trusted-LAN only.
+- `make qualify` software matrix + PRODUCTION / QUALIFICATION / TEST-REPORT docs.
+- HTTPS-aware `verify-deployment.sh` / `deploy-remote.sh` health checks (`ZYVOR_DEVICE_AGENT_TLS` / `_CA`).
+- Document arm64 production install as signed tarball or multi-arch OCI (amd64 packages unchanged).
+- Rename Aether → Axiom in positioning docs.
+
 ## 0.1.5 — 2026-09-12
 
 - Add optional camera support (`--features camera`, off by default like

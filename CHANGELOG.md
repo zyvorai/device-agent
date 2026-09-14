@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- (none)
+
+## 0.1.6 — 2026-09-14
+
+Production-hardening release: arm64 native packages, emulator CI, Minewing
+HIL harness (silicon sign-off still operator-gated), qualify/production docs.
+
 - Minewing HIL runner (`scripts/hil/run-minewing-hil.sh`, `docs/HIL.md`) with
   fail-closed checklist signing (`DA_HIL_SIGN=1` only when claimable).
 - Native **arm64** `.deb`/`.rpm` packaging: CI `packages-arm64` on

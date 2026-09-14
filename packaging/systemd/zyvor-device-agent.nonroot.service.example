@@ -1,0 +1,45 @@
+# Example: run Device Agent as non-root (opt-in; default unit stays User=root).
+#
+# Prerequisites:
+#   1. Install packaging/udev/99-zyvor-device-agent.rules and reload udev
+#   2. Create user + groups (see docs/HARDWARE_PERMISSIONS.md)
+#        useradd --system --no-create-home --shell /usr/sbin/nologin zyvor
+#        usermod -aG gpio,i2c,spi,video,dialout zyvor
+#   3. chown state dirs: chown -R zyvor:zyvor /var/lib/zyvor-device-agent /run/zyvor-device-agent
+#
+# Install as drop-in or replace:
+#   cp packaging/systemd/zyvor-device-agent.nonroot.service.example \
+#      /etc/systemd/system/zyvor-device-agent.service
+#   systemctl daemon-reload && systemctl restart zyvor-device-agent
+
+[Unit]
+Description=Zyvor Device Agent (non-root example)
+Documentation=https://zyvor.dev
+Documentation=file:///usr/share/doc/zyvor-device-agent/HARDWARE_PERMISSIONS.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/zyvor-device-agent --config /etc/zyvor/device-agent.toml serve
+Restart=always
+RestartSec=3
+TimeoutStopSec=15
+User=zyvor
+Group=zyvor
+SupplementaryGroups=gpio i2c spi video dialout
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/zyvor-device-agent /run/zyvor-device-agent /etc/zyvor/device-agent/tls
+RuntimeDirectory=zyvor-device-agent
+RuntimeDirectoryMode=0750
+UMask=0077
+DevicePolicy=auto
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+Environment=RUST_LOG=zyvor_device_agent=info
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+# Zyvor Device Agent — example udev rules for non-root daemon
+# Install: copy to /etc/udev/rules.d/99-zyvor-device-agent.rules && udevadm control --reload-rules
+#
+# Pair with packaging/systemd/zyvor-device-agent.nonroot.service.example
+# and docs/HARDWARE_PERMISSIONS.md. Create missing groups first:
+#   groupadd --system gpio; groupadd --system i2c; groupadd --system spi
+
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"
+SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", GROUP="video", MODE="0660"

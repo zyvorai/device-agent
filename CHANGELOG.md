@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Opt-in non-root systemd unit example + udev rules (`packaging/systemd` /
+  `packaging/udev`); HARDWARE_PERMISSIONS documents the swap path.
 - Bring-up SKU profile `minewing-gw1-r1` (aligned with Zyvor OTA board profile).
 - Nodra MQTTS via `[nodra.tls]` (CA + optional client cert); plain MQTT documented as trusted-LAN only.
 - `make qualify` software matrix + PRODUCTION / QUALIFICATION / TEST-REPORT docs.

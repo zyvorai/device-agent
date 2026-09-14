@@ -14,10 +14,10 @@ exists for two other cases:
 1. **Sensor plugins** (`plugins.rs`) can be dropped to a non-root uid/gid via
    `plugins.run_as_uid`/`run_as_gid` (see `docs/PLUGIN_PROTOCOL.md`). That dropped-to
    account needs its own access to whichever device node the plugin actually opens.
-2. **Any future move of the daemon itself off `User=root`** — not done today (no code
-   path currently needs privileged *write* access to a bus), but if it happens, every
-   bus the daemon polls needs to be re-derived from this table into
-   `SupplementaryGroups=` in the unit file.
+2. **Optional non-root daemon** — default unit stays `User=root`. An opt-in example
+   lives at `packaging/systemd/zyvor-device-agent.nonroot.service.example` with matching
+   `packaging/udev/99-zyvor-device-agent.rules`. Every bus the daemon polls must be
+   covered by those groups (see table) before switching.
 
 ## Bus reference
 
@@ -52,13 +52,33 @@ account's **primary** gid or be granted explicitly — a plugin that needs both 
 and `dialout` access, for example, needs a dedicated group that has both, not reliance
 on inherited supplementary groups.
 
+## Non-root daemon (opt-in)
+
+```bash
+# 1) groups + udev
+sudo groupadd --system gpio; sudo groupadd --system i2c; sudo groupadd --system spi
+sudo cp packaging/udev/99-zyvor-device-agent.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# 2) service user
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin zyvor
+sudo usermod -aG gpio,i2c,spi,video,dialout zyvor
+sudo chown -R zyvor:zyvor /var/lib/zyvor-device-agent /run/zyvor-device-agent
+
+# 3) swap unit (example — review SupplementaryGroups for your board)
+sudo cp packaging/systemd/zyvor-device-agent.nonroot.service.example \
+  /etc/systemd/system/zyvor-device-agent.service
+sudo systemctl daemon-reload && sudo systemctl restart zyvor-device-agent
+```
+
+Validate with `id zyvor` and opening the same `/dev/*` nodes the agent needs.
+Keep the stock root unit for boards that still require privileged setup paths.
+
 ## Hardening checklist
 
-- Today: daemon runs as root, so this table matters only for plugin subprocesses.
-- If the daemon ever moves off `User=root`: every bus row above needs its group added
-  to `SupplementaryGroups=` in `packaging/systemd/zyvor-device-agent.service`, and the
-  CAN row's capabilities need to move from `AmbientCapabilities` (works for any uid)
-  to being re-verified against the new non-root user.
+- Default: daemon runs as root, so this table matters primarily for plugin subprocesses.
+- Non-root example: use the packaging paths above; keep `CAP_NET_ADMIN`/`CAP_NET_RAW`
+  for CAN; re-verify every bus row against the `zyvor` user on the target board.
 - `NoNewPrivileges=true` is already set — a plugin dropped via `run_as_uid`/`run_as_gid`
   cannot regain privileges even if its binary is later replaced with something
   setuid-root, which is the property that makes the privilege drop meaningful defense

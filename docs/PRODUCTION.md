@@ -14,7 +14,7 @@ and [guides/03-securing-your-agent.md](guides/03-securing-your-agent.md).
 3. `auth.mode` is `bearer` or `mtls` when binding beyond loopback (or use UDS only).
 4. Prefer `server.tls.enabled = true` (or terminate TLS at a frontier).
 5. Nodra: enable `[nodra.tls]` unless MQTT is strictly on a trusted LAN/loopback.
-6. Arm64 install via release **tarball** or GHCR image (not amd64-only `.deb`).
+6. Arm64 install via release **`.deb`/`.rpm`**, **tarball**, or GHCR image.
 
 ## Day-2 monitoring
 
@@ -64,5 +64,5 @@ ZYVOR_DEVICE_AGENT_BEARER_TOKEN=… ./scripts/verify-deployment.sh HOST USER
 
 - Daemon unit still typically runs as root; plugins can drop privileges.
 - Partial `SIGHUP` reload — Nodra reconnect / listen bind need restart.
-- arm64 `.deb`/`.rpm` not shipped yet.
+- arm64 `.deb`/`.rpm` shipped via release matrix on `ubuntu-24.04-arm`.
 - Physical HIL still open for GA claims.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Native **arm64** `.deb`/`.rpm` packaging: CI `packages-arm64` on
+  `ubuntu-24.04-arm`, release matrix for amd64+arm64, `scripts/package-deb-rpm.sh`.
 - Emulator CI scaffolding: `scripts/emulator/` smokes for **vcan** CAN
   capture, **swtpm** TPM identity, and **v4l2loopback** camera; CI jobs
   `emulator-vcan` / `emulator-swtpm` / `emulator-v4l2`; qualify rows +

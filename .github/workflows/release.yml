@@ -40,7 +40,55 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+  # Native package builds per arch — arm64 uses GitHub's ubuntu-24.04-arm
+  # runners so .deb/.rpm metadata and $auto depends stay correct (no cross).
+  packages:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            rust_target: ''
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            rust_target: ''
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Dashboard
+        run: cd web/dashboard && npm install --no-audit --no-fund && npm test && npm run build
+      - name: Test and build (amd64 only — arm64 validated in CI packages-arm64)
+        if: matrix.arch == 'amd64'
+        run: cargo test --all && cargo build --release
+      - name: Build release binary (arm64)
+        if: matrix.arch == 'arm64'
+        run: cargo build --release
+      - name: Packaging tools
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev binutils file rpm || sudo apt-get install -y dpkg-dev binutils file
+      - name: Build .deb / .rpm
+        run: |
+          chmod +x scripts/package-deb-rpm.sh
+          ./scripts/package-deb-rpm.sh
+      - name: Release tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ARCH="linux-${{ matrix.arch }}"
+          VERSION="$VERSION" ARCH="$ARCH" ./scripts/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.arch }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+
   release:
+    needs: [packages]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,53 +98,30 @@ jobs:
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
       - run: python3 scripts/check-static.py
-      - run: cd web/dashboard && npm install --no-audit --no-fund && npm test && npm run build
-      - run: cargo test --all && cargo build --release
-      - name: Build .deb/.rpm (amd64 only for now)
-        # cargo-deb/cargo-generate-rpm are metadata-driven from
-        # [package.metadata.deb]/[package.metadata.generate-rpm] in Cargo.toml,
-        # so there's no separate packaging manifest to keep in sync. arm64
-        # cross-packaging isn't validated yet (see docs/BACKLOG.md) - amd64
-        # only until that's confirmed, rather than blocking this milestone on it.
-        run: |
-          cargo install cargo-deb cargo-generate-rpm --locked
-          cargo deb -o dist/
-          cargo generate-rpm -o dist/
-      - run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-      - run: echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc' >> "$GITHUB_ENV"
-      - run: cargo build --release --target aarch64-unknown-linux-gnu
-      - name: Package amd64
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}" ARCH=linux-amd64 ./scripts/package.sh
-      - name: Package arm64
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          OUT="dist/zyvor-device-agent-${VERSION}-linux-arm64"
-          mkdir -p "$OUT/bin" "$OUT/config" "$OUT/systemd" "$OUT/dashboard" "$OUT/profiles" "$OUT/plugins" "$OUT/plugins.d"
-          cp target/aarch64-unknown-linux-gnu/release/zyvor-device-agent "$OUT/bin/"
-          cp config/device-agent.example.toml "$OUT/config/device-agent.toml"
-          cp packaging/systemd/zyvor-device-agent.service "$OUT/systemd/"
-          cp profiles/*.toml "$OUT/profiles/"
-          cp examples/i2c_temperature.py "$OUT/plugins/"
-          cp examples/plugins.d/i2c-temperature.json "$OUT/plugins.d/"
-          cp -r web/dashboard/dist/. "$OUT/dashboard/"
-          tar -C dist -czf "${OUT}.tar.gz" "$(basename "$OUT")"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: dist
+          merge-multiple: true
+      - name: List artifacts
+        run: find dist -type f | sort
       - name: Checksums
-        run: sha256sum dist/*.tar.gz dist/*.deb dist/*.rpm > dist/SHA256SUMS
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.deb *.rpm > SHA256SUMS
       - name: Generate Rust SBOM
         run: |
           cargo install cargo-cyclonedx --locked
           cargo cyclonedx --format json
           mv *.cdx.json dist/sbom-rust.cdx.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
       - name: Generate dashboard SBOM
         run: |
           cd web/dashboard
+          npm install --no-audit --no-fund
           npm sbom --sbom-format cyclonedx > ../../dist/sbom-dashboard.cdx.json
       - uses: sigstore/cosign-installer@v3
       - name: Sign checksums and SBOMs (keyless, GitHub OIDC)
@@ -115,9 +140,6 @@ jobs:
         id: changelog
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Matches "## X.Y.Z ..." or "## X.Y.Z-dev ..." (this repo bundles a
-          # release's changes under a single "-dev" heading until it ships) up
-          # to the next "## " heading.
           NOTES=$(awk -v ver="$VERSION" '
             /^## / {
               if (found) exit

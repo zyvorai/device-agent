@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T12:44:05.101381+00:00",
-  "finished_at": "2026-09-14T12:44:24.554875+00:00",
+  "generated_at": "2026-09-14T12:49:25.367603+00:00",
+  "finished_at": "2026-09-14T12:49:26.158952+00:00",
   "product": "zyvor-device-agent",
   "version": "0.1.5",
   "host": "Darwin",
@@ -43,8 +43,8 @@
     },
     {
       "id": "arm64_native_deb_rpm",
-      "status": "skip",
-      "detail": "supported path today: arm64 tarball + multi-arch container; amd64 .deb/.rpm",
+      "status": "pass",
+      "detail": "CI packages-arm64 + release matrix ubuntu-24.04-arm",
       "class": "software"
     },
     {

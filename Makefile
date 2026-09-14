@@ -1,4 +1,4 @@
-.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify emulator-vcan emulator-swtpm emulator-v4l2 emulator
+.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify emulator-vcan emulator-swtpm emulator-v4l2 emulator package-deb-rpm
 
 fmt:
 	cargo fmt --all -- --check
@@ -61,3 +61,6 @@ check: static lint test ui-test ui
 
 package: check
 	./scripts/package.sh
+
+package-deb-rpm:
+	./scripts/package-deb-rpm.sh

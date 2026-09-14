@@ -33,18 +33,18 @@ emulators. They **do not** prove GPIO/I2C/CAN on real silicon.
 | Auth + TLS | `auth.mode` ≠ `none` (or UDS-only); API TLS or loopback-only bind |
 | Nodra path | Plain MQTT only on trusted LAN; else `[nodra.tls] enabled = true` |
 | OTA health | `zyvor-device-agent.service` + `/api/v1/health` usable as Mark-good probes |
-| Arm64 install | Tarball or multi-arch container (amd64 `.deb`/`.rpm` optional) |
+| Arm64 install | Signed arm64 `.deb`/`.rpm`, tarball, or multi-arch container |
 
 ## Arm64 packaging posture
 
 | Artifact | amd64 | arm64 |
 |---|---|---|
-| `.deb` / `.rpm` | Release pipeline | **Not yet** — tracked backlog |
-| Release tarball | yes | **yes** (`linux-arm64`) |
-| GHCR OCI | yes | **yes** |
+| `.deb` / `.rpm` | Release + CI `packages-amd64` | Release + CI `packages-arm64` (`ubuntu-24.04-arm`) |
+| Release tarball | yes | yes (`linux-arm64`) |
+| GHCR OCI | yes | yes |
 
-Production on arm64 gateways: prefer the signed arm64 tarball or multi-arch
-container until native packages ship.
+Native arm64 packages are built on GitHub's `ubuntu-24.04-arm` runners (not
+cross-packed) so architecture metadata and `$auto` depends stay correct.
 
 ## Maturity note
 

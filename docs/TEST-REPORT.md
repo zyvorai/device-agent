@@ -18,7 +18,7 @@ certification.
 | Nodra MQTTS config (`[nodra.tls]`) | Unit-tested transport builder |
 | Minewing GW1 r1 profile file | Present under `profiles/` |
 | Physical RAUC / power-loss / real I2C HIL | **Not run** — hardware checklist |
-| arm64 native `.deb`/`.rpm` | **Not built** — tarball + OCI supported |
+| arm64 native `.deb`/`.rpm` | CI `packages-arm64` + release matrix on `ubuntu-24.04-arm` |
 
 ## Lab wiring (optional evidence)
 

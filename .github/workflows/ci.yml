@@ -37,6 +37,7 @@ jobs:
           DA_EMULATOR_VCAN: "1"
           DA_EMULATOR_SWTPM: "1"
           DA_EMULATOR_V4L2: "skip"
+          DA_ARM64_PACKAGES: "1"
         run: make qualify
       - uses: actions/upload-artifact@v4
         with: {name: qualification-matrix, path: evidence/qualification/software-matrix.json}
@@ -127,6 +128,42 @@ jobs:
       - run: cargo check --target aarch64-unknown-linux-gnu --all-targets
       - run: cargo build --release --target aarch64-unknown-linux-gnu
 
+  packages-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: cd web/dashboard && npm install --no-audit --no-fund && npm run build
+      - run: cargo build --release
+      - run: sudo apt-get update && sudo apt-get install -y dpkg-dev binutils file rpm || sudo apt-get install -y dpkg-dev binutils file
+      - run: chmod +x scripts/package-deb-rpm.sh scripts/package.sh
+      - run: ./scripts/package-deb-rpm.sh
+      - run: VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1) ARCH=linux-amd64 ./scripts/package.sh
+      - run: ls -la dist && dpkg-deb -I dist/*.deb | head -40
+
+  packages-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: cd web/dashboard && npm install --no-audit --no-fund && npm run build
+      - run: cargo build --release
+      - run: sudo apt-get update && sudo apt-get install -y dpkg-dev binutils file rpm || sudo apt-get install -y dpkg-dev binutils file
+      - run: chmod +x scripts/package-deb-rpm.sh scripts/package.sh
+      - run: ./scripts/package-deb-rpm.sh
+      - run: VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1) ARCH=linux-arm64 ./scripts/package.sh
+      - run: ls -la dist && dpkg-deb -I dist/*.deb | head -40
+      - name: Confirm aarch64 package payload
+        run: |
+          dpkg-deb -x dist/*.deb /tmp/da-arm64
+          file /tmp/da-arm64/usr/bin/zyvor-device-agent | grep -Ei 'aarch64|ARM aarch64|ARM64'
+
   dashboard:
     runs-on: ubuntu-latest
     defaults:
@@ -143,7 +180,7 @@ jobs:
       - run: npm run build
 
   container:
-    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, emulator-vcan, emulator-swtpm, dashboard]
+    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, emulator-vcan, emulator-swtpm, packages-amd64, packages-arm64, dashboard]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

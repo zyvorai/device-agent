@@ -72,9 +72,24 @@ def main():
 
     for name, detail in [
         ("hardware_hil_minewing", "operator-signed — evidence/qualification/hardware-checklist.md"),
-        ("arm64_native_deb_rpm", "supported path today: arm64 tarball + multi-arch container; amd64 .deb/.rpm"),
     ]:
         row(results, name, "skip", detail)
+
+    arm64_pkg = os.environ.get("DA_ARM64_PACKAGES", "")
+    if arm64_pkg in ("1", "true", "pass", "yes"):
+        row(
+            results,
+            "arm64_native_deb_rpm",
+            "pass",
+            "CI packages-arm64 + release matrix ubuntu-24.04-arm",
+        )
+    else:
+        row(
+            results,
+            "arm64_native_deb_rpm",
+            "skip",
+            "set DA_ARM64_PACKAGES=1 after packages-arm64 CI / release",
+        )
 
     # Emulator CI rows: pass when CI env markers are set (jobs write these),
     # otherwise skip with a pointer to scripts/emulator/.

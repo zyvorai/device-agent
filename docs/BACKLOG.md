@@ -34,8 +34,9 @@ hero:
 - [ ] WAN-loss/reconnect demo with Nodra WAL replay. (needs physical hardware)
 - [x] Nodra MQTTS scaffolding (`[nodra.tls]`) + HTTPS-aware verify/deploy scripts.
 - [x] `make qualify` + PRODUCTION/QUALIFICATION/TEST-REPORT evidence pack.
-- [x] Document arm64 supported install = tarball + OCI (amd64 `.deb`/`.rpm` only until native packages land).
+- [x] Document arm64 supported install = tarball + OCI + native `.deb`/`.rpm`.
 - [x] Emulator CI scaffolding (vcan / swtpm / v4l2loopback) — see `docs/EMULATOR_CI.md`.
+- [x] Arm64 native `.deb`/`.rpm` via `ubuntu-24.04-arm` CI/release matrix.
 
 ## P1 — Production hardening
 
@@ -54,10 +55,11 @@ hero:
   `docs/HARDWARE_PERMISSIONS.md`).
 - [x] Plugin executable owner allowlist and process resource limits (v0.1.4).
 - [x] Signed release artifacts, SBOM, provenance and cosign workflow (v0.1.4).
-- [x] Debian/RPM packages and clean uninstall path (v0.1.4 — amd64 only;
+- [x] Debian/RPM packages and clean uninstall path (v0.1.4 amd64;
   `cargo-deb`/`cargo-generate-rpm`, both Cargo-metadata-driven; installing
   never auto-enables/starts the service; config is a conffile/noreplace and
-  survives upgrade/removal). arm64 packages not yet built/validated.
+  survives upgrade/removal). Arm64 native packages: CI `packages-arm64` +
+  release matrix on `ubuntu-24.04-arm` (`scripts/package-deb-rpm.sh`).
 - [x] ARM64 smoke test under QEMU in CI (v0.1.4 — and its own smoke-test
   command bug, present since it was added, only caught and fixed once
   `-D warnings` made the CI clippy gate meaningful).

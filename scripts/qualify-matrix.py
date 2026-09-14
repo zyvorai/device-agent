@@ -92,6 +92,30 @@ def main():
         else:
             row(results, name, "skip", detail)
 
+    ci_hil = os.environ.get("DA_CI_HIL_EMULATOR", "")
+    if ci_hil in ("1", "true", "pass", "yes"):
+        row(results, "ci_hil_emulator", "pass", "scripts/ci/run-hil-emulator.sh + CI hil-ci-emulator")
+    else:
+        ci_root = EVIDENCE / "ci"
+        found = False
+        if ci_root.is_dir():
+            for p in sorted(ci_root.glob("*/ci-wrapper.json"), reverse=True):
+                try:
+                    data = json.loads(p.read_text())
+                except Exception:
+                    continue
+                if data.get("environment") == "ci-emulator" and not data.get("minewing_claimable"):
+                    row(results, "ci_hil_emulator", "pass", f"ci/{p.parent.name}")
+                    found = True
+                    break
+        if not found:
+            row(
+                results,
+                "ci_hil_emulator",
+                "skip",
+                "set DA_CI_HIL_EMULATOR=1 after scripts/ci/run-hil-emulator.sh / CI hil-ci-emulator",
+            )
+
     arm64_pkg = os.environ.get("DA_ARM64_PACKAGES", "")
     if arm64_pkg in ("1", "true", "pass", "yes"):
         row(

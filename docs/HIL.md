@@ -6,6 +6,14 @@ hero:
 
 Physical / QEMU HIL is **operator-signed**. Emulator CI does not close these rows.
 
+## GitHub CI (lab substitute)
+
+When Minewing silicon is unavailable, CI job **`hil-ci-emulator`** runs
+[`scripts/ci/run-hil-emulator.sh`](../scripts/ci/run-hil-emulator.sh): starts
+the agent with `minewing-gw1-r1` profile + vcan, then
+`DA_HIL_ENV=ci-emulator` against the HIL harness. Evidence under
+`evidence/qualification/ci/` — **`minewing_claimable` is always false**.
+
 ## Runner
 
 ```bash

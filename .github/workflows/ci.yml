@@ -116,6 +116,27 @@ jobs:
           chmod +x scripts/emulator/*.sh
           ./scripts/emulator/smoke-v4l2.sh
 
+  hil-ci-emulator:
+    # Lab substitute when Minewing silicon is unavailable: HIL harness vs
+    # vcan emulator agent. Never claimable as physical Minewing.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y iproute2 can-utils curl
+      - name: CI emulator HIL
+        env:
+          DA_EMULATOR_STRICT: "1"
+        run: |
+          chmod +x scripts/ci/run-hil-emulator.sh scripts/emulator/*.sh scripts/hil/*.sh
+          ./scripts/ci/run-hil-emulator.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualification-ci-hil-emulator
+          path: evidence/qualification/ci/
+          if-no-files-found: error
+
   rust-arm64:
     runs-on: ubuntu-latest
     steps:
@@ -180,7 +201,7 @@ jobs:
       - run: npm run build
 
   container:
-    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, emulator-vcan, emulator-swtpm, packages-amd64, packages-arm64, dashboard]
+    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, emulator-vcan, emulator-swtpm, hil-ci-emulator, packages-amd64, packages-arm64, dashboard]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

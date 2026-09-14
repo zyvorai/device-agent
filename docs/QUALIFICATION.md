@@ -5,9 +5,10 @@ hero:
 ---
 
 Software rows are automated by `make qualify`. Physical Minewing GW1 r1 HIL
-is driven by [`scripts/hil/run-minewing-hil.sh`](../scripts/hil/run-minewing-hil.sh)
-([HIL.md](HIL.md)) and signed in
-[`evidence/qualification/hardware-checklist.md`](../evidence/qualification/hardware-checklist.md).
+is driven by [`scripts/hil/run-minewing-hil.sh`](https://github.com/zyvorai/device-agent/blob/main/scripts/hil/run-minewing-hil.sh)
+([HIL.md](HIL.md)). Lab-surrogate and `hil-ci-emulator` evidence **never**
+set `minewing_claimable=true`. Hardware checklist remains unsigned until
+physical silicon passes.
 
 ## Software (host) rows — `make qualify`
 
@@ -24,17 +25,25 @@ These prove agent software, Nodra MQTTS config, and **emulator** paths for
 CAN / TPM2 / camera where the host can load the matching kernel/userspace
 emulators. They **do not** prove GPIO/I2C/CAN on real silicon.
 
-## Operator / hardware rows — signed checklist
+## Lab substitute / surrogate (not Minewing)
 
-| Test | Required outcome |
+| Path | Evidence | Claim |
+|---|---|---|
+| CI `hil-ci-emulator` | `evidence/qualification/ci/` | green substitute; `minewing_claimable=false` |
+| Lab-surrogate HIL | `evidence/qualification/hil/20260914T162450Z/` | wiring on x86 host; `minewing_claimable=false` |
+| Physical Minewing | `hardware-checklist.md` | **unsigned** |
+
+## Operator / hardware rows — checklist status
+
+| Test | Lab / CI status |
 |---|---|
-| Profile freeze | `device.profile = "minewing-gw1-r1"`; doctor profile checks pass on board |
-| I2C plugin path | Reference temperature plugin reads real bus/address |
-| Industrial buses | CAN/UART/RS485 presence per [INDUSTRIAL_ACCEPTANCE.md](INDUSTRIAL_ACCEPTANCE.md) |
-| Auth + TLS | `auth.mode` ≠ `none` (or UDS-only); API TLS or loopback-only bind |
-| Nodra path | Plain MQTT only on trusted LAN; else `[nodra.tls] enabled = true` |
-| OTA health | `zyvor-device-agent.service` + `/api/v1/health` usable as Mark-good probes |
-| Arm64 install | Signed arm64 `.deb`/`.rpm`, tarball, or multi-arch container |
+| Profile freeze on Minewing board | **open** (surrogate ≠ silicon) |
+| I2C plugin path on board | **open** |
+| Industrial buses on board | **open** |
+| Auth + TLS / UDS on agent | **done** in software + packages v0.1.6 |
+| Nodra MQTTS config | **done** in software matrix |
+| OTA health probe contract | **documented** — see PRODUCTION.md |
+| Arm64 install artifacts | **ship** — release + CI packages |
 
 ## Arm64 packaging posture
 
@@ -49,5 +58,6 @@ cross-packed) so architecture metadata and `$auto` depends stay correct.
 
 ## Maturity note
 
-v0.1.5 is **production-hardening**, not GA. See [TEST-REPORT.md](TEST-REPORT.md)
-and [BACKLOG.md](BACKLOG.md).
+**v0.1.6** is **production-hardening** for the Linux agent (packages + auth/TLS
+guidance + emulator/lab-surrogate evidence). It is **not** Minewing-silicon GA.
+See [PRODUCTION.md](PRODUCTION.md), [HIL.md](HIL.md), and [BACKLOG.md](BACKLOG.md).

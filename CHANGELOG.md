@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Docs refresh: README/QUALIFICATION/PRODUCTION/HIL pin **v0.1.6**; detail
+  lab-surrogate stamp + `minewing_claimable=false` vs physical sign rules.
+
 - Record lab-surrogate HIL evidence; Minewing still unsigned.
 
 - Document production maturity — Linux agent ready, Minewing HIL still unsigned.

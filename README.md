@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
   <img src="https://img.shields.io/badge/rust-1.85%2B-orange?logo=rust" alt="Rust 1.85+">
   <img src="https://img.shields.io/badge/platform-arm64%20%7C%20amd64-informational" alt="Platforms: arm64 | amd64">
-  <img src="https://img.shields.io/badge/status-v0.1.5%20production--hardening-yellow" alt="Status: v0.1.5 production-hardening">
+  <img src="https://img.shields.io/badge/status-v0.1.6%20production--hardening-yellow" alt="Status: v0.1.6 production-hardening">
 </p>
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.

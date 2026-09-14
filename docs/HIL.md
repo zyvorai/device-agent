@@ -4,17 +4,18 @@ hero:
   title: Minewing GW1 r1 hardware-in-the-loop
 ---
 
-Physical / QEMU HIL is **operator-signed**. Emulator CI does not close these rows.
+Physical Minewing HIL is **operator-signed**. Emulator CI and lab-surrogate
+runs do **not** close Minewing claimable rows.
 
 ## GitHub CI (lab substitute)
 
 When Minewing silicon is unavailable, CI job **`hil-ci-emulator`** runs
-[`scripts/ci/run-hil-emulator.sh`](../scripts/ci/run-hil-emulator.sh): starts
-the agent with `minewing-gw1-r1` profile + vcan, then
+[`scripts/ci/run-hil-emulator.sh`](https://github.com/zyvorai/device-agent/blob/main/scripts/ci/run-hil-emulator.sh):
+starts the agent with `minewing-gw1-r1` profile + vcan, then
 `DA_HIL_ENV=ci-emulator` against the HIL harness. Evidence under
 `evidence/qualification/ci/` — **`minewing_claimable` is always false**.
 
-## Runner
+## Runner (physical — still open)
 
 ```bash
 # On the Minewing board (or SSH tunnel to its API):
@@ -33,7 +34,7 @@ Evidence lands in `evidence/qualification/hil/<stamp>/` (`results.json`,
 `hardware-checklist.md` **only** when `minewing_claimable=true`
 (physical env, profile match, zero fail/blocked).
 
-## Lab surrogate
+## Lab surrogate (recorded; not claimable)
 
 An x86 lab host with Device Agent may run:
 
@@ -41,4 +42,7 @@ An x86 lab host with Device Agent may run:
 DA_HIL_ENV=lab-surrogate DA_HIL_STRICT=0 ./scripts/hil/run-minewing-hil.sh
 ```
 
-That captures wiring evidence; it **must not** be signed as Minewing silicon.
+Recorded stamp example:
+[`20260914T162450Z`](https://github.com/zyvorai/device-agent/blob/main/evidence/qualification/hil/20260914T162450Z/SUMMARY.md)
+(`environment=lab-surrogate`, `minewing_claimable=false`). That captures
+wiring evidence; it **must not** be signed as Minewing silicon.

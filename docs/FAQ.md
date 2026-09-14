@@ -35,12 +35,15 @@ commercial support arrangements.
 
 ## Production readiness
 
-**Is this production-ready?** Status is **v0.1.5 production-hardening** — not
-GA. Run `make qualify` and sign
-[`docs/QUALIFICATION.md`](QUALIFICATION.md) / the hardware checklist before
-field claims. See [`docs/PRODUCTION.md`](PRODUCTION.md) and
-[`docs/TEST-REPORT.md`](TEST-REPORT.md). [`docs/ROADMAP.md`](ROADMAP.md)
-lists what is still ahead (e.g. local AI inference remains unscoped).
+**Is this production-ready?** Status is **v0.1.6 production-hardening** — not
+GA, and **not** Minewing-silicon-qualified. The Linux agent (packages,
+auth/TLS, emulator/`hil-ci-emulator`, lab-surrogate) is shippable for
+hardened installs; physical Minewing HIL remains unsigned
+(`minewing_claimable=false` on surrogate evidence). Run `make qualify`
+and sign the hardware checklist only after physical HIL. See
+[PRODUCTION.md](PRODUCTION.md), [HIL.md](HIL.md), and
+[TEST-REPORT.md](TEST-REPORT.md). [ROADMAP.md](ROADMAP.md) lists what is
+still ahead (e.g. local AI inference remains unscoped).
 
 **How stable is the API?** Each REST endpoint and config field added is
 documented in the README under its introducing version (e.g. "v0.1.4"). No

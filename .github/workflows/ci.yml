@@ -137,6 +137,36 @@ jobs:
           path: evidence/qualification/ci/
           if-no-files-found: error
 
+  cargo-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+
+  qualify-summary:
+    needs: [rust-native, emulator-vcan, emulator-swtpm, hil-ci-emulator, packages-arm64, cargo-audit]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Qualify with CI emulator/HIL markers
+        env:
+          DA_QUALIFY_FAST: "1"
+          DA_EMULATOR_VCAN: "1"
+          DA_EMULATOR_SWTPM: "1"
+          DA_EMULATOR_V4L2: "skip"
+          DA_ARM64_PACKAGES: "1"
+          DA_CI_HIL_EMULATOR: "1"
+        run: make qualify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualification-suite-ci
+          path: evidence/qualification/software-matrix.json
+
   rust-arm64:
     runs-on: ubuntu-latest
     steps:

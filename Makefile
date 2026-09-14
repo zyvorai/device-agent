@@ -1,4 +1,4 @@
-.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify
+.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify emulator-vcan emulator-swtpm emulator-v4l2 emulator
 
 fmt:
 	cargo fmt --all -- --check
@@ -44,6 +44,18 @@ static:
 
 qualify:
 	python3 scripts/qualify-matrix.py
+
+emulator-vcan:
+	DA_EMULATOR_STRICT=$${DA_EMULATOR_STRICT:-1} ./scripts/emulator/smoke-vcan.sh
+
+emulator-swtpm:
+	DA_EMULATOR_STRICT=$${DA_EMULATOR_STRICT:-1} ./scripts/emulator/smoke-swtpm.sh
+
+emulator-v4l2:
+	DA_EMULATOR_STRICT=$${DA_EMULATOR_STRICT:-0} ./scripts/emulator/smoke-v4l2.sh
+
+emulator:
+	./scripts/emulator/smoke-all.sh
 
 check: static lint test ui-test ui
 

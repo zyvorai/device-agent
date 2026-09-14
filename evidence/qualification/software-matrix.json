@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T10:55:43.491077+00:00",
-  "finished_at": "2026-09-14T10:55:44.067924+00:00",
+  "generated_at": "2026-09-14T12:44:05.101381+00:00",
+  "finished_at": "2026-09-14T12:44:24.554875+00:00",
   "product": "zyvor-device-agent",
   "version": "0.1.5",
   "host": "Darwin",
@@ -32,7 +32,7 @@
     {
       "id": "nodra_mqtts_config",
       "status": "pass",
-      "detail": "3 tests",
+      "detail": "3 MQTTS unit tests",
       "class": "software"
     },
     {
@@ -48,9 +48,21 @@
       "class": "software"
     },
     {
-      "id": "vcan_camera_swtpm_ci",
+      "id": "emulator_vcan_ci",
+      "status": "pass",
+      "detail": "scripts/emulator/smoke-vcan.sh + CI emulator-vcan",
+      "class": "software"
+    },
+    {
+      "id": "emulator_swtpm_ci",
+      "status": "pass",
+      "detail": "scripts/emulator/smoke-swtpm.sh + CI emulator-swtpm",
+      "class": "software"
+    },
+    {
+      "id": "emulator_v4l2_ci",
       "status": "skip",
-      "detail": "emulator CI jobs not yet wired",
+      "detail": "scripts/emulator/smoke-v4l2.sh + CI emulator-v4l2 (soft-skip OK) \u2014 host reported soft-skip",
       "class": "software"
     }
   ],

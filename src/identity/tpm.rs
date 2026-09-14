@@ -262,3 +262,43 @@ impl rustls::sign::Signer for TpmKey {
         rustls::SignatureScheme::ECDSA_NISTP256_SHA256
     }
 }
+
+/// Live swtpm round-trip. Enabled only when `ZYVOR_SWTPM_TCTI` is set
+/// (see `scripts/emulator/smoke-swtpm.sh`). Soft-skips otherwise so default
+/// `cargo test --features tpm2` stays green without an emulator.
+#[cfg(test)]
+pub mod live_swtpm_tests {
+    use super::*;
+
+    #[test]
+    fn generate_persist_reload_sign() {
+        let tcti = match std::env::var("ZYVOR_SWTPM_TCTI") {
+            Ok(v) if !v.trim().is_empty() => v,
+            _ => {
+                eprintln!("skip live_swtpm_tests: ZYVOR_SWTPM_TCTI unset");
+                return;
+            }
+        };
+
+        let key = TpmKey::generate(&tcti).expect("generate TPM key against swtpm");
+        let json = key.serialize_json().expect("serialize TPM key envelope");
+        assert!(
+            json.contains("\"backend\": \"tpm\"") || json.contains("\"backend\":\"tpm\""),
+            "expected tpm backend envelope, got {json}"
+        );
+        assert!(
+            !json.contains("BEGIN PRIVATE KEY"),
+            "TPM envelope must not contain a PKCS#8 private key"
+        );
+
+        let reloaded = TpmKey::load(&json, &tcti).expect("reload TPM key envelope");
+        let sig = reloaded
+            .sign_der(b"zyvor-device-agent-swtpm-smoke")
+            .expect("sign with reloaded TPM key");
+        assert!(
+            sig.len() > 8,
+            "ECDSA DER signature should be non-trivial, got {} bytes",
+            sig.len()
+        );
+    }
+}

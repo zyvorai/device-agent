@@ -13,6 +13,7 @@ certification.
 |---|---|
 | `cargo fmt` / clippy `-D warnings` / `cargo test --all` | Required software gate |
 | Optional feature legs | `hotplug`, `tpm2`, `camera` in CI |
+| Emulator smokes | `emulator-vcan`, `emulator-swtpm`; `emulator-v4l2` best-effort — [EMULATOR_CI.md](EMULATOR_CI.md) |
 | ARM64 cross-build + QEMU container smoke | CI `rust-arm64` / container jobs |
 | Nodra MQTTS config (`[nodra.tls]`) | Unit-tested transport builder |
 | Minewing GW1 r1 profile file | Present under `profiles/` |
@@ -30,6 +31,9 @@ inventory projection; it does not close hardware rows.
 ```bash
 make check
 make qualify
+# optional on Linux CI-like hosts:
+make emulator-vcan emulator-swtpm
+make emulator-v4l2   # soft-skip if no v4l2loopback
 ```
 
 Sign [`evidence/qualification/hardware-checklist.md`](../evidence/qualification/hardware-checklist.md)

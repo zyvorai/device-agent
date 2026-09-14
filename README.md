@@ -492,7 +492,7 @@ A numbered series meant to be read in order the first time through; see
 
 ### How-to / reference
 
-- **Hardware & acceptance** — [`REFERENCE_HARDWARE.md`](docs/REFERENCE_HARDWARE.md), [`V0.1.1_LIVE_HARDWARE.md`](docs/V0.1.1_LIVE_HARDWARE.md), [`HARDWARE_PERMISSIONS.md`](docs/HARDWARE_PERMISSIONS.md), [`INDUSTRIAL_ACCEPTANCE.md`](docs/INDUSTRIAL_ACCEPTANCE.md)
+- **Hardware & acceptance** — [`REFERENCE_HARDWARE.md`](docs/REFERENCE_HARDWARE.md), [`V0.1.1_LIVE_HARDWARE.md`](docs/V0.1.1_LIVE_HARDWARE.md), [`HARDWARE_PERMISSIONS.md`](docs/HARDWARE_PERMISSIONS.md), [`INDUSTRIAL_ACCEPTANCE.md`](docs/INDUSTRIAL_ACCEPTANCE.md), [`EMULATOR_CI.md`](docs/EMULATOR_CI.md)
 - **Industrial buses & protocol hand-off** — [`INDUSTRIAL_BUSES.md`](docs/INDUSTRIAL_BUSES.md), [`CAN_CAPTURE.md`](docs/CAN_CAPTURE.md), [`NODRA_J1939_HANDOFF.md`](docs/NODRA_J1939_HANDOFF.md), [`NODRA_MODBUS_RTU_CONTRACT.md`](docs/NODRA_MODBUS_RTU_CONTRACT.md)
 - **Security & identity** — [`MTLS_ENROLLMENT.md`](docs/MTLS_ENROLLMENT.md), [`TPM2_IDENTITY.md`](docs/TPM2_IDENTITY.md)
 - **Plugins** — [`PLUGIN_PROTOCOL.md`](docs/PLUGIN_PROTOCOL.md)

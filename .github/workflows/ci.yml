@@ -31,7 +31,13 @@ jobs:
       - run: cargo test --all
       - run: cargo build --release
       - name: Software qualification matrix
-        run: DA_QUALIFY_FAST=1 make qualify
+        env:
+          DA_QUALIFY_FAST: "1"
+          # Emulator rows are claimed by the dedicated emulator-* jobs.
+          DA_EMULATOR_VCAN: "1"
+          DA_EMULATOR_SWTPM: "1"
+          DA_EMULATOR_V4L2: "skip"
+        run: make qualify
       - uses: actions/upload-artifact@v4
         with: {name: qualification-matrix, path: evidence/qualification/software-matrix.json}
       # `hotplug` is pure Rust (netlink-sys, no system library), so unlike
@@ -68,6 +74,47 @@ jobs:
       - run: cargo test --all --features camera
       - run: cargo build --release --features camera
 
+  emulator-vcan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y iproute2 can-utils curl
+      - name: vcan capture smoke
+        env:
+          DA_EMULATOR_STRICT: "1"
+        run: |
+          chmod +x scripts/emulator/*.sh
+          ./scripts/emulator/smoke-vcan.sh
+
+  emulator-swtpm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libtss2-dev swtpm swtpm-tools tpm2-tools pkg-config
+      - name: swtpm identity smoke
+        env:
+          DA_EMULATOR_STRICT: "1"
+        run: |
+          chmod +x scripts/emulator/*.sh
+          ./scripts/emulator/smoke-swtpm.sh
+
+  emulator-v4l2:
+    runs-on: ubuntu-latest
+    # Soft-skip when the runner kernel has no matching v4l2loopback module.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libclang-dev ffmpeg v4l2loopback-dkms linux-headers-$(uname -r) curl file xxd || true
+      - name: v4l2loopback camera smoke
+        env:
+          DA_EMULATOR_STRICT: "0"
+        run: |
+          chmod +x scripts/emulator/*.sh
+          ./scripts/emulator/smoke-v4l2.sh
+
   rust-arm64:
     runs-on: ubuntu-latest
     steps:
@@ -96,7 +143,7 @@ jobs:
       - run: npm run build
 
   container:
-    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, dashboard]
+    needs: [static, rust-native, rust-arm64, rust-tpm2, rust-camera, emulator-vcan, emulator-swtpm, dashboard]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

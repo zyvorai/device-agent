@@ -15,9 +15,13 @@ and bus acceptance remain operator-signed in
 | `minewing_profile` | `profiles/minewing-gw1-r1.toml` present |
 | `cargo_fmt` / `clippy_default` / `unit_tests` | Format, clippy `-D warnings`, `cargo test --all` |
 | `nodra_mqtts_config` | `[nodra.tls]` deserializes; MQTTS transport builds |
+| `emulator_vcan_ci` | `scripts/emulator/smoke-vcan.sh` (CI `emulator-vcan`) |
+| `emulator_swtpm_ci` | `scripts/emulator/smoke-swtpm.sh` (CI `emulator-swtpm`) |
+| `emulator_v4l2_ci` | `scripts/emulator/smoke-v4l2.sh` (CI `emulator-v4l2`; soft-skip OK) |
 
-These prove agent software and Nodra MQTTS config. They **do not** prove
-GPIO/I2C/CAN on real silicon.
+These prove agent software, Nodra MQTTS config, and **emulator** paths for
+CAN / TPM2 / camera where the host can load the matching kernel/userspace
+emulators. They **do not** prove GPIO/I2C/CAN on real silicon.
 
 ## Operator / hardware rows — signed checklist
 

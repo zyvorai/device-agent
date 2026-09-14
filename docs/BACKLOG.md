@@ -35,6 +35,7 @@ hero:
 - [x] Nodra MQTTS scaffolding (`[nodra.tls]`) + HTTPS-aware verify/deploy scripts.
 - [x] `make qualify` + PRODUCTION/QUALIFICATION/TEST-REPORT evidence pack.
 - [x] Document arm64 supported install = tarball + OCI (amd64 `.deb`/`.rpm` only until native packages land).
+- [x] Emulator CI scaffolding (vcan / swtpm / v4l2loopback) — see `docs/EMULATOR_CI.md`.
 
 ## P1 — Production hardening
 

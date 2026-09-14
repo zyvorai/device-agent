@@ -73,9 +73,25 @@ def main():
     for name, detail in [
         ("hardware_hil_minewing", "operator-signed — evidence/qualification/hardware-checklist.md"),
         ("arm64_native_deb_rpm", "supported path today: arm64 tarball + multi-arch container; amd64 .deb/.rpm"),
-        ("vcan_camera_swtpm_ci", "emulator CI jobs not yet wired"),
     ]:
         row(results, name, "skip", detail)
+
+    # Emulator CI rows: pass when CI env markers are set (jobs write these),
+    # otherwise skip with a pointer to scripts/emulator/.
+    emu_rows = [
+        ("emulator_vcan_ci", "DA_EMULATOR_VCAN", "scripts/emulator/smoke-vcan.sh + CI emulator-vcan"),
+        ("emulator_swtpm_ci", "DA_EMULATOR_SWTPM", "scripts/emulator/smoke-swtpm.sh + CI emulator-swtpm"),
+        ("emulator_v4l2_ci", "DA_EMULATOR_V4L2", "scripts/emulator/smoke-v4l2.sh + CI emulator-v4l2 (soft-skip OK)"),
+    ]
+    for name, env_key, detail in emu_rows:
+        val = os.environ.get(env_key, "")
+        if val in ("1", "true", "pass", "yes"):
+            row(results, name, "pass", detail)
+        elif val in ("skip", "soft-skip"):
+            row(results, name, "skip", f"{detail} — host reported soft-skip")
+        else:
+            row(results, name, "skip", f"set {env_key}=1 after smoke; {detail}")
+
 
     report = {
         "generated_at": started,

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Emulator CI scaffolding: `scripts/emulator/` smokes for **vcan** CAN
+  capture, **swtpm** TPM identity, and **v4l2loopback** camera; CI jobs
+  `emulator-vcan` / `emulator-swtpm` / `emulator-v4l2`; qualify rows +
+  [`docs/EMULATOR_CI.md`](docs/EMULATOR_CI.md).
 - Opt-in non-root systemd unit example + udev rules (`packaging/systemd` /
   `packaging/udev`); HARDWARE_PERMISSIONS documents the swap path.
 - Bring-up SKU profile `minewing-gw1-r1` (aligned with Zyvor OTA board profile).

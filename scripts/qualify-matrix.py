@@ -52,19 +52,23 @@ def main():
         proc = run(["cargo", "test", "--all"], timeout=600)
         row(results, "unit_tests", "pass" if proc.returncode == 0 else "fail", (proc.stdout + proc.stderr)[-400:])
 
-    proc = run(["cargo", "test", "--lib", "integrations::nodra::tests"], timeout=180)
+    proc = run(["cargo", "test", "--lib", "nodra::tests::"], timeout=180)
     out = proc.stdout + proc.stderr
-    passed = 0
-    for line in out.splitlines():
-        if line.startswith("test result: ok."):
-            try:
-                passed = int(line.split("ok.", 1)[1].split("passed", 1)[0].strip())
-            except (IndexError, ValueError):
-                passed = 0
-    if proc.returncode == 0 and passed >= 3:
-        row(results, "nodra_mqtts_config", "pass", f"{passed} tests")
+    names = [
+        "mqtt_transport_disabled_is_plain",
+        "mqtt_transport_enabled_uses_default_roots",
+        "nodra_tls_deserializes_from_toml",
+    ]
+    missing = [n for n in names if f"{n} ... ok" not in out]
+    if proc.returncode == 0 and not missing:
+        row(results, "nodra_mqtts_config", "pass", "3 MQTTS unit tests")
     else:
-        row(results, "nodra_mqtts_config", "fail", out[-400:])
+        row(
+            results,
+            "nodra_mqtts_config",
+            "fail",
+            (f"missing={missing}; " + out)[-400:],
+        )
 
     for name, detail in [
         ("hardware_hil_minewing", "operator-signed — evidence/qualification/hardware-checklist.md"),

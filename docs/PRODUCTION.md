@@ -7,6 +7,19 @@ hero:
 Companion to [guides/06-deploying-to-production.md](guides/06-deploying-to-production.md)
 and [guides/03-securing-your-agent.md](guides/03-securing-your-agent.md).
 
+## Current maturity (2026-09-14)
+
+| Claim | Status |
+|---|---|
+| Software matrix + emulator HIL CI | green (`hil-ci-emulator`, packages amd64/arm64) |
+| Hardened Linux agent packages | shippable (`v0.1.6`) with auth/TLS guidance below |
+| Minewing GW1 r1 physical HIL | **unsigned** — lab host is x86 surrogate (`minewing_claimable=false`) |
+| Hardware checklist | **not signed** — do not claim Minewing GA |
+
+**Verdict:** device-agent is **production-ready as a hardened Linux agent** on supported
+arches when auth/TLS (or UDS) are configured. It is **not** Minewing-silicon-qualified
+until [HIL.md](HIL.md) is signed on real hardware.
+
 ## Preconditions
 
 1. `make qualify` green → `evidence/qualification/software-matrix.json`.

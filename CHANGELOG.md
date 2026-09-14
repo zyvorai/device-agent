@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document production maturity — Linux agent ready, Minewing HIL still unsigned.
+
 - GitHub CI `hil-ci-emulator` + `qualify-summary` / `cargo-audit` / CodeQL
 - GitHub CI `hil-ci-emulator` job (`scripts/ci/run-hil-emulator.sh`): HIL
   harness against vcan + minewing profile when lab silicon is unavailable

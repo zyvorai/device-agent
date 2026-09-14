@@ -1,4 +1,4 @@
-.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify emulator-vcan emulator-swtpm emulator-v4l2 emulator package-deb-rpm
+.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify hil emulator-vcan emulator-swtpm emulator-v4l2 emulator package-deb-rpm
 
 fmt:
 	cargo fmt --all -- --check
@@ -44,6 +44,9 @@ static:
 
 qualify:
 	python3 scripts/qualify-matrix.py
+
+hil:
+	DA_HIL_STRICT=$${DA_HIL_STRICT:-1} ./scripts/hil/run-minewing-hil.sh
 
 emulator-vcan:
 	DA_EMULATOR_STRICT=$${DA_EMULATOR_STRICT:-1} ./scripts/emulator/smoke-vcan.sh

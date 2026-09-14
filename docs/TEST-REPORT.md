@@ -37,4 +37,5 @@ make emulator-v4l2   # soft-skip if no v4l2loopback
 ```
 
 Sign [`evidence/qualification/hardware-checklist.md`](../evidence/qualification/hardware-checklist.md)
-before production claims on a physical SKU.
+via [`scripts/hil/run-minewing-hil.sh`](../scripts/hil/run-minewing-hil.sh)
+([HIL.md](HIL.md)) before production claims on a physical SKU.

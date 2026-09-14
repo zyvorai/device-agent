@@ -71,9 +71,26 @@ def main():
         )
 
     for name, detail in [
-        ("hardware_hil_minewing", "operator-signed — evidence/qualification/hardware-checklist.md"),
+        ("hardware_hil_minewing", "run scripts/hil/run-minewing-hil.sh + DA_HIL_SIGN=1 — docs/HIL.md"),
     ]:
-        row(results, name, "skip", detail)
+        # Promote to pass when a claimable physical HIL run exists.
+        hil_root = EVIDENCE / "hil"
+        claimable = False
+        stamp = ""
+        if hil_root.is_dir():
+            for p in sorted(hil_root.glob("*/results.json"), reverse=True):
+                try:
+                    data = json.loads(p.read_text())
+                except Exception:
+                    continue
+                if data.get("minewing_claimable"):
+                    claimable = True
+                    stamp = p.parent.name
+                    break
+        if name == "hardware_hil_minewing" and claimable:
+            row(results, name, "pass", f"signed hil/{stamp}")
+        else:
+            row(results, name, "skip", detail)
 
     arm64_pkg = os.environ.get("DA_ARM64_PACKAGES", "")
     if arm64_pkg in ("1", "true", "pass", "yes"):

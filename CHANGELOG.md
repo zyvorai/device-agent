@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Minewing HIL runner (`scripts/hil/run-minewing-hil.sh`, `docs/HIL.md`) with
+  fail-closed checklist signing (`DA_HIL_SIGN=1` only when claimable).
 - Native **arm64** `.deb`/`.rpm` packaging: CI `packages-arm64` on
   `ubuntu-24.04-arm`, release matrix for amd64+arm64, `scripts/package-deb-rpm.sh`.
 - Emulator CI scaffolding: `scripts/emulator/` smokes for **vcan** CAN

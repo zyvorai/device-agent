@@ -1,9 +1,8 @@
 # Device Agent hardware qualification checklist
 
-SKU / revision: Minewing GW1 / r1  
-Profile: `minewing-gw1-r1`  
-Image / package digest: ________________  
-Operator: ________________  Date: __________
+**Status:** harness ready (`scripts/hil/run-minewing-hil.sh`); **unsigned for Minewing
+silicon**. Lab surrogate run recorded under `evidence/qualification/hil/` —
+does **not** close production HIL claims.
 
 | Test | Pass? | Notes |
 |---|---|---|

@@ -1,0 +1,10 @@
+{
+  "version": "0.1.5",
+  "inventory_generation": 316,
+  "last_inventory_refresh_unix_ms": 1789390668604,
+  "sensor_samples_total": 0,
+  "sensor_sample_failures": 0,
+  "event_subscribers": 1,
+  "can_capture_frames_total": 0,
+  "can_capture_dropped_total": 0
+}

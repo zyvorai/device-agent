@@ -5,7 +5,8 @@ hero:
 ---
 
 Software rows are automated by `make qualify`. Physical Minewing GW1 r1 HIL
-and bus acceptance remain operator-signed in
+is driven by [`scripts/hil/run-minewing-hil.sh`](../scripts/hil/run-minewing-hil.sh)
+([HIL.md](HIL.md)) and signed in
 [`evidence/qualification/hardware-checklist.md`](../evidence/qualification/hardware-checklist.md).
 
 ## Software (host) rows — `make qualify`

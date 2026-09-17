@@ -51,6 +51,22 @@ devices = []
 # max_stream_clients = 4
 # publish_to_nodra = true
 
+[edge_ai]
+# --features edge-ai build only for the HTTP routes (off by default).
+# Scaffold: never starts an NPU/GPU backend even when enabled = true —
+# GET /api/v1/inference/events returns 501 not-configured. See docs/EDGE_AI.md.
+enabled = false
+accelerator = ""
+publish_to_nodra = true
+
+[privsep]
+# Privilege-separation helper for the daemon's own bus access (design only).
+# Default false keeps today's root + direct /dev opens. Even with enabled =
+# true and --features privsep, no helper is spawned yet — see docs/PRIVSEP.md.
+enabled = false
+helper_path = "/usr/lib/zyvor-device-agent/bus-helper"
+socket_path = "/run/zyvor-device-agent/bus.sock"
+
 [auth]
 # "none" (default, backward compatible), "bearer", or "mtls". scripts/deploy-remote.sh
 # generates a token and populates auth.bearer.token_hash_file automatically

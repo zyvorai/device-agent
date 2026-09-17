@@ -86,3 +86,12 @@ Keep the stock root unit for boards that still require privileged setup paths.
 - `plugins.seccomp_enabled = true` adds a further layer: even a plugin binary that's
   compromised or malicious can't `ptrace` another process, load a kernel module, or
   remount/pivot the filesystem — see `docs/PLUGIN_PROTOCOL.md` for the exact denylist.
+
+## Daemon bus privilege separation (open)
+
+Plugin drops and the optional non-root unit above are not a two-process
+helper. The design for a dedicated bus-access helper (API daemon
+unprivileged, helper holds device groups/caps) lives in
+[`docs/PRIVSEP.md`](PRIVSEP.md). Config knobs (`[privsep]`) and
+`--features privsep` are scaffold only: default remains `User=root` with
+direct bus opens, and no helper binary is spawned yet.

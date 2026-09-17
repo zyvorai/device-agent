@@ -68,7 +68,9 @@ nav:
       - Security & identity:
           - mTLS enrollment: MTLS_ENROLLMENT.md
           - TPM2 identity: TPM2_IDENTITY.md
+          - Privilege separation (bus helper): PRIVSEP.md
       - Camera: CAMERA.md
+      - Edge AI (scaffold): EDGE_AI.md
       - Plugins: PLUGIN_PROTOCOL.md
       - Operations:
           - Quickstart: QUICKSTART.md

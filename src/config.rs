@@ -19,6 +19,8 @@ pub struct Config {
     pub plugins: PluginConfig,
     pub thresholds: ThresholdConfig,
     pub camera: CameraConfig,
+    pub edge_ai: EdgeAiConfig,
+    pub privsep: PrivsepConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -318,6 +320,58 @@ impl Default for CameraDeviceConfig {
     }
 }
 
+/// Local inference bridge scaffold — see `docs/EDGE_AI.md`. Parsed always so
+/// TOML stays stable; the `/api/v1/inference/*` routes only exist when the
+/// binary is built with `--features edge-ai`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EdgeAiConfig {
+    /// Operator intent flag. Today never starts a backend even when true —
+    /// handlers return 501 `not-configured` until a real accelerator family
+    /// is implemented.
+    pub enabled: bool,
+    /// Accelerator family name placeholder (e.g. `"rknn"`, `"openvino"`,
+    /// `"tensorrt"`). Empty means undeclared. Naming a family does not load
+    /// a driver in this scaffold.
+    pub accelerator: String,
+    /// Future: publish inference event envelopes to Nodra (never raw frames).
+    pub publish_to_nodra: bool,
+}
+
+impl Default for EdgeAiConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            accelerator: String::new(),
+            publish_to_nodra: true,
+        }
+    }
+}
+
+/// Privilege-separation helper for daemon bus access — see `docs/PRIVSEP.md`.
+/// Default `enabled = false` keeps the stock root daemon path unchanged.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PrivsepConfig {
+    /// Opt-in. When false (default), the daemon opens buses directly as today.
+    pub enabled: bool,
+    /// Absolute path of the future bus-helper binary. Not executed in this
+    /// scaffold even when `enabled` and `--features privsep` are set.
+    pub helper_path: String,
+    /// Unix socket the API daemon would use to talk to the helper.
+    pub socket_path: String,
+}
+
+impl Default for PrivsepConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            helper_path: "/usr/lib/zyvor-device-agent/bus-helper".into(),
+            socket_path: "/run/zyvor-device-agent/bus.sock".into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NodraConfig {
@@ -534,5 +588,42 @@ impl Config {
         let raw =
             fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
         toml::from_str(&raw).with_context(|| format!("parsing {}", path.display()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edge_ai_and_privsep_defaults_are_inert() {
+        let cfg = Config::default();
+        assert!(!cfg.edge_ai.enabled);
+        assert!(cfg.edge_ai.accelerator.is_empty());
+        assert!(!cfg.privsep.enabled);
+        assert!(!cfg.privsep.helper_path.is_empty());
+        assert!(!cfg.privsep.socket_path.is_empty());
+    }
+
+    #[test]
+    fn edge_ai_and_privsep_toml_round_trip() {
+        let raw = r#"
+[edge_ai]
+enabled = true
+accelerator = "rknn"
+publish_to_nodra = false
+
+[privsep]
+enabled = true
+helper_path = "/opt/bus-helper"
+socket_path = "/tmp/bus.sock"
+"#;
+        let cfg: Config = toml::from_str(raw).expect("parse");
+        assert!(cfg.edge_ai.enabled);
+        assert_eq!(cfg.edge_ai.accelerator, "rknn");
+        assert!(!cfg.edge_ai.publish_to_nodra);
+        assert!(cfg.privsep.enabled);
+        assert_eq!(cfg.privsep.helper_path, "/opt/bus-helper");
+        assert_eq!(cfg.privsep.socket_path, "/tmp/bus.sock");
     }
 }

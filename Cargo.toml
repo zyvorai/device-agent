@@ -26,10 +26,14 @@ path = "src/main.rs"
 # `libv4l.so` link) and `jpeg-encoder` are both pure Rust with no runtime
 # library footprint, but V4L2 itself is Linux-only and the feature gets its
 # own CI leg like tpm2/hotplug rather than being imposed on every build.
+# `edge-ai` and `privsep` are pure scaffolds (no optional crates): they expose
+# placeholder API/config surfaces only — see docs/EDGE_AI.md and docs/PRIVSEP.md.
 [features]
 tpm2 = ["dep:tss-esapi"]
 hotplug = ["dep:netlink-sys"]
 camera = ["dep:v4l", "dep:jpeg-encoder"]
+edge-ai = []
+privsep = []
 
 [dependencies]
 anyhow = "1.0"

@@ -43,9 +43,13 @@ jobs:
         with: {name: qualification-matrix, path: evidence/qualification/software-matrix.json}
       # `hotplug` is pure Rust (netlink-sys, no system library), so unlike
       # tpm2 it can just piggyback on this job instead of needing its own.
+      # `edge-ai` / `privsep` are empty feature scaffolds (no optional crates).
       - run: cargo clippy --all-targets --features hotplug -- -D warnings
       - run: cargo test --all --features hotplug
       - run: cargo build --release --features hotplug
+      - run: cargo clippy --all-targets --features edge-ai,privsep -- -D warnings
+      - run: cargo test --all --features edge-ai,privsep
+      - run: cargo build --release --features edge-ai,privsep
 
   rust-tpm2:
     runs-on: ubuntu-latest

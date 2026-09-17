@@ -104,11 +104,12 @@ intentionally still runs as root — see
     `--features camera` (off by default) adds live snapshot and MJPEG
     streaming from an explicitly allowlisted `/dev/video*` — the
     device-discovery and live-viewing half of the "Edge AI bridge" line
-    item in [`ROADMAP.md`](ROADMAP.md); local inference stays a
-    separate, still-unscoped increment. Acquisition only: no control
-    tuning, no daemon-side recording, and only the single newest frame per
-    camera is cached. `publish_to_nodra` sends health/presence only, never
-    frame bytes. See [`docs/CAMERA.md`](CAMERA.md).
+    item in [`ROADMAP.md`](ROADMAP.md). Local inference has a scaffold
+    under [`EDGE_AI.md`](EDGE_AI.md) (`--features edge-ai`, 501 until a
+    backend lands); no NPU runtime is linked yet. Acquisition only: no
+    control tuning, no daemon-side recording, and only the single newest
+    frame per camera is cached. `publish_to_nodra` sends health/presence
+    only, never frame bytes. See [`docs/CAMERA.md`](CAMERA.md).
 
 === "Security & identity"
 

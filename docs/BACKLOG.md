@@ -77,5 +77,7 @@ hero:
 ## Explicitly outside Device Agent v0.x
 
 Kubernetes dependency, industrial protocol meaning, Nodra WAL duplication, a
-second Fleet agent, arbitrary remote shell, bootloader/partition OTA logic or
-EdgeAI inference.
+second Fleet agent, arbitrary remote shell, bootloader/partition OTA logic, or
+full EdgeAI NPU inference (HTTP/config scaffold under `docs/EDGE_AI.md` /
+`--features edge-ai` only). Daemon bus privsep helper binary likewise remains
+out of v0.x (`docs/PRIVSEP.md` design + knobs only).

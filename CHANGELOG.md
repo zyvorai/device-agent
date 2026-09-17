@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Edge AI bridge scaffold: `docs/EDGE_AI.md`, `--features edge-ai`,
+  `[edge_ai]` config, `GET /api/v1/inference/events` returns 501
+  `not-configured` (no accelerator runtime).
+- Daemon bus privsep design scaffold: `docs/PRIVSEP.md`, `[privsep]` config
+  knobs, `--features privsep` status surface; default root daemon unchanged,
+  no helper binary spawned.
+- Roadmap / HARDWARE_PERMISSIONS / CAMERA / ARCHITECTURE updated to point at
+  the scaffolds.
+
 - Docs refresh: README/QUALIFICATION/PRODUCTION/HIL pin **v0.1.6**; detail
   lab-surrogate stamp + `minewing_claimable=false` vs physical sign rules.
 

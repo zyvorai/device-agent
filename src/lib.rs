@@ -9,11 +9,14 @@ pub mod auth;
 pub mod camera_capture;
 pub mod can_capture;
 pub mod config;
+#[cfg(feature = "edge-ai")]
+pub mod edge_ai;
 pub mod hardware;
 pub mod identity;
 pub mod integrations;
 pub mod model;
 pub mod plugins;
+pub mod privsep;
 pub mod profile;
 pub mod state;
 pub mod tls;

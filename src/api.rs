@@ -40,6 +40,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/camera", get(camera_list))
         .route("/api/v1/camera/{id}/snapshot", get(camera_snapshot))
         .route("/api/v1/camera/{id}/stream", get(camera_stream))
+        .merge(edge_ai_routes())
         .route("/api/v1/thermal", get(thermal))
         .route("/api/v1/integrations", get(integrations))
         .route("/api/v1/integrations/fleet/inventory", get(fleet_inventory))
@@ -58,6 +59,22 @@ pub fn router(state: Arc<AppState>) -> Router {
         ))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+}
+
+/// `--features edge-ai` only: placeholder inference contract. Empty merge
+/// otherwise so a plain `cargo build` never grows new routes.
+fn edge_ai_routes() -> Router<Arc<AppState>> {
+    #[cfg(feature = "edge-ai")]
+    {
+        Router::new().route(
+            "/api/v1/inference/events",
+            get(crate::edge_ai::inference_events),
+        )
+    }
+    #[cfg(not(feature = "edge-ai"))]
+    {
+        Router::new()
+    }
 }
 
 async fn health(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {

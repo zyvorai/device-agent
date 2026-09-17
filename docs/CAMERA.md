@@ -6,9 +6,9 @@ hero:
 
 Starts the "Edge AI bridge" line item in `docs/ROADMAP.md`, scoped
 deliberately to its device-discovery and live-viewing half — local
-inference and accelerator support remain a separate, still-unscoped future
-increment. Requires the daemon to be built with `--features camera` (off by
-default, like `hotplug`/`tpm2`).
+inference has a separate scaffold (`docs/EDGE_AI.md`, `--features edge-ai`)
+and still has no accelerator backend. Requires the daemon to be built with
+`--features camera` (off by default, like `hotplug`/`tpm2`).
 
 ## Safety contract
 
@@ -77,8 +77,9 @@ error — never frame bytes:
 
 This is a deliberate boundary, not an oversight: raw video must never reach
 Nodra in this increment. Device Agent's job stops at "here's a live JPEG
-feed and camera health"; a future local-inference bridge (still unscoped —
-see `docs/ROADMAP.md`) or Nodra itself would own actually consuming frames.
+feed and camera health"; a future local-inference bridge (scaffold in
+`docs/EDGE_AI.md`, `--features edge-ai`) or Nodra itself would own
+actually consuming frames.
 
 ## Permissions
 

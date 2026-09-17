@@ -16,7 +16,7 @@ use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 use zyvor_device_agent::{
     api, auth, camera_capture, can_capture, config::Config, hardware, identity::DeviceIdentity,
-    integrations, plugins, state::AppState, tls,
+    integrations, plugins, privsep, state::AppState, tls,
 };
 
 #[derive(Debug, Parser)]
@@ -166,6 +166,9 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
     let inventory = hardware::collect_inventory(&cfg).await;
     let state = Arc::new(AppState::new(cfg.clone(), inventory));
     let shutdown = CancellationToken::new();
+
+    // Scaffold only: never spawns a helper / never drops daemon privileges.
+    privsep::warn_if_requested(&cfg.privsep);
 
     spawn_inventory_refresh(state.clone(), shutdown.clone());
     spawn_plugin_scheduler(state.clone(), shutdown.clone());

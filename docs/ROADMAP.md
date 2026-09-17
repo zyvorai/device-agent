@@ -42,8 +42,10 @@ hero:
   below, deliberately scoped no further than that
 - local inference event contract into Nodra, one accelerator family, and
   the Fleet health/application-lifecycle story for it remain **not**
-  scoped — see the trimmed "Edge AI bridge" entry under "Later / not yet
-  scoped"
+  fully scoped — a `--features edge-ai` scaffold exposing
+  `GET /api/v1/inference/events` (501 / `not-configured`) landed; see
+  `docs/EDGE_AI.md` and the trimmed "Edge AI bridge" entry under "Later /
+  not yet scoped"
 
 ## v0.2 — Production device identity
 
@@ -57,7 +59,8 @@ hero:
   `plugins.run_as_uid`/`run_as_gid`; the daemon itself intentionally still
   runs as root for direct GPIO/I2C/SPI/CAN bus access — see
   `docs/HARDWARE_PERMISSIONS.md`. A privilege-separation helper for the
-  daemon's *own* bus access, as opposed to plugin subprocesses, remains open)
+  daemon's *own* bus access remains open; design + config/`--features privsep`
+  scaffold landed — see `docs/PRIVSEP.md`, helper binary not implemented)
 - [x] richer health thresholds and event sources (v0.1.4 — `[thresholds]`,
   thermal + CAN controller error counters; more event sources can still be
   added later)
@@ -78,15 +81,22 @@ These remain Nodra adapters, not Device Agent modules.
 ## Later / not yet scoped
 
 Directionally plausible, but not committed to a version and not currently
-being worked on. Also flagged in `docs/BACKLOG.md`'s "explicitly outside
-Device Agent v0.x" list as out of scope for the v0.x line specifically —
-these would need to be re-scoped (and that exclusion revisited) before
-either becomes real roadmap work:
+being worked on as a full delivery. Also flagged in `docs/BACKLOG.md`'s
+"explicitly outside Device Agent v0.x" list as out of scope for the v0.x
+line specifically — these would need to be re-scoped (and that exclusion
+revisited) before either becomes real roadmap work. Small scaffolds may
+land ahead of that re-scope so clients can wire against stable paths:
 
 - **OTA executor** — signed bundle verification, A/B inactive-slot write,
   reboot + health confirmation, commit/rollback, rollout initiated by Fleet.
 - **Edge AI bridge (remaining half)** — one accelerator family, a local
   inference event contract into Nodra, and Fleet health/application
   lifecycle for it. V4L2 device discovery + live snapshot/stream shipped
-  in v0.1.5 (see above and `docs/CAMERA.md`); RTSP discovery and
-  everything inference-related here is still not scoped.
+  in v0.1.5 (see above and `docs/CAMERA.md`). **Scaffold landed:**
+  `docs/EDGE_AI.md`, `--features edge-ai`, `[edge_ai]` config, and
+  `GET /api/v1/inference/events` returning 501 `not-configured` until a
+  real backend exists. RTSP discovery and actual NPU/GPU inference remain
+  unscoped.
+- **Daemon bus privsep helper** — design + knobs in `docs/PRIVSEP.md`,
+  `[privsep]` config, `--features privsep` status surface; helper binary
+  and RPC not implemented. Default root daemon unchanged.

@@ -103,6 +103,11 @@ cargo run --bin zyvor-device-agent -- --config /tmp/device-agent.toml inventory
 cargo run -- --config /tmp/device-agent.toml doctor
 cargo run -- --config /tmp/device-agent.toml serve
 
+make ci              # fmt, clippy, tests, release build (no dashboard)
+make status          # release agentctl against the example config
+make check-ui        # dashboard npm test + build
+make deploy-remote H=<host> U=sus ARGS='--quick --no-ui'
+
 # Reference sensor decode test; does not touch hardware
 python3 examples/i2c_temperature.py --self-test
 ```

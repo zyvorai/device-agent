@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `agentctl` is the short CLI; `zyvor-device-agent` stays the daemon name. `agentctl status` prints the colorful local banner. `make status`, `make ci`, and `make deploy-remote H=<host> U=sus`. `make check` no longer builds the dashboard (`make check-ui`).
+- Dashboard install matches React 19 types and a Vite 6 React plugin so `npm run build` typechecks.
+
 - Edge AI bridge scaffold: `docs/EDGE_AI.md`, `--features edge-ai`,
   `[edge_ai]` config, `GET /api/v1/inference/events` returns 501
   `not-configured` (no accelerator runtime).

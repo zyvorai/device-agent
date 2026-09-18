@@ -39,7 +39,7 @@ jobs:
           DA_EMULATOR_V4L2: "skip"
           DA_ARM64_PACKAGES: "1"
         run: make qualify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: {name: qualification-matrix, path: evidence/qualification/software-matrix.json}
       # `hotplug` is pure Rust (netlink-sys, no system library), so unlike
       # tpm2 it can just piggyback on this job instead of needing its own.
@@ -135,7 +135,7 @@ jobs:
         run: |
           chmod +x scripts/ci/run-hil-emulator.sh scripts/emulator/*.sh scripts/hil/*.sh
           ./scripts/ci/run-hil-emulator.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: qualification-ci-hil-emulator
           path: evidence/qualification/ci/
@@ -168,7 +168,7 @@ jobs:
           DA_ARM64_PACKAGES: "1"
           DA_CI_HIL_EMULATOR: "1"
         run: make qualify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: qualification-suite-ci
           path: evidence/qualification/software-matrix.json

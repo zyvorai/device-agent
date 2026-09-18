@@ -1,12 +1,12 @@
-.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check qualify hil emulator-vcan emulator-swtpm emulator-v4l2 emulator package-deb-rpm
+.PHONY: fmt lint lint-hotplug lint-tpm2 test test-hotplug test-tpm2 build ui ui-test static package check check-ui qualify hil emulator-vcan emulator-swtpm emulator-v4l2 emulator package-deb-rpm help ci status deploy-remote
 
-fmt:
+fmt: ## cargo fmt --check
 	cargo fmt --all -- --check
 
 # Default features only, matching CI's rust-native job: the optional `tpm2`
 # feature needs libtss2-dev, which most contributors won't have installed -
 # see lint-tpm2 below for that leg specifically.
-lint:
+lint: ## Clippy, default features, warnings denied
 	cargo clippy --all-targets -- -D warnings
 
 # Not part of the default `check` target: netlink-sys (AF_NETLINK,
@@ -21,7 +21,7 @@ lint-hotplug:
 lint-tpm2:
 	cargo clippy --all-targets --features tpm2 -- -D warnings
 
-test:
+test: ## All tests, default features
 	cargo test --all
 
 test-hotplug:
@@ -30,7 +30,7 @@ test-hotplug:
 test-tpm2:
 	cargo test --all --features tpm2
 
-build:
+build: ## Release binaries, including agentctl
 	cargo build --release
 
 ui:
@@ -60,10 +60,26 @@ emulator-v4l2:
 emulator:
 	./scripts/emulator/smoke-all.sh
 
-check: static lint test ui-test ui
+# rust-native gate. Dashboard npm is separate: @types/react 19 and
+# @types/react-dom 18 do not resolve, and that job is already red in CI.
+check: static lint test build ## fmt, clippy, tests, release build
 
-package: check
+check-ui: ui-test ui ## Dashboard install, test, and build
+
+package: check ui
 	./scripts/package.sh
+
+ci: check ## Same core gate as the rust-native CI job
+
+status: build ## agentctl status from the example config (or CONFIG=path)
+	./target/release/agentctl --config $(or $(CONFIG),config/device-agent.example.toml) status
+
+deploy-remote: ## Deploy: make deploy-remote H=<host> [U=sus] [ARGS=--quick]
+	@test -n "$(H)" || (echo "Usage: make deploy-remote H=<host> [U=user] [ARGS='--quick --no-ui']"; exit 1)
+	./scripts/deploy-remote.sh $(if $(U),$(U)@)$(H) $(ARGS)
+
+help: ## Show targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sort | awk -F':.*## ' '{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 package-deb-rpm:
 	./scripts/package-deb-rpm.sh

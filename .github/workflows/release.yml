@@ -34,7 +34,7 @@ jobs:
       - name: Sign image (keyless, GitHub OIDC)
         run: cosign sign --yes "ghcr.io/zyvorai/device-agent@${{ steps.build.outputs.digest }}"
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/zyvorai/device-agent
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -133,7 +133,7 @@ jobs:
           cosign sign-blob --yes dist/sbom-dashboard.cdx.json \
             --output-signature dist/sbom-dashboard.cdx.json.sig --output-certificate dist/sbom-dashboard.cdx.json.pem
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'dist/*.tar.gz,dist/*.deb,dist/*.rpm'
       - name: Extract changelog section

@@ -98,7 +98,8 @@ people actually hit.
 
 ```bash
 cp config/device-agent.example.toml /tmp/device-agent.toml
-cargo run -- --config /tmp/device-agent.toml inventory
+cargo run --bin agentctl -- --config /tmp/device-agent.toml status
+cargo run --bin zyvor-device-agent -- --config /tmp/device-agent.toml inventory
 cargo run -- --config /tmp/device-agent.toml doctor
 cargo run -- --config /tmp/device-agent.toml serve
 

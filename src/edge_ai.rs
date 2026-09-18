@@ -43,8 +43,7 @@ pub fn not_configured_body(config: &EdgeAiConfig) -> InferenceNotConfigured {
     };
     InferenceNotConfigured {
         error: "not-configured",
-        message: "Edge AI inference is not configured: no accelerator backend is enabled"
-            .into(),
+        message: "Edge AI inference is not configured: no accelerator backend is enabled".into(),
         contract_version: CONTRACT_VERSION,
         configured: false,
         accelerator,

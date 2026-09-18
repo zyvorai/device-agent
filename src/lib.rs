@@ -19,4 +19,5 @@ pub mod plugins;
 pub mod privsep;
 pub mod profile;
 pub mod state;
+pub mod status_banner;
 pub mod tls;

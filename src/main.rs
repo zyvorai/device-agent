@@ -20,11 +20,7 @@ use zyvor_device_agent::{
 };
 
 #[derive(Debug, Parser)]
-#[command(
-    name = "zyvor-device-agent",
-    version,
-    about = "Zyvor hardware edge agent"
-)]
+#[command(version, about = "Zyvor hardware edge agent")]
 struct Cli {
     #[arg(
         long,
@@ -65,6 +61,8 @@ enum Command {
     },
     /// Print this device's current mTLS identity (subject, validity, backend).
     Identity,
+    /// Cilium-style colorful local status (API, TLS, plugins, Nodra, Fleet).
+    Status,
 }
 
 #[tokio::main]
@@ -128,6 +126,10 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Enroll { force } => auth::enroll::run(&cfg, force).await,
         Command::Identity => print_identity(&cfg),
+        Command::Status => {
+            print!("{}", zyvor_device_agent::status_banner::format_status(&cfg));
+            Ok(())
+        }
         Command::Serve => serve(cfg, cli.config).await,
     }
 }

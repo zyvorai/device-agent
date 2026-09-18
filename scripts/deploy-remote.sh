@@ -174,7 +174,7 @@ if [[ "$MODE" == uninstall ]]; then
   run "$SUDO systemctl disable --now ${APP}.service 2>/dev/null || true"
   run "$SUDO rm -f /etc/systemd/system/${APP}.service"
   run "$SUDO systemctl daemon-reload"
-  run "$SUDO rm -f /usr/bin/${APP}"
+  run "$SUDO rm -f /usr/bin/${APP} /usr/bin/agentctl"
   run "$SUDO rm -rf /usr/share/${APP}"
   log "Kept /etc/zyvor/device-agent* and /var/lib/${APP} (config + state)"
   exit 0
@@ -216,6 +216,7 @@ fi
 # --- 5. install binary, config, profiles, dashboard --------------------------
 log "Installing binary and support files"
 run "$SUDO install -m755 '$REMOTE_DIR/target/release/${APP}' /usr/bin/${APP}"
+run "$SUDO install -m755 '$REMOTE_DIR/target/release/agentctl' /usr/bin/agentctl"
 run "$SUDO mkdir -p /var/lib/${APP} /run/${APP} /etc/zyvor/device-agent/profiles /etc/zyvor/device-agent/plugins.d /etc/zyvor/device-agent/tls /usr/lib/${APP}/plugins"
 run "$SUDO cp '$REMOTE_DIR'/profiles/*.toml /etc/zyvor/device-agent/profiles/"
 run "$SUDO install -m755 '$REMOTE_DIR/examples/i2c_temperature.py' /usr/lib/${APP}/plugins/i2c_temperature.py"

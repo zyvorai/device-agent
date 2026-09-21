@@ -48,7 +48,7 @@ arc-swap = "1.9"
 axum = { version = "0.8", features = ["json", "macros"] }
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 clap = { version = "4.5", features = ["derive", "env"] }
-jpeg-encoder = { version = "0.6.1", optional = true }
+jpeg-encoder = { version = "0.7.1", optional = true }
 libc = "0.2"
 netlink-sys = { version = "0.9.0", features = ["tokio_socket"], optional = true }
 nix = { version = "0.29", features = ["process", "socket", "user"] }

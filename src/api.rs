@@ -4,7 +4,7 @@ use std::{convert::Infallible, fmt::Write as _, sync::Arc, time::Duration};
 
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, StatusCode},
     middleware,
     response::{
@@ -17,7 +17,10 @@ use axum::{
 use tokio_stream::{wrappers::BroadcastStream, Stream, StreamExt};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
-use crate::{auth, hardware, model::IntegrationStatus, plugins, state::AppState};
+use crate::{
+    auth, bundle, diagnostics, hardware, model::IntegrationStatus, passport, plugins, privsep,
+    recorder, remediation, state::AppState,
+};
 
 pub fn router(state: Arc<AppState>) -> Router {
     // Captured once at router-build time: ServeDir is wired to this path for the
@@ -51,6 +54,15 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/v1/events", get(events))
         .route("/api/v1/events/recent", get(recent_events))
         .route("/api/v1/doctor", get(doctor))
+        .route("/api/v1/stream-tickets", post(issue_stream_ticket))
+        .route("/api/v1/passport", get(passport))
+        .route("/api/v1/passport/verify", post(passport_verify))
+        .route("/api/v1/recorder", get(recorder_query))
+        .route("/api/v1/diagnostics/findings", get(diagnostic_findings))
+        .route("/api/v1/support-bundle/preview", post(support_preview))
+        .route("/api/v1/support-bundle", post(support_download))
+        .route("/api/v1/remediation", post(remediate))
+        .route("/api/v1/commissioning", get(commissioning_status))
         .route("/metrics", get(metrics))
         .fallback_service(ServeDir::new(dashboard_dir).append_index_html_on_directories(true))
         .layer(middleware::from_fn_with_state(
@@ -58,6 +70,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             auth::dispatch,
         ))
         .layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(auth::redact_stream_ticket))
         .with_state(state)
 }
 
@@ -300,7 +313,10 @@ async fn fleet_inventory(
     State(state): State<Arc<AppState>>,
 ) -> Json<crate::integrations::fleet::FleetInventoryProjection> {
     let inventory = state.inventory_snapshot().await;
-    Json(crate::integrations::fleet::project(&inventory))
+    Json(crate::integrations::fleet::project_signed(
+        &inventory,
+        &state.config.load(),
+    ))
 }
 
 async fn list_plugins(State(state): State<Arc<AppState>>) -> Json<Vec<plugins::PluginStatus>> {
@@ -365,7 +381,227 @@ async fn events(
 }
 
 async fn doctor(State(state): State<Arc<AppState>>) -> Json<crate::model::DoctorReport> {
-    Json(hardware::doctor(&state.config.load()).await)
+    let cfg = state.config.load_full();
+    if privsep::direct_bus_access(&cfg.privsep) {
+        return Json(hardware::doctor(&cfg).await);
+    }
+    match privsep::fetch_doctor(&cfg).await {
+        Ok(report) => Json(report),
+        Err(error) => Json(crate::model::DoctorReport {
+            ok: false,
+            checks: vec![crate::model::DoctorCheck {
+                name: "bus-helper".into(),
+                ok: false,
+                detail: error.to_string(),
+            }],
+        }),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct TicketRequest {
+    path_prefix: String,
+}
+
+async fn issue_stream_ticket(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<TicketRequest>,
+) -> Response {
+    let ttl = state.config.load().auth.stream_ticket_ttl_seconds;
+    match state.stream_tickets().issue(&request.path_prefix, ttl) {
+        Ok(ticket) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "ticket": ticket,
+                "pathPrefix": request.path_prefix,
+                "ttlSeconds": ttl,
+            })),
+        )
+            .into_response(),
+        Err(error) => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": error})),
+        )
+            .into_response(),
+    }
+}
+
+async fn passport(State(state): State<Arc<AppState>>) -> Json<passport::Passport> {
+    let cfg = state.config.load_full();
+    let inventory = state.inventory_snapshot().await;
+    let report = hardware::doctor(&cfg).await;
+    Json(passport::build(&cfg, &inventory, Some(&report)))
+}
+
+async fn passport_verify(Json(document): Json<passport::Passport>) -> Response {
+    match passport::verify_document(&document) {
+        Ok(()) => (StatusCode::OK, Json(serde_json::json!({"ok": true}))).into_response(),
+        Err(error) => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"ok": false, "error": error.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct RecorderQuery {
+    #[serde(default)]
+    since: String,
+}
+
+async fn recorder_query(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<RecorderQuery>,
+) -> Response {
+    let cfg = state.config.load_full();
+    let now = crate::state::now_unix_ms();
+    let since = if query.since.is_empty() {
+        now.saturating_sub(15 * 60 * 1000)
+    } else {
+        match recorder::parse_since(&query.since, now) {
+            Ok(value) => value,
+            Err(error) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": error.to_string()})),
+                )
+                    .into_response();
+            }
+        }
+    };
+    match recorder::query(&recorder::directory(&cfg), since, u64::MAX) {
+        Ok(records) => Json(records).into_response(),
+        Err(error) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": error.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+async fn diagnostic_findings(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<diagnostics::Finding>> {
+    let inventory = state.inventory_snapshot().await;
+    let events = state.recent_events();
+    let nodra = Some(state.nodra_connected());
+    Json(diagnostics::findings(
+        &inventory,
+        &events,
+        None,
+        crate::state::now_unix_ms() as i64,
+        nodra,
+    ))
+}
+
+#[derive(serde::Deserialize)]
+struct BundleRequest {
+    #[serde(default = "default_since")]
+    since: String,
+    #[serde(default = "default_true")]
+    redact: bool,
+}
+
+fn default_since() -> String {
+    "2h".into()
+}
+
+fn default_true() -> bool {
+    true
+}
+
+async fn support_preview(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<BundleRequest>,
+) -> Response {
+    let cfg = state.config.load_full();
+    let inventory = state.inventory_snapshot().await;
+    let report = hardware::doctor(&cfg).await;
+    let since = recorder::parse_since(&request.since, crate::state::now_unix_ms()).unwrap_or(0);
+    match bundle::preview(&cfg, &inventory, &report, since, request.redact) {
+        Ok(manifest) => Json(manifest).into_response(),
+        Err(error) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": error.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+async fn support_download(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<BundleRequest>,
+) -> Response {
+    let cfg = state.config.load_full();
+    let inventory = state.inventory_snapshot().await;
+    let report = hardware::doctor(&cfg).await;
+    let since = recorder::parse_since(&request.since, crate::state::now_unix_ms()).unwrap_or(0);
+    let path = std::env::temp_dir().join(format!(
+        "zyvor-support-{}-{}.tar.zst",
+        std::process::id(),
+        crate::state::now_unix_ms()
+    ));
+    match bundle::write_archive(&cfg, &inventory, &report, since, request.redact, &path) {
+        Ok(_) => match std::fs::read(&path) {
+            Ok(bytes) => {
+                let _ = std::fs::remove_file(&path);
+                (
+                    StatusCode::OK,
+                    [(header::CONTENT_TYPE, "application/zstd")],
+                    bytes,
+                )
+                    .into_response()
+            }
+            Err(error) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": error.to_string()})),
+            )
+                .into_response(),
+        },
+        Err(error) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": error.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+async fn remediate(
+    State(state): State<Arc<AppState>>,
+    Json(command): Json<remediation::Command>,
+) -> Response {
+    let cfg = state.config.load_full();
+    let mut replay = remediation::load_replay(&cfg);
+    match remediation::execute(&cfg, &command, crate::state::now_unix_ms(), &mut replay) {
+        Ok(result) => {
+            let _ = remediation::store_replay(&cfg, &replay);
+            state.emit_event(
+                "remediation.completed",
+                serde_json::json!({"action": result.action, "ok": result.ok, "detail": result.detail}),
+            );
+            Json(result).into_response()
+        }
+        Err(error) => (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": error.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+async fn commissioning_status(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    let cfg = state.config.load();
+    let identity_present = std::path::Path::new(&cfg.auth.mtls.cert_file).exists();
+    let loopback = crate::config::listen_is_loopback(&cfg.server.listen).unwrap_or(false);
+    Json(serde_json::json!({
+        "authMode": cfg.auth.mode,
+        "listenLoopback": loopback,
+        "enrollmentEnabled": cfg.enrollment.enabled,
+        "identityPresent": identity_present,
+        "passportReady": true,
+        "needsWizard": cfg.auth.mode == "none" && !cfg.enrollment.enabled,
+    }))
 }
 
 async fn metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {

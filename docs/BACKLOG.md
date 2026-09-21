@@ -79,5 +79,15 @@ hero:
 Kubernetes dependency, industrial protocol meaning, Nodra WAL duplication, a
 second Fleet agent, arbitrary remote shell, bootloader/partition OTA logic, or
 full EdgeAI NPU inference (HTTP/config scaffold under `docs/EDGE_AI.md` /
-`--features edge-ai` only). Daemon bus privsep helper binary likewise remains
-out of v0.x (`docs/PRIVSEP.md` design + knobs only).
+`--features edge-ai` only). Production CA key custody stays in Fleet; this
+repo ships only the enrollment client and a lab fixture CA.
+
+## v0.2.0 customer journey (landed)
+
+- [x] Secure non-loopback refusal + stream tickets
+- [x] TPM `identity.policy`
+- [x] Privilege-separated bus helper (`--features privsep`)
+- [x] Signed passport, flight recorder, support bundles
+- [x] Signed Fleet inventory sibling + remediation allowlist
+- [x] Rules-based diagnostics (Edge AI remains 501)
+- [ ] Physical Minewing HIL signed on silicon (`minewing_claimable` still false)

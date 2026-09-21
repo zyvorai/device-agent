@@ -16,26 +16,18 @@
 //! the same JS bundle regardless of auth state, and it must load before it can show its
 //! own token-entry UI.
 //!
-//! Browsers' `EventSource` cannot set custom headers, so the two SSE routes
-//! additionally accept the token as a `?token=` query parameter. This is
-//! deliberately narrower than the header path: it is only checked for
-//! [`SSE_QUERY_TOKEN_PATHS`], never as a general alternative to the
-//! `Authorization` header, since a query-string token can land in access logs
-//! and browser history.
-//!
-//! `<img src>` has the same header limitation as `EventSource`, so
-//! `/api/v1/camera/{id}/snapshot` and `/api/v1/camera/{id}/stream` get the
-//! same `?token=` treatment via [`QUERY_TOKEN_PATH_PREFIXES`] - kept as a
-//! separate, independently-reasoned prefix list rather than folded into
-//! [`SSE_QUERY_TOKEN_PATHS`] (whose paths are dynamic-segment-free and can
-//! stay an exact-match list) or exempted via `auth.exempt_paths` (which
-//! would let an operator disable auth for camera routes entirely without
-//! meaning to - this stays a narrow, hardcoded browser-capability carve-out
-//! like the SSE one, not a config surface).
+//! Browsers cannot set `Authorization` on `<img>` requests. Those camera
+//! routes accept a short-lived stream ticket (`?ticket=`), minted by
+//! `POST /api/v1/stream-tickets` under normal bearer or mTLS auth. The
+//! long-lived bearer is never accepted from a query string. SSE uses
+//! `fetch()` with the `Authorization` header, so it does not need a ticket,
+//! but the same ticket path is allowed for it. A middleware strips `ticket`
+//! from the URI before access logs run.
 
 pub mod bearer;
 pub mod enroll;
 pub mod mtls;
+pub mod tickets;
 pub mod uds;
 
 use std::sync::Arc;
@@ -51,17 +43,12 @@ use serde::Deserialize;
 
 use crate::state::AppState;
 
-/// Routes that accept a `?token=` query-string fallback, in addition to the
-/// `Authorization` header, because they are consumed via `EventSource`.
-const SSE_QUERY_TOKEN_PATHS: &[&str] = &["/api/v1/events", "/api/v1/can/frames/stream"];
-
-/// Path prefixes (not exact paths, since camera ids are dynamic) that accept
-/// a `?token=` query-string fallback - see the module doc comment.
-const QUERY_TOKEN_PATH_PREFIXES: &[&str] = &["/api/v1/camera/"];
+#[derive(Clone)]
+pub struct PresentedStreamTicket(pub String);
 
 #[derive(Deserialize)]
-struct TokenQuery {
-    token: Option<String>,
+struct TicketQuery {
+    ticket: Option<String>,
 }
 
 pub async fn dispatch(
@@ -129,27 +116,95 @@ fn check_bearer(state: &AppState, request: &Request) -> Result<(), &'static str>
     }
 
     let path = request.uri().path();
-    let accepts_query_token = SSE_QUERY_TOKEN_PATHS.contains(&path)
-        || QUERY_TOKEN_PATH_PREFIXES
-            .iter()
-            .any(|prefix| path.starts_with(prefix));
-    if accepts_query_token {
-        if let Some(token) = query_token(request) {
-            return if bearer::verify(&token, &expected) {
-                Ok(())
-            } else {
-                Err("invalid bearer token")
-            };
+    if tickets::is_stream_path(path) {
+        if let Some(ticket) = presented_ticket(request) {
+            return state.stream_tickets().verify(&ticket, path);
         }
     }
 
     Err("missing Authorization header")
 }
 
-fn query_token(request: &Request) -> Option<String> {
+fn presented_ticket(request: &Request) -> Option<String> {
+    if let Some(PresentedStreamTicket(ticket)) = request.extensions().get() {
+        if !ticket.is_empty() {
+            return Some(ticket.clone());
+        }
+    }
     request.uri().query()?;
-    let parsed: TokenQuery = Query::try_from_uri(request.uri()).ok()?.0;
-    parsed.token.filter(|token| !token.is_empty())
+    let parsed: TicketQuery = Query::try_from_uri(request.uri()).ok()?.0;
+    parsed.ticket.filter(|ticket| !ticket.is_empty())
+}
+
+/// Outermost middleware: move `?ticket=` into request extensions and drop it
+/// from the URI so access logs do not record the credential.
+pub async fn redact_stream_ticket(mut request: Request, next: Next) -> Response {
+    if let Some(ticket) = take_ticket_query(&mut request) {
+        request
+            .extensions_mut()
+            .insert(PresentedStreamTicket(ticket));
+    }
+    next.run(request).await
+}
+
+fn take_ticket_query(request: &mut Request) -> Option<String> {
+    let query = request.uri().query()?.to_string();
+    let mut ticket = None;
+    let mut kept = Vec::new();
+    for part in query.split('&') {
+        if let Some(value) = part.strip_prefix("ticket=") {
+            if ticket.is_none() && !value.is_empty() {
+                ticket = Some(urlencoding_decode(value).unwrap_or_else(|| value.to_string()));
+            }
+        } else if !part.is_empty() {
+            kept.push(part.to_string());
+        }
+    }
+    ticket.as_ref()?;
+    let path = request.uri().path().to_string();
+    let rebuilt = if kept.is_empty() {
+        path
+    } else {
+        format!("{path}?{}", kept.join("&"))
+    };
+    if let Ok(uri) = rebuilt.parse() {
+        *request.uri_mut() = uri;
+    }
+    ticket
+}
+
+fn urlencoding_decode(value: &str) -> Option<String> {
+    let mut out = Vec::new();
+    let bytes = value.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'%' if i + 2 < bytes.len() => {
+                let hi = hex_val(bytes[i + 1])?;
+                let lo = hex_val(bytes[i + 2])?;
+                out.push((hi << 4) | lo);
+                i += 3;
+            }
+            b'+' => {
+                out.push(b' ');
+                i += 1;
+            }
+            byte => {
+                out.push(byte);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+fn hex_val(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 fn unauthorized(message: &str) -> Response {
@@ -257,27 +312,49 @@ mod tests {
     }
 
     #[test]
-    fn query_token_reads_token_param() {
-        let request = request_with_query("/api/v1/events?token=abc123");
-        assert_eq!(query_token(&request).as_deref(), Some("abc123"));
+    fn query_bearer_is_not_accepted() {
+        let bearer = state_with_bearer_token("secret");
+        for path in [
+            "/api/v1/events?token=secret",
+            "/api/v1/camera/front-dock/snapshot?token=secret",
+            "/api/v1/inventory?token=secret",
+        ] {
+            let request = request_with_query(path);
+            assert_eq!(
+                check_bearer(&bearer.state, &request),
+                Err("missing Authorization header")
+            );
+        }
     }
 
     #[test]
-    fn query_token_ignores_other_params() {
-        let request = request_with_query("/api/v1/events?other=1");
-        assert_eq!(query_token(&request), None);
+    fn stream_ticket_authorizes_camera_but_not_inventory() {
+        let bearer = state_with_bearer_token("secret");
+        let ticket = bearer
+            .state
+            .stream_tickets()
+            .issue("/api/v1/camera/front-dock/snapshot", 60)
+            .unwrap();
+        let ok = request_with_query(&format!(
+            "/api/v1/camera/front-dock/snapshot?ticket={ticket}"
+        ));
+        assert_eq!(check_bearer(&bearer.state, &ok), Ok(()));
+        let inventory = request_with_query(&format!("/api/v1/inventory?ticket={ticket}"));
+        assert_eq!(
+            check_bearer(&bearer.state, &inventory),
+            Err("missing Authorization header")
+        );
     }
 
     #[test]
-    fn query_token_treats_empty_token_as_absent() {
-        let request = request_with_query("/api/v1/events?token=");
-        assert_eq!(query_token(&request), None);
-    }
-
-    #[test]
-    fn query_token_absent_with_no_query_string() {
-        let request = request_with_query("/api/v1/events");
-        assert_eq!(query_token(&request), None);
+    fn redact_removes_ticket_from_uri() {
+        let mut request = request_with_query("/api/v1/camera/dock/stream?ticket=abc&x=1");
+        let ticket = take_ticket_query(&mut request).unwrap();
+        assert_eq!(ticket, "abc");
+        assert_eq!(
+            request.uri().path_and_query().unwrap(),
+            "/api/v1/camera/dock/stream?x=1"
+        );
     }
 
     #[test]
@@ -296,31 +373,12 @@ mod tests {
     }
 
     #[test]
-    fn sse_query_token_paths_are_exact() {
-        assert!(SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/events"));
-        assert!(SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/can/frames/stream"));
-        assert!(!SSE_QUERY_TOKEN_PATHS.contains(&"/api/v1/inventory"));
-    }
-
-    #[test]
-    fn camera_query_token_paths_accept_any_camera_id() {
+    fn wrong_stream_ticket_is_rejected() {
         let bearer = state_with_bearer_token("secret");
-        for path in [
-            "/api/v1/camera/front-dock/snapshot?token=secret",
-            "/api/v1/camera/back-yard/stream?token=secret",
-        ] {
-            let request = request_with_query(path);
-            assert_eq!(check_bearer(&bearer.state, &request), Ok(()));
-        }
-    }
-
-    #[test]
-    fn camera_query_token_paths_still_reject_wrong_token() {
-        let bearer = state_with_bearer_token("secret");
-        let request = request_with_query("/api/v1/camera/front-dock/snapshot?token=wrong");
+        let request = request_with_query("/api/v1/camera/front-dock/snapshot?ticket=wrong");
         assert_eq!(
             check_bearer(&bearer.state, &request),
-            Err("invalid bearer token")
+            Err("invalid or expired stream ticket")
         );
     }
 

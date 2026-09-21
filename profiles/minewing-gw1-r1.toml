@@ -1,6 +1,12 @@
 # Minewing GW1 revision r1 — bring-up SKU profile for Zyvor Device Agent.
 # Aligns with zyvor-ota boards/minewing-gw1-r1. Software doctor checks only;
-# physical HIL remains an operator-signed QUALIFICATION row.
+# physical HIL remains unsigned. Do not market this SKU as certified.
+#
+# Production identity snippet (not applied by this profile file alone):
+#   [identity]
+#   backend = "tpm"
+#   policy = "required"
+#   tpm_tcti = "device:/dev/tpmrm0"
 name = "minewing-gw1-r1"
 vendor = "Minewing"
 arch = "aarch64"

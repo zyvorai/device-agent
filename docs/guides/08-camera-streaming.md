@@ -83,7 +83,10 @@ set an `Authorization` header — append the token as a query parameter
 instead, same fallback the two SSE routes already use:
 
 ```html
-<img src="https://<host>:9188/api/v1/camera/front-dock/stream?token=<TOKEN>">
+<img src="https://<host>:9188/api/v1/camera/front-dock/stream?ticket=<STREAM_TICKET>">
+
+Mint the ticket with `POST /api/v1/stream-tickets` under bearer or mTLS auth.
+Never put the long-lived bearer on the query string.
 ```
 
 ## 5. Check status

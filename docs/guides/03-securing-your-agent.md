@@ -55,9 +55,9 @@ authenticated request needs `Authorization: Bearer <token>`; `/metrics`
 needs it too (it is **not** in `exempt_paths` by default). The bundled
 dashboard prompts for the token on first load and stores it in that
 browser's `localStorage` only. See the README's "API auth and Unix socket"
-section for the full picture, including the two SSE routes that accept the
-token as a `?token=` query parameter (browsers' `EventSource` can't set
-headers).
+section for the full picture. SSE uses authenticated `fetch()`; camera
+`<img>` routes use short-lived stream tickets from `POST /api/v1/stream-tickets`
+(never the long-lived bearer on a query string).
 
 ## `mtls`
 

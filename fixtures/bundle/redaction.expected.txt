@@ -1,0 +1,2 @@
+host [hostname] saw [ip] from [mac]
+[redacted-pem]

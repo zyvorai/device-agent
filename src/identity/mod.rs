@@ -10,8 +10,11 @@
 //!   on-disk artifact is a TPM-wrapped key blob, not a raw PKCS#8 key. See
 //!   `docs/TPM2_IDENTITY.md`.
 //!
-//! `identity.backend = "tpm"` falls back to software at runtime (with a
-//! warning) if the TPM can't be opened, since most dev/test boxes have none.
+//! `identity.policy` controls failure:
+//! - `software` — always a file key
+//! - `preferred` (default) — TPM when `backend = "tpm"`, else software, with
+//!   fallback if the TPM cannot be opened
+//! - `required` — fail if the TPM cannot be opened or this binary lacks `tpm2`
 
 pub mod software;
 #[cfg(feature = "tpm2")]
@@ -34,31 +37,87 @@ pub enum DeviceIdentity {
 }
 
 impl DeviceIdentity {
-    /// Generates a fresh key using the backend named by `cfg.identity.backend`.
+    /// Generates a fresh key using `identity.policy` and `identity.backend`.
     pub fn generate(cfg: &Config) -> anyhow::Result<Self> {
-        match cfg.identity.backend.as_str() {
-            "tpm" => {
-                #[cfg(feature = "tpm2")]
-                {
-                    match tpm::TpmKey::generate(&cfg.identity.tpm_tcti) {
-                        Ok(key) => return Ok(Self::Tpm(key)),
-                        Err(error) => {
-                            tracing::warn!(
-                                %error,
-                                "identity.backend = \"tpm\" but the TPM could not be opened; \
-                                 falling back to a software key"
-                            );
-                        }
-                    }
+        match cfg.identity.policy.as_str() {
+            "software" => {
+                if cfg.identity.backend == "tpm" {
+                    tracing::warn!(
+                        "identity.policy = \"software\" overrides identity.backend = \"tpm\""
+                    );
                 }
-                #[cfg(not(feature = "tpm2"))]
-                tracing::warn!(
-                    "identity.backend = \"tpm\" but this binary was built without the tpm2 \
-                     feature; falling back to a software key"
-                );
-                Ok(Self::Software(Box::new(software::SoftwareKey::generate()?)))
+                return Ok(Self::Software(Box::new(software::SoftwareKey::generate()?)));
             }
-            _ => Ok(Self::Software(Box::new(software::SoftwareKey::generate()?))),
+            "preferred" | "required" => {}
+            other => anyhow::bail!(
+                "identity.policy must be software, preferred, or required (got {other})"
+            ),
+        }
+
+        let require_tpm = cfg.identity.policy == "required";
+        let try_tpm = require_tpm || cfg.identity.backend == "tpm";
+        if !try_tpm {
+            return Ok(Self::Software(Box::new(software::SoftwareKey::generate()?)));
+        }
+
+        #[cfg(feature = "tpm2")]
+        {
+            match tpm::TpmKey::generate(&cfg.identity.tpm_tcti) {
+                Ok(key) => return Ok(Self::Tpm(key)),
+                Err(error) if require_tpm => {
+                    anyhow::bail!(
+                        "identity.policy = \"required\" but the TPM could not be opened: {error}"
+                    );
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        %error,
+                        "identity.policy = \"preferred\" and the TPM could not be opened; \
+                         falling back to a software key"
+                    );
+                }
+            }
+        }
+        #[cfg(not(feature = "tpm2"))]
+        {
+            if require_tpm {
+                anyhow::bail!(
+                    "identity.policy = \"required\" but this binary was built without the tpm2 feature"
+                );
+            }
+            tracing::warn!(
+                "identity.backend = \"tpm\" but this binary was built without the tpm2 \
+                 feature; falling back to a software key"
+            );
+        }
+        Ok(Self::Software(Box::new(software::SoftwareKey::generate()?)))
+    }
+
+    /// Fail closed before `serve` when production policy demands a TPM.
+    pub fn assert_serve_policy(cfg: &Config) -> anyhow::Result<()> {
+        if cfg.identity.policy != "required" {
+            return Ok(());
+        }
+        #[cfg(not(feature = "tpm2"))]
+        {
+            anyhow::bail!(
+                "identity.policy = \"required\" but this binary was built without the tpm2 feature"
+            );
+        }
+        #[cfg(feature = "tpm2")]
+        {
+            tpm::probe(&cfg.identity.tpm_tcti)?;
+            if std::path::Path::new(&cfg.auth.mtls.key_file).exists() {
+                let contents = fs::read_to_string(&cfg.auth.mtls.key_file)
+                    .with_context(|| format!("reading {}", cfg.auth.mtls.key_file))?;
+                if contents.trim_start().starts_with("-----BEGIN") {
+                    anyhow::bail!(
+                        "identity.policy = \"required\" but {} is a software private key",
+                        cfg.auth.mtls.key_file
+                    );
+                }
+            }
+            Ok(())
         }
     }
 
@@ -185,4 +244,29 @@ pub(crate) fn write_identity_file(path: &str, contents: &[u8]) -> anyhow::Result
             .with_context(|| format!("setting permissions on {}", path.display()))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[test]
+    fn software_policy_ignores_tpm_backend() {
+        let mut cfg = Config::default();
+        cfg.identity.policy = "software".into();
+        cfg.identity.backend = "tpm".into();
+        let identity = DeviceIdentity::generate(&cfg).unwrap();
+        assert_eq!(identity.backend_name(), "software");
+    }
+
+    #[test]
+    fn required_policy_fails_closed_without_a_tpm() {
+        let mut cfg = Config::default();
+        cfg.identity.policy = "required".into();
+        let generated = DeviceIdentity::generate(&cfg);
+        assert!(generated.is_err(), "required policy must not return a key");
+        let serve = DeviceIdentity::assert_serve_policy(&cfg);
+        assert!(serve.is_err());
+    }
 }

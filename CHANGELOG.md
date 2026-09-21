@@ -1,6 +1,42 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-09-21
+
+Trusted hardware passport and flight recorder. Upgrade notes:
+[`docs/UPGRADE-0.2.0.md`](docs/UPGRADE-0.2.0.md).
+
+### Breaking
+
+- Default listen is `127.0.0.1:9188`. Non-loopback + `auth.mode = "none"` is
+  refused unless `server.allow_unauthenticated_remote = true`.
+- Long-lived bearer tokens are no longer accepted from `?token=` query strings.
+  Camera `<img>` uses short-lived stream tickets; SSE uses authenticated `fetch()`.
+- `identity.policy = required|preferred|software` (default `preferred`).
+  Production TPM boards use `required`.
+
+### Added
+
+- Device passport (`GET /api/v1/passport`, `agentctl passport` / `verify`).
+- Segmented flight recorder and `GET /api/v1/recorder`.
+- Redacted support bundles (`agentctl support-bundle`).
+- Signed Fleet inventory sibling fields (digest, boot id, sequence, signature).
+- Privilege-separated `bus-helper` over authenticated UDS (`--features privsep`).
+- Enrollment renew / revocation check and lab enrollment server fixture.
+- Safe signed remediation catalogue (no shell).
+- Rules-based diagnostics findings; Edge AI stays HTTP 501.
+- Hardware profile directory layout, qualify/package commands, verified
+  hardware registry (Minew intentionally unsigned).
+- Plugin SDK v2 schema and optional WASI feature.
+- Six-screen field-engineer dashboard and first-run wizard.
+- Zero-touch installer flags (`--enrollment-token`) and `agentctl commission`.
+
+### Qualification
+
+- HIL runner records RS485 and power-cycle evidence when operators attach logs.
+- Minewing physical checklist remains unsigned; `minewing_claimable=false`
+  until a physical signed run.
+
+## Unreleased (folded into 0.2.0)
 
 - `agentctl` is the short CLI; `zyvor-device-agent` stays the daemon name. `agentctl status` prints the colorful local banner. `make status`, `make ci`, and `make deploy-remote H=<host> U=sus`. `make check` no longer builds the dashboard (`make check-ui`).
 - Dashboard install matches React 19 types and a Vite 6 React plugin so `npm run build` typechecks.

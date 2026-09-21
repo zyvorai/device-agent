@@ -61,9 +61,9 @@ GET /api/v1/camera/{id}/stream        # multipart/x-mixed-replace MJPEG — work
 - `503`: configured but no frame captured yet (not enabled, still starting, or erroring).
 - `429` on `/stream`: `max_stream_clients` exceeded.
 
-`<img src>` can't set an `Authorization` header, so both routes accept the
-bearer token as a `?token=` query parameter too (same treatment the two SSE
-routes already get) — see `src/auth/mod.rs`'s `QUERY_TOKEN_PATH_PREFIXES`.
+`<img src>` can't set an `Authorization` header, so mint a short-lived
+stream ticket with `POST /api/v1/stream-tickets` and pass `?ticket=` —
+never the long-lived bearer. See `src/auth/tickets.rs`.
 
 ## Nodra hand-off
 

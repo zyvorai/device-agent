@@ -1,6 +1,10 @@
 [server]
-listen = "0.0.0.0:9188"
+# Loopback by default. Non-loopback with auth.mode = "none" is refused unless
+# allow_unauthenticated_remote = true.
+listen = "127.0.0.1:9188"
 dashboard_dir = "/usr/share/zyvor-device-agent/dashboard"
+allow_unauthenticated_remote = false
+state_dir = "/var/lib/zyvor-device-agent"
 
 [server.unix_socket]
 # Additional API listener over a Unix socket, alongside the TCP listener above.
@@ -60,19 +64,35 @@ accelerator = ""
 publish_to_nodra = true
 
 [privsep]
-# Privilege-separation helper for the daemon's own bus access (design only).
-# Default false keeps today's root + direct /dev opens. Even with enabled =
-# true and --features privsep, no helper is spawned yet — see docs/PRIVSEP.md.
+# Privilege-separation helper for the daemon's own bus access.
+# Default false keeps today's root + direct /dev opens. With enabled = true
+# and --features privsep, serve starts bus-helper over an authenticated UDS.
 enabled = false
 helper_path = "/usr/lib/zyvor-device-agent/bus-helper"
 socket_path = "/run/zyvor-device-agent/bus.sock"
+allow_uids = []
+allow_gids = []
+
+[recorder]
+enabled = true
+directory = ""
+segment_bytes = 1048576
+max_bytes = 33554432
+can_frames = false
+redact_can_payload = true
+
+[remediation]
+enabled = false
+fleet_public_key_pem = ""
+service_allowlist = []
+can_allowlist = []
+two_person = true
 
 [auth]
-# "none" (default, backward compatible), "bearer", or "mtls". scripts/deploy-remote.sh
-# generates a token and populates auth.bearer.token_hash_file automatically
-# when deploying with --auth-mode bearer.
+# "none" is only for loopback. Use bearer or mtls for non-loopback binds.
 mode = "none"
 exempt_paths = ["/api/v1/health", "/api/v1/ready"]
+stream_ticket_ttl_seconds = 60
 
 [auth.bearer]
 token_hash_file = "/etc/zyvor/device-agent/auth/bearer.sha256"
@@ -92,13 +112,14 @@ server_url = ""
 token_file = "/etc/zyvor/device-agent/identity/enrollment-token"
 ca_bundle_file = ""
 common_name = ""
+revocation_check = false
 
-# Where the mTLS private key above actually lives. "software" (default) is a
-# plain PKCS#8 file. "tpm" (needs the tpm2 build feature) generates and signs
-# with the key inside a TPM2, falling back to "software" at runtime (with a
-# warning) if the TPM can't be opened - see docs/TPM2_IDENTITY.md.
+# Where the mTLS private key above actually lives. policy = "required" is the
+# production setting for Minew and other TPM boards; preferred keeps the
+# software fallback for laptops and CI.
 [identity]
 backend = "software"
+policy = "preferred"
 tpm_tcti = ""
 
 [device]

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "title": "Zyvor Verified Hardware",
+  "note": "Minew / Minewing silicon is intentionally absent until a physical HIL run is signed.",
+  "profiles": [
+    {
+      "id": "generic-reference-arm64",
+      "status": "reference",
+      "source": "profiles/generic-reference-arm64.toml"
+    },
+    {
+      "id": "generic-linux-arm64",
+      "status": "reference",
+      "source": "profiles/generic-linux-arm64.toml"
+    }
+  ]
+}

@@ -15,8 +15,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 use zyvor_device_agent::{
-    api, auth, camera_capture, can_capture, config::Config, hardware, identity::DeviceIdentity,
-    integrations, plugins, privsep, state::AppState, tls,
+    api, auth, bundle, camera_capture, can_capture, config::Config, hardware,
+    identity::DeviceIdentity, integrations, passport, plugins, privsep, profile, recorder,
+    state::AppState, tls,
 };
 
 #[derive(Debug, Parser)]
@@ -58,11 +59,57 @@ enum Command {
         /// Reissue even if a certificate already exists at `auth.mtls.cert_file`.
         #[arg(long)]
         force: bool,
+        /// Ask the enrollment server to renew an existing certificate.
+        #[arg(long)]
+        renew: bool,
     },
     /// Print this device's current mTLS identity (subject, validity, backend).
     Identity,
     /// Cilium-style colorful local status (API, TLS, plugins, Nodra, Fleet).
     Status,
+    /// Print the signed device passport, or verify one from disk.
+    Passport {
+        #[command(subcommand)]
+        action: Option<PassportAction>,
+    },
+    /// Build a redacted diagnostic archive.
+    SupportBundle {
+        #[arg(long, default_value = "2h")]
+        since: String,
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        redact: bool,
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Print the manifest and do not write an archive.
+        #[arg(long)]
+        preview: bool,
+    },
+    /// Board profile detection, validation, qualification, and packaging.
+    Profile {
+        #[command(subcommand)]
+        action: ProfileAction,
+    },
+    /// Detect hardware, check enrollment, and print the local device URL.
+    Commission,
+    /// Privileged bus helper. Started by `serve` when privsep is enabled.
+    BusHelper,
+}
+
+#[derive(Debug, Subcommand)]
+enum PassportAction {
+    /// Verify a passport file's device signature.
+    Verify { path: PathBuf },
+}
+
+#[derive(Debug, Subcommand)]
+enum ProfileAction {
+    Detect,
+    Validate,
+    Qualify,
+    Package {
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -99,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::FleetInventory => {
             let inventory = hardware::collect_inventory(&cfg).await;
-            let projection = integrations::fleet::project(&inventory);
+            let projection = integrations::fleet::project_signed(&inventory, &cfg);
             println!("{}", serde_json::to_string_pretty(&projection)?);
             Ok(())
         }
@@ -124,12 +171,28 @@ async fn main() -> anyhow::Result<()> {
                 anyhow::bail!("sensor sample failed")
             }
         }
-        Command::Enroll { force } => auth::enroll::run(&cfg, force).await,
+        Command::Enroll { force, renew } => {
+            if renew {
+                auth::enroll::renew(&cfg).await
+            } else {
+                auth::enroll::run(&cfg, force).await
+            }
+        }
         Command::Identity => print_identity(&cfg),
         Command::Status => {
             print!("{}", zyvor_device_agent::status_banner::format_status(&cfg));
             Ok(())
         }
+        Command::Passport { action } => passport_command(&cfg, action).await,
+        Command::SupportBundle {
+            since,
+            redact,
+            output,
+            preview,
+        } => support_bundle_command(&cfg, &since, redact, output, preview).await,
+        Command::Profile { action } => profile_command(&cfg, action).await,
+        Command::Commission => commission_command(&cfg).await,
+        Command::BusHelper => privsep::serve_helper(&cfg),
         Command::Serve => serve(cfg, cli.config).await,
     }
 }
@@ -153,7 +216,100 @@ fn print_identity(cfg: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn passport_command(cfg: &Config, action: Option<PassportAction>) -> anyhow::Result<()> {
+    match action {
+        Some(PassportAction::Verify { path }) => {
+            let passport = passport::verify_file(&path)?;
+            println!("passport signature ok for {}", passport.device_id);
+            Ok(())
+        }
+        None => {
+            let inventory = hardware::collect_inventory(cfg).await;
+            let report = hardware::doctor(cfg).await;
+            let document = passport::build(cfg, &inventory, Some(&report));
+            println!("{}", passport::to_pretty(&document)?);
+            Ok(())
+        }
+    }
+}
+
+async fn support_bundle_command(
+    cfg: &Config,
+    since: &str,
+    redact: bool,
+    output: Option<PathBuf>,
+    preview: bool,
+) -> anyhow::Result<()> {
+    let inventory = hardware::collect_inventory(cfg).await;
+    let report = hardware::doctor(cfg).await;
+    let since_ms = recorder::parse_since(since, zyvor_device_agent::state::now_unix_ms())?;
+    if preview || output.is_none() {
+        let manifest = bundle::preview(cfg, &inventory, &report, since_ms, redact)?;
+        println!("{}", serde_json::to_string_pretty(&manifest)?);
+        return Ok(());
+    }
+    let path = output.unwrap();
+    let manifest = bundle::write_archive(cfg, &inventory, &report, since_ms, redact, &path)?;
+    println!("{}", serde_json::to_string_pretty(&manifest)?);
+    Ok(())
+}
+
+async fn profile_command(cfg: &Config, action: ProfileAction) -> anyhow::Result<()> {
+    match action {
+        ProfileAction::Detect | ProfileAction::Validate => {
+            let profile = profile::load(cfg)?;
+            println!("{}", serde_json::to_string_pretty(&profile)?);
+            Ok(())
+        }
+        ProfileAction::Qualify => {
+            let inventory = hardware::collect_inventory(cfg).await;
+            let report = profile::qualify(cfg, &inventory)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            if report.status == "pass" {
+                Ok(())
+            } else {
+                anyhow::bail!("profile qualification {}", report.status)
+            }
+        }
+        ProfileAction::Package { output } => profile::package_profile(cfg, &output),
+    }
+}
+
+async fn commission_command(cfg: &Config) -> anyhow::Result<()> {
+    let inventory = hardware::collect_inventory(cfg).await;
+    let _ = profile::load(cfg);
+    let report = hardware::doctor(cfg).await;
+    let document = passport::build(cfg, &inventory, Some(&report));
+    println!("{}", passport::to_pretty(&document)?);
+    let url = format!(
+        "http://{}/",
+        cfg.server.listen.replace("0.0.0.0", "127.0.0.1")
+    );
+    println!("\nDevice URL: {url}");
+    if let Ok(code) = qrcode::QrCode::new(url.as_bytes()) {
+        let image = code
+            .render::<char>()
+            .quiet_zone(false)
+            .module_dimensions(2, 1)
+            .build();
+        println!("{image}");
+    }
+    if !report.ok {
+        anyhow::bail!("commissioning checks failed");
+    }
+    Ok(())
+}
+
 async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
+    zyvor_device_agent::config::ensure_authenticated_bind(&cfg)?;
+    if cfg.server.allow_unauthenticated_remote && cfg.auth.mode == "none" {
+        warn!(
+            listen = %cfg.server.listen,
+            "server.allow_unauthenticated_remote is set; unauthenticated API is allowed"
+        );
+    }
+    DeviceIdentity::assert_serve_policy(&cfg)?;
+    auth::enroll::ensure_not_revoked(&cfg).await?;
     if cfg.auth.mode == "mtls"
         && (!std::path::Path::new(&cfg.auth.mtls.cert_file).exists()
             || !std::path::Path::new(&cfg.auth.mtls.key_file).exists())
@@ -165,18 +321,27 @@ async fn serve(cfg: Config, config_path: PathBuf) -> anyhow::Result<()> {
         );
     }
 
-    let inventory = hardware::collect_inventory(&cfg).await;
+    let helper = if !privsep::direct_bus_access(&cfg.privsep) {
+        Some(privsep::spawn_helper_process(&cfg, &config_path)?)
+    } else {
+        privsep::warn_if_requested(&cfg.privsep);
+        None
+    };
+    let inventory = if helper.is_some() {
+        privsep::fetch_inventory(&cfg).await?
+    } else {
+        hardware::collect_inventory(&cfg).await
+    };
     let state = Arc::new(AppState::new(cfg.clone(), inventory));
     let shutdown = CancellationToken::new();
-
-    // Scaffold only: never spawns a helper / never drops daemon privileges.
-    privsep::warn_if_requested(&cfg.privsep);
 
     spawn_inventory_refresh(state.clone(), shutdown.clone());
     spawn_plugin_scheduler(state.clone(), shutdown.clone());
     spawn_config_reload_listener(state.clone(), config_path, shutdown.clone());
-    can_capture::spawn(state.clone(), shutdown.clone());
-    camera_capture::spawn(state.clone(), shutdown.clone());
+    if helper.is_none() {
+        can_capture::spawn(state.clone(), shutdown.clone());
+        camera_capture::spawn(state.clone(), shutdown.clone());
+    }
     hardware::hotplug::spawn(state.clone(), shutdown.clone());
 
     if cfg.nodra.enabled {
@@ -368,7 +533,18 @@ fn spawn_inventory_refresh(state: Arc<AppState>, shutdown: CancellationToken) {
                     break;
                 }
                 _ = ticker.tick() => {
-                    let inventory = hardware::collect_inventory(&state.config.load()).await;
+                    let cfg = state.config.load_full();
+                    let inventory = if privsep::direct_bus_access(&cfg.privsep) {
+                        hardware::collect_inventory(&cfg).await
+                    } else {
+                        match privsep::fetch_inventory(&cfg).await {
+                            Ok(inventory) => inventory,
+                            Err(error) => {
+                                warn!(%error, "bus helper inventory failed");
+                                continue;
+                            }
+                        }
+                    };
                     state.update_inventory(inventory).await;
                 }
             }

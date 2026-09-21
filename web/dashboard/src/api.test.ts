@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { bitrate, bytes, duration, getToken, setToken, withTokenParam } from './api';
+import { bitrate, bytes, duration, getToken, setToken, withStreamTicket } from './api';
 
 describe('formatters', () => {
   it('formats bytes', () => expect(bytes(8 * 1024 ** 3)).toBe('8.0 GiB'));
@@ -25,20 +25,10 @@ describe('bearer token storage', () => {
   });
 });
 
-describe('withTokenParam', () => {
+describe('withStreamTicket', () => {
   beforeEach(() => setToken(''));
 
-  it('returns the path unchanged with no token set', () => {
-    expect(withTokenParam('/api/v1/events')).toBe('/api/v1/events');
-  });
-
-  it('appends ?token= when a token is set', () => {
-    setToken('abc123');
-    expect(withTokenParam('/api/v1/events')).toBe('/api/v1/events?token=abc123');
-  });
-
-  it('appends &token= when the path already has a query string', () => {
-    setToken('abc 123');
-    expect(withTokenParam('/api/v1/x?a=1')).toBe('/api/v1/x?a=1&token=abc%20123');
+  it('returns the path unchanged when no bearer is stored', async () => {
+    expect(await withStreamTicket('/api/v1/camera/dock/stream')).toBe('/api/v1/camera/dock/stream');
   });
 });

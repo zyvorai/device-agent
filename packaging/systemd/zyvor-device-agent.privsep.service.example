@@ -1,0 +1,33 @@
+# Opt-in: API process as User=zyvor, bus helper owns device nodes.
+# Requires a binary built with --features privsep and:
+#   [privsep]
+#   enabled = true
+#
+# Keep the stock zyvor-device-agent.service as the default root unit.
+
+[Unit]
+Description=Zyvor Device Agent (privilege-separated)
+Documentation=https://zyvor.dev
+Documentation=file:///usr/share/doc/zyvor-device-agent/PRIVSEP.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/zyvor-device-agent --config /etc/zyvor/device-agent.toml serve
+Restart=always
+RestartSec=3
+TimeoutStopSec=15
+User=zyvor
+Group=zyvor
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/zyvor-device-agent /run/zyvor-device-agent /etc/zyvor/device-agent
+RuntimeDirectory=zyvor-device-agent
+RuntimeDirectoryMode=0750
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

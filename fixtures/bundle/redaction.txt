@@ -1,0 +1,4 @@
+host edge-gw saw 10.1.2.3 from 02:42:ac:11:00:02
+-----BEGIN PRIVATE KEY-----
+aaaa
+-----END PRIVATE KEY-----

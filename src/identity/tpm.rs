@@ -118,6 +118,15 @@ struct TpmKeyInner {
 #[derive(Debug, Clone)]
 pub struct TpmKey(Arc<TpmKeyInner>);
 
+pub fn probe(tcti: &str) -> anyhow::Result<()> {
+    let tcti_conf = resolve_tcti(tcti)?;
+    TransientKeyContextBuilder::new()
+        .with_tcti(tcti_conf)
+        .build()
+        .map(|_| ())
+        .map_err(|error| anyhow::anyhow!("opening TPM context: {error}"))
+}
+
 impl TpmKey {
     pub fn generate(tcti: &str) -> anyhow::Result<Self> {
         let tcti_conf = resolve_tcti(tcti)?;

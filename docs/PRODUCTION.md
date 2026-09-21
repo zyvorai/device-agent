@@ -11,8 +11,8 @@ and [guides/03-securing-your-agent.md](guides/03-securing-your-agent.md).
 
 | Claim | Status |
 |---|---|
-| Software matrix + emulator HIL CI | green (`hil-ci-emulator`, packages amd64/arm64) — **v0.1.6** |
-| Hardened Linux agent packages | shippable (`v0.1.6`) with auth/TLS guidance below |
+| Software matrix + emulator HIL CI | green (`hil-ci-emulator`, packages amd64/arm64) — **v0.2.0** |
+| Hardened Linux agent packages | shippable (`v0.2.0`) with auth/TLS guidance below |
 | Lab-surrogate HIL | recorded — [`hil/20260914T162450Z`](https://github.com/zyvorai/device-agent/blob/main/evidence/qualification/hil/20260914T162450Z/SUMMARY.md) (`minewing_claimable=false`) |
 | Minewing GW1 r1 physical HIL | **unsigned** — lab host is x86 surrogate |
 | Hardware checklist | **not signed** — do not claim Minewing GA |

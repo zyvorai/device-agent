@@ -70,6 +70,7 @@ pub struct AppState {
     camera_dropped_total: Mutex<HashMap<String, u64>>,
     camera_encode_errors_total: Mutex<HashMap<String, u64>>,
     camera_last_frame_at_unix_ms: Mutex<HashMap<String, u64>>,
+    stream_tickets: crate::auth::tickets::TicketStore,
 }
 
 /// Small on purpose: much smaller than CAN's 1024-frame channel
@@ -148,7 +149,12 @@ impl AppState {
             camera_dropped_total: Mutex::new(HashMap::new()),
             camera_encode_errors_total: Mutex::new(HashMap::new()),
             camera_last_frame_at_unix_ms: Mutex::new(HashMap::new()),
+            stream_tickets: crate::auth::tickets::TicketStore::default(),
         }
+    }
+
+    pub fn stream_tickets(&self) -> &crate::auth::tickets::TicketStore {
+        &self.stream_tickets
     }
 
     pub fn bearer_token_hash(&self) -> Option<[u8; 32]> {
@@ -593,7 +599,8 @@ impl AppState {
             }
             history.push_back(event.clone());
         }
-        let _ = self.events.send(event);
+        let _ = self.events.send(event.clone());
+        crate::recorder::record_agent_event(&self.config.load(), &event);
     }
 
     pub fn set_nodra_connected(&self, value: bool) {

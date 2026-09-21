@@ -26,7 +26,7 @@ cp config/device-agent.example.toml /tmp/device-agent.toml
 ```
 
 The example config ships with `auth.mode = "none"` and binds to
-`0.0.0.0:9188`. That's fine for local development on a machine you trust;
+`127.0.0.1:9188`. That's fine for local development on a machine you trust;
 see [3. Securing your agent](03-securing-your-agent.md) before exposing this
 to a network you don't.
 

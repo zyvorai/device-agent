@@ -1,0 +1,8 @@
+{
+  "action": "refresh-inventory",
+  "expiresAtUnixMs": 9000,
+  "nonce": "fixture-nonce",
+  "payload": {},
+  "signatureHex": "00",
+  "countersignatureHex": ""
+}

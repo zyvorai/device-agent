@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
   <img src="https://img.shields.io/badge/rust-1.85%2B-orange?logo=rust" alt="Rust 1.85+">
   <img src="https://img.shields.io/badge/platform-arm64%20%7C%20amd64-informational" alt="Platforms: arm64 | amd64">
-  <img src="https://img.shields.io/badge/status-v0.1.6%20production--hardening-yellow" alt="Status: v0.1.6 production-hardening">
+  <img src="https://img.shields.io/badge/status-v0.2.0%20passport--and--flight--recorder-yellow" alt="Status: v0.2.0 passport and flight recorder">
 </p>
 
 > Linux hardware edge agent for Zyvor — discover the box, expose physical interfaces, publish to Nodra, expose Fleet-compatible inventory.
@@ -222,10 +222,9 @@ scrape_configs:
 
 The bundled dashboard (`web/dashboard`) also understands bearer auth: it prompts for a token
 on first load against a bearer-protected agent (stored in that browser's `localStorage`
-only), and re-sends it on every request. The two SSE streams (`/api/v1/events`,
-`/api/v1/can/frames/stream`) additionally accept the token as a `?token=` query parameter,
-since browsers' `EventSource` API cannot set custom headers — this fallback is scoped to
-just those two routes and is never accepted in place of the header for any other route.
+only), and re-sends it on every request. SSE uses authenticated `fetch()` with the
+`Authorization` header. Camera `<img>` routes use short-lived stream tickets from
+`POST /api/v1/stream-tickets` (`?ticket=`), never the long-lived bearer on a query string.
 
 A second, additive API listener over a Unix domain socket is available for same-host callers
 (Fleet, Nodra) that would rather use kernel peer-credential checks than carry a token:

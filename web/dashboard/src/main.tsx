@@ -1,13 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {
-  Activity, Box, Cable, Camera, CircuitBoard, Cpu, Gauge, Network, Radio, RefreshCw,
-  Settings2, Thermometer, Usb, Wifi, Workflow
+  Activity, Box, Cable, Camera, Cpu, Gauge, Network, Radio, RefreshCw, Thermometer, Usb, Wifi
 } from 'lucide-react';
 import {
-  age, AuthRequiredError, bitrate, bytes, cameraSnapshotUrl, cameraStreamUrl, duration,
-  getCameras, getCanCaptureStatus, getDoctor, getIntegrations, getInventory, getRecentCanFrames,
-  getRecentEvents, getSensors, getStatus, getToken, setToken, withTokenParam
+  age, AuthRequiredError, bitrate, bytes, cameraSnapshotUrl, cameraStreamUrl, consumeSse, duration,
+  getCameras, getCanCaptureStatus, getCommissioning, getDoctor, getFindings, getIntegrations, getInventory,
+  getPassport, getRecentCanFrames, getRecentEvents, getRecorder, getSensors, getStatus, getToken,
+  previewSupportBundle, setToken, withStreamTicket
 } from './api';
 import type {
   AgentEvent, AgentStatus, CameraCaptureStatus, CanCaptureStatus, CanFrame, DoctorReport,
@@ -59,11 +59,10 @@ const demoFrames: CanFrame[] = [
 const demoCameras: CameraCaptureStatus[] = [];
 
 
-type Page = 'Overview' | 'Hardware' | 'Interfaces' | 'Industrial' | 'Sensors' | 'Camera' | 'Integrations' | 'Diagnostics' | 'Settings';
+type Page = 'Overview' | 'Passport' | 'Timeline' | 'Interfaces' | 'Diagnostics' | 'Support';
 const pages: Array<[Page, React.ReactNode]> = [
-  ['Overview', <Gauge size={18} />], ['Hardware', <Cpu size={18} />], ['Interfaces', <Cable size={18} />],
-  ['Industrial', <CircuitBoard size={18} />], ['Sensors', <Thermometer size={18} />], ['Camera', <Camera size={18} />],
-  ['Integrations', <Workflow size={18} />], ['Diagnostics', <Activity size={18} />], ['Settings', <Settings2 size={18} />]
+  ['Overview', <Gauge size={18} />], ['Passport', <Cpu size={18} />], ['Timeline', <Activity size={18} />],
+  ['Interfaces', <Cable size={18} />], ['Diagnostics', <Activity size={18} />], ['Support', <Box size={18} />]
 ];
 
 function Dot({ on }: { on: boolean }) { return <span className={`dot ${on ? 'dot-on' : 'dot-off'}`} />; }
@@ -101,14 +100,22 @@ function App() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [authRequired, setAuthRequired] = React.useState(false);
   const [tokenInput, setTokenInput] = React.useState(getToken());
+  const [wizard, setWizard] = React.useState(false);
+  const [passport, setPassport] = React.useState<Record<string, unknown> | null>(null);
+  const [findings, setFindings] = React.useState<Array<Record<string, unknown>>>([]);
+  const [timeline, setTimeline] = React.useState<Array<Record<string, unknown>>>([]);
+  const [bundlePreview, setBundlePreview] = React.useState<string>('');
+  const [cameraUrls, setCameraUrls] = React.useState<Record<string, string>>({});
 
   const refresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const [inv, ints, samples, checks, agent, recent, captureStatus, frames, cameraStatuses] = await Promise.all([
-        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents(), getCanCaptureStatus(), getRecentCanFrames(), getCameras()
+      const [inv, ints, samples, checks, agent, recent, captureStatus, frames, cameraStatuses, pass, found, recorded, commissioning] = await Promise.all([
+        getInventory(), getIntegrations(), getSensors(), getDoctor(), getStatus(), getRecentEvents(), getCanCaptureStatus(), getRecentCanFrames(), getCameras(),
+        getPassport().catch(() => null), getFindings().catch(() => []), getRecorder('15m').catch(() => []), getCommissioning().catch(() => null)
       ]);
-      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setCameras(cameraStatuses); setLive(true); setAuthRequired(false);
+      setInventory(inv); setIntegrations(ints); setSensors(samples); setDoctor(checks); setStatus(agent); setEvents(recent.slice(-40)); setCapture(captureStatus); setCanFrames(frames.slice(-32)); setCameras(cameraStatuses); setPassport(pass); setFindings(found); setTimeline(recorded); setLive(true); setAuthRequired(false);
+      if (commissioning?.needsWizard && window.localStorage.getItem('zyvor-wizard-dismissed') !== '1') setWizard(true);
     } catch (error) {
       setLive(false);
       setAuthRequired(error instanceof AuthRequiredError);
@@ -134,30 +141,38 @@ function App() {
 
   React.useEffect(() => {
     if (authRequired) return;
-    const source = new EventSource(withTokenParam('/api/v1/events'));
-    source.onopen = () => setStreamLive(true);
-    source.onerror = () => setStreamLive(false);
-    source.onmessage = (message) => {
+    const controller = new AbortController();
+    consumeSse('/api/v1/events', (_event, data) => {
       try {
-        const event = JSON.parse(message.data) as AgentEvent;
+        const event = JSON.parse(data) as AgentEvent;
         setEvents(current => [...current.slice(-39), event]);
+        setStreamLive(true);
         if (event.kind === 'inventory.changed' || event.kind === 'sensor.sample' || event.kind.startsWith('nodra.')) refresh();
       } catch { /* ignore malformed event */ }
-    };
-    return () => source.close();
+    }, controller.signal).catch(() => setStreamLive(false));
+    return () => controller.abort();
   }, [refresh, authRequired, tokenInput]);
 
   React.useEffect(() => {
     if (!capture.enabled || authRequired) return;
-    const source = new EventSource(withTokenParam('/api/v1/can/frames/stream'));
-    source.addEventListener('can.frame', (message) => {
+    const controller = new AbortController();
+    consumeSse('/api/v1/can/frames/stream', (event, data) => {
+      if (event !== 'can.frame') return;
       try {
-        const frame = JSON.parse((message as MessageEvent).data) as CanFrame;
+        const frame = JSON.parse(data) as CanFrame;
         setCanFrames(current => [...current.slice(-31), frame]);
       } catch { /* ignore malformed frame */ }
-    });
-    return () => source.close();
+    }, controller.signal).catch(() => undefined);
+    return () => controller.abort();
   }, [capture.enabled, authRequired, tokenInput]);
+
+  React.useEffect(() => {
+    let cancel = false;
+    Promise.all(cameras.map(async (camera) => [camera.id, await withStreamTicket(cameraStreamUrl(camera.id))] as const))
+      .then((pairs) => { if (!cancel) setCameraUrls(Object.fromEntries(pairs)); })
+      .catch(() => undefined);
+    return () => { cancel = true; };
+  }, [cameras, tokenInput]);
 
   const temp = inventory.thermal.map(z => z.celsius).filter((v): v is number => v != null).sort((a, b) => b - a)[0];
   const busCount = inventory.buses.gpio_chips.length + inventory.buses.i2c.length + inventory.buses.spi.length + inventory.buses.uart.length + inventory.buses.can.length;
@@ -180,34 +195,37 @@ function App() {
         </form>
       </section>}
 
-      {page === 'Overview' && <>
-        <section className="hero card"><div><span className="eyebrow">EDGE NODE · GENERATION {status.inventory_generation}</span><h2>{inventory.device.model}</h2><p>{inventory.device.hostname} continuously watches Linux hardware, samples local sensors and exposes a stable edge contract.</p><div className="hero-pills"><StatusPill ok={integrations.nodra_connected}>Nodra</StatusPill><StatusPill ok={integrations.fleet_projection_ready}>Fleet</StatusPill><StatusPill ok={streamLive}>Events</StatusPill><StatusPill ok={doctor.ok}>Doctor</StatusPill></div></div><div className="orb"><Cpu size={44}/><span>{inventory.system.cpu_cores} core</span></div></section>
-        <section className="metrics-grid"><Metric label="CPU" value={`${inventory.system.cpu_cores} cores`} hint={inventory.system.cpu_model}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)} hint={inventory.system.os}/><Metric label="Temperature" value={temp == null ? '—' : `${temp.toFixed(1)}°C`} hint={inventory.thermal[0]?.kind || 'No thermal zone'}/><Metric label="Sensors" value={`${sensors.filter(s => s.ok).length}/${sensors.length || 0}`} hint={`${status.sensor_samples_total} samples`}/></section>
-        <section className="two-col"><div className="card"><div className="section-head"><div><span className="eyebrow">PHYSICAL I/O</span><h3>{busCount} detected interfaces</h3></div><Cable/></div><div className="io-line"><span>GPIO</span><b>{inventory.buses.gpio_chips.length}</b></div><div className="io-line"><span>I²C</span><b>{inventory.buses.i2c.length}</b></div><div className="io-line"><span>SPI</span><b>{inventory.buses.spi.length}</b></div><div className="io-line"><span>UART</span><b>{inventory.buses.uart.length}</b></div><div className="io-line"><span>CAN</span><b>{inventory.buses.can.length}</b></div></div>
-          <div className="card dark-card"><span className="eyebrow">LIVE DATA PATH</span><h3>Hardware → Agent → Nodra → Fleet</h3><div className="flow"><span>Sensor</span><i>→</i><span>Agent</span><i>→</i><span>Nodra</span><i>→</i><span>Fleet</span></div><p>Inventory and status are retained in Nodra; sensor samples publish on per-sensor topics. Fleet consumes the hardware projection without duplicating its agent.</p></div></section>
-      </>}
-
-      {page === 'Hardware' && <section className="content-grid"><div className="card wide"><span className="eyebrow">COMPUTE</span><h2>{inventory.system.cpu_model}</h2><div className="spec-grid"><Metric label="Architecture" value={inventory.system.arch}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)}/><Metric label="Storage" value={bytes(inventory.system.storage_bytes)}/><Metric label="Uptime" value={duration(inventory.system.uptime_seconds)}/></div></div><div className="card"><span className="eyebrow">IDENTITY</span><h3>{inventory.device.serial}</h3><p className="muted">{inventory.device.vendor} · {inventory.device.model}</p><div className="mono">{inventory.device.machine_id}</div></div><div className="card"><span className="eyebrow">THERMAL</span><h3>{temp == null ? 'No sensor' : `${temp.toFixed(1)}°C`}</h3><p className="muted">Highest detected Linux thermal zone. Kernel {inventory.system.kernel}.</p></div></section>}
-
-      {page === 'Interfaces' && <section className="content-grid"><BusCard title="GPIO" icon={<Radio size={18}/>} values={inventory.buses.gpio_chips}/><BusCard title="I²C" icon={<Cable size={18}/>} values={inventory.buses.i2c}/><BusCard title="SPI" icon={<Cable size={18}/>} values={inventory.buses.spi}/><BusCard title="UART / Serial" icon={<Cable size={18}/>} values={inventory.buses.uart}/><BusCard title="CAN" icon={<Network size={18}/>} values={inventory.buses.can}/><BusCard title="USB" icon={<Usb size={18}/>} values={inventory.usb.map(u => `${u.product || 'USB device'} · ${u.path}`)}/><div className="card wide"><div className="section-head"><div><span className="eyebrow">NETWORK</span><h3>Interfaces, addresses and counters</h3></div><Wifi/></div>{inventory.network.map(n => <div className="network-row network-rich" key={n.name}><div><Dot on={n.operstate === 'up'}/><b>{n.name}</b><span>{n.kind}</span><span>{n.addresses?.join(' · ') || 'no address'}</span></div><div><span>RX {bytes(n.rx_bytes)}</span><span>TX {bytes(n.tx_bytes)}</span><b>{n.operstate}</b></div></div>)}</div></section>}
-
-      {page === 'Industrial' && <section className="industrial-layout">
-        <div className="card wide industrial-hero"><div><span className="eyebrow">INDUSTRIAL I/O</span><h2>CAN health. RS485 awareness.</h2><p className="muted">Device Agent exposes physical bus state without interpreting machine protocols. J1939, Modbus RTU registers and device semantics remain in Nodra.</p></div><div className="industrial-stats"><Metric label="CAN" value={`${inventory.industrial.can.length}`} hint={`${inventory.industrial.can.filter(item => item.operstate === 'up').length} up`}/><Metric label="RS485" value={`${inventory.industrial.serial.filter(item => item.rs485).length}`} hint="declared ports"/><Metric label="Serial" value={`${inventory.industrial.serial.length}`} hint="UART / USB serial"/></div></div>
-        <div className="industrial-grid wide">{inventory.industrial.can.length ? inventory.industrial.can.map(can => { const state = can.can_state || can.operstate; const busOff = state.toLowerCase() === 'bus-off'; return <article className="card industrial-card" key={can.name}><div className="section-head"><div><span className="eyebrow">SOCKETCAN · {can.kind.toUpperCase()}</span><h3>{can.name}</h3></div><StatusPill ok={!busOff && can.operstate === 'up'}>{state}</StatusPill></div><div className="industrial-rate">{bitrate(can.bitrate)}</div><div className="io-line"><span>Data bitrate</span><b>{bitrate(can.data_bitrate)}</b></div><div className="io-line"><span>Driver</span><b>{can.driver || 'unknown'}</b></div><div className="io-line"><span>Controller errors</span><b>RX {can.rx_error_counter ?? 0} · TX {can.tx_error_counter ?? 0}</b></div><div className="io-line"><span>Netdevice errors</span><b>RX {can.rx_errors ?? 0} · TX {can.tx_errors ?? 0}</b></div><div className="io-line"><span>Traffic</span><b>RX {bytes(can.rx_bytes)} · TX {bytes(can.tx_bytes)}</b></div><div className="chips">{can.controller_modes.length ? can.controller_modes.map(mode => <span key={mode}>{mode}</span>) : <em>{can.details_source}</em>}</div></article> }) : <article className="card industrial-card"><span className="eyebrow">SOCKETCAN</span><h3>No CAN interface detected</h3><p className="muted">Bring up a kernel CAN netdevice and it will appear here automatically.</p></article>}</div>
-        <div className="card wide"><div className="section-head"><div><span className="eyebrow">READ-ONLY CAN CAPTURE</span><h3>{capture.enabled ? `${capture.interfaces.join(', ') || 'Configured'} · live frames` : 'Disabled by default'}</h3></div><StatusPill ok={capture.enabled && !capture.last_error}>{capture.enabled ? 'RX only' : 'off'}</StatusPill></div><p className="muted">Capture never transmits, never changes bitrate, and only binds explicitly allowlisted SocketCAN interfaces. Raw 29-bit identifiers are preserved for Nodra/J1939 processing.</p><div className="spec-grid"><Metric label="Frames" value={capture.frames_total.toLocaleString()}/><Metric label="Rate drops" value={capture.dropped_total.toLocaleString()}/><Metric label="Decode errors" value={capture.decode_errors_total.toLocaleString()}/><Metric label="History" value={`${capture.history_len}`}/></div>{capture.last_error && <p className="sensor-error-text">{capture.last_error}</p>}<div className="can-frame-list">{canFrames.slice(-8).reverse().map(frame => <div className="can-frame-row" key={`${frame.interface}-${frame.sequence}`}><span>{frame.interface}</span><code>{frame.extended ? frame.can_id.toString(16).padStart(8, '0').toUpperCase() : frame.can_id.toString(16).padStart(3, '0').toUpperCase()}</code><b>{frame.data_hex || '—'}</b><small>{frame.fd ? 'CAN-FD' : 'CAN'} · {age(frame.captured_at_unix_ms)}</small></div>)}</div></div>
-        <div className="card wide"><div className="section-head"><div><span className="eyebrow">SERIAL / RS485</span><h3>Passive port inventory</h3></div><Cable/></div><p className="muted">RS485 is shown only when explicitly declared in configuration or described by the Linux device tree. The agent never transmits probe bytes.</p>{inventory.industrial.serial.map(port => <div className="serial-row" key={port.name}><div><StatusPill ok={Boolean(port.rs485)}>{port.rs485 ? 'RS485' : 'serial'}</StatusPill><div><b>{port.name}</b><span>{port.path} · {port.transport} · {port.driver || 'driver unknown'}</span></div></div><div className="serial-detail">{port.rs485 ? <><b>{port.rs485.source}</b><span>{port.rs485.enabled_at_boot ? 'enabled at boot' : 'runtime/config declared'}</span></> : <span>no RS485 declaration</span>}</div></div>)}</div>
+      {wizard && <section className="card auth-banner" role="dialog">
+        <div><span className="eyebrow">FIRST RUN</span><h3>Commission this device without editing TOML first</h3><p className="muted">Review the Overview, then set a bearer token or enroll with Fleet. Minew silicon is not certified until a physical HIL run is signed.</p></div>
+        <button type="button" onClick={() => { window.localStorage.setItem('zyvor-wizard-dismissed', '1'); setWizard(false); }}>Continue</button>
       </section>}
 
-      {page === 'Sensors' && <section className="sensor-grid">{sensors.length ? sensors.map(sample => <article className="card sensor-card" key={sample.sensor_id}><div className="section-head"><div><span className="eyebrow">{sample.plugin}</span><h3>{sample.sensor_id}</h3></div><StatusPill ok={sample.ok}>{sample.ok ? sample.quality : 'failed'}</StatusPill></div><ReadingValue sample={sample}/><div className="sensor-meta"><span>{age(sample.collected_at_unix_ms)}</span><span>{Object.entries(sample.labels).map(([k,v]) => `${k}=${v}`).join(' · ') || 'no labels'}</span></div>{sample.error && <p className="sensor-error-text">{sample.error}</p>}{sample.readings.slice(1).map(reading => <div className="io-line" key={reading.name}><span>{reading.name}</span><b>{reading.value} {reading.unit}</b></div>)}</article>) : <section className="empty-state card wide"><Thermometer size={32}/><span className="eyebrow">SENSOR SCHEDULER</span><h2>No samples yet.</h2><p>Install a plugin manifest under the configured plugins directory. The included LM75/TMP102 reference plugin reads an explicit I²C bus/address without scanning the bus.</p></section>}</section>}
+      {page === 'Overview' && <>
+        <section className="hero card"><div><span className="eyebrow">TRUSTED HARDWARE PASSPORT</span><h2>{inventory.device.model}</h2><p>{inventory.device.hostname} reports health, identity, Fleet and Nodra status for remote diagnosis.</p><div className="hero-pills"><StatusPill ok={doctor.ok}>Healthy</StatusPill><StatusPill ok={integrations.nodra_connected}>Nodra</StatusPill><StatusPill ok={integrations.fleet_projection_ready}>Fleet</StatusPill><StatusPill ok={Boolean(passport?.signature)}>Passport signed</StatusPill></div></div><div className="orb"><Cpu size={44}/><span>{inventory.system.cpu_cores} core</span></div></section>
+        <section className="metrics-grid"><Metric label="CPU" value={`${inventory.system.cpu_cores} cores`} hint={inventory.system.cpu_model}/><Metric label="Memory" value={bytes(inventory.system.memory_bytes)} hint={inventory.system.os}/><Metric label="Temperature" value={temp == null ? '—' : `${temp.toFixed(1)}°C`} hint={inventory.thermal[0]?.kind || 'No thermal zone'}/><Metric label="Interfaces" value={`${busCount}`} hint={`${sensors.filter(s => s.ok).length} sensors ok`}/></section>
+      </>}
 
-      {page === 'Camera' && <section className="content-grid">{cameras.length ? cameras.map(camera => <article className="card wide" key={camera.id}><div className="section-head"><div><span className="eyebrow">{camera.id}</span><h3>{camera.capturing ? 'Live' : camera.enabled ? 'Starting…' : 'Disabled'}</h3></div><StatusPill ok={camera.capturing}>{camera.capturing ? 'streaming' : camera.enabled ? 'not yet capturing' : 'off'}</StatusPill></div>{camera.capturing ? <img className="camera-stream" src={cameraStreamUrl(camera.id)} alt={`Live view: ${camera.id}`}/> : <a className="link-button" href={cameraSnapshotUrl(camera.id)} target="_blank" rel="noreferrer">View last snapshot</a>}<div className="spec-grid"><Metric label="Frames" value={camera.frames_total.toLocaleString()}/><Metric label="Rate drops" value={camera.dropped_total.toLocaleString()}/><Metric label="Encode errors" value={camera.encode_errors_total.toLocaleString()}/><Metric label="Viewers" value={`${camera.subscribers}`}/></div>{camera.last_error && <p className="sensor-error-text">{camera.last_error}</p>}</article>) : <section className="empty-state card wide"><Camera size={32}/><span className="eyebrow">CAMERA CAPTURE</span><h2>No cameras configured.</h2><p>Declare a device under <code>[[camera.devices]]</code> in <code>device-agent.toml</code> and build with <code>--features camera</code>. See docs/CAMERA.md.</p></section>}</section>}
+      {page === 'Passport' && <section className="content-grid"><div className="card wide"><span className="eyebrow">DEVICE PASSPORT</span><h2>{String(passport?.deviceId || inventory.device.serial)}</h2><p className="muted">Hardware identity, firmware, TPM policy and qualification for Fleet, Yard and support.</p><pre className="mono">{passport ? JSON.stringify(passport, null, 2) : 'Passport unavailable'}</pre></div></section>}
 
-      {page === 'Integrations' && <section className="integration-grid"><div className="card integration"><div className="integration-icon"><Radio/></div><span className="eyebrow">DATA PLANE</span><h2>Nodra</h2><p>Retained inventory/status, legacy telemetry and new per-sensor MQTT topics. Nodra continues to own WAL, protocol semantics and disconnected delivery.</p><StatusPill ok={integrations.nodra_connected}>{integrations.nodra_connected ? 'Connected' : integrations.nodra_enabled ? 'Configured · offline' : 'Disabled'}</StatusPill></div><div className="card integration"><div className="integration-icon"><Box/></div><span className="eyebrow">CONTROL PLANE</span><h2>Fleet</h2><p>Device Agent projects IP addresses, hardware counts, capabilities and identity into the existing Fleet inventory contract.</p><StatusPill ok={integrations.fleet_projection_ready}>{integrations.fleet_projection_ready ? 'Inventory bridge ready' : 'Disabled'}</StatusPill></div></section>}
+      {page === 'Timeline' && <section className="diagnostic-layout"><div className="card event-card wide"><div className="section-head"><div><span className="eyebrow">FLIGHT RECORDER</span><h3>Last 15 minutes</h3></div><Activity/></div><div className="event-list">{(timeline.length ? timeline : events).slice().reverse().map((event, index) => <div className="event-row" key={`${String(event.kind)}-${index}`}><Dot on={!String(event.kind).includes('disconnected')}/><div><b>{String(event.kind)}</b><span>{typeof event.at_unix_ms === 'number' ? age(event.at_unix_ms as number) : ''}</span></div></div>)}</div></div></section>}
 
-      {page === 'Diagnostics' && <section className="diagnostic-layout"><div className="terminal card"><div className="terminal-head"><div className="lights"><i/><i/><i/></div><span>zyvor-device-agent doctor</span></div><pre>{doctor.checks.map(check => `${check.ok ? '✓' : '✕'} ${check.name.padEnd(22)} ${check.detail}`).join('\n') || 'No diagnostic checks returned.'}</pre></div><div className="card event-card"><div className="section-head"><div><span className="eyebrow">EVENT STREAM</span><h3>{streamLive ? 'Streaming' : 'Disconnected'}</h3></div><Activity/></div><div className="event-list">{events.slice().reverse().map(event => <div className="event-row" key={`${event.id}-${event.at_unix_ms}`}><Dot on={!event.kind.includes('disconnected')}/><div><b>{event.kind}</b><span>{age(event.at_unix_ms)}</span></div></div>)}</div></div></section>}
+      {page === 'Interfaces' && <section className="content-grid">
+        <BusCard title="GPIO" icon={<Radio size={18}/>} values={inventory.buses.gpio_chips}/>
+        <BusCard title="I²C" icon={<Cable size={18}/>} values={inventory.buses.i2c}/>
+        <BusCard title="SPI" icon={<Cable size={18}/>} values={inventory.buses.spi}/>
+        <BusCard title="UART / Serial" icon={<Cable size={18}/>} values={inventory.buses.uart}/>
+        <BusCard title="CAN" icon={<Network size={18}/>} values={inventory.buses.can}/>
+        <BusCard title="USB" icon={<Usb size={18}/>} values={inventory.usb.map(u => `${u.product || 'USB device'} · ${u.path}`)}/>
+        <div className="card wide"><div className="section-head"><div><span className="eyebrow">NETWORK</span><h3>Interfaces</h3></div><Wifi/></div>{inventory.network.map(n => <div className="network-row network-rich" key={n.name}><div><Dot on={n.operstate === 'up'}/><b>{n.name}</b><span>{n.kind}</span><span>{n.addresses?.join(' · ') || 'no address'}</span></div><div><span>RX {bytes(n.rx_bytes)}</span><span>TX {bytes(n.tx_bytes)}</span><b>{n.operstate}</b></div></div>)}</div>
+        <div className="card wide"><div className="section-head"><div><span className="eyebrow">CAN HEALTH</span><h3>{capture.enabled ? 'Capture running' : 'Capture off'}</h3></div><StatusPill ok={capture.enabled && !capture.last_error}>{capture.enabled ? 'RX only' : 'off'}</StatusPill></div>{inventory.industrial.can.map(can => <div className="io-line" key={can.name}><span>{can.name}</span><b>{can.can_state || can.operstate} · {bitrate(can.bitrate)}</b></div>)}<div className="can-frame-list">{canFrames.slice(-6).reverse().map(frame => <div className="can-frame-row" key={`${frame.interface}-${frame.sequence}`}><span>{frame.interface}</span><code>{frame.data_hex || '—'}</code><small>{age(frame.captured_at_unix_ms)}</small></div>)}</div></div>
+        <div className="card wide"><div className="section-head"><div><span className="eyebrow">SENSORS</span><h3>{sensors.length} samples</h3></div><Thermometer/></div>{sensors.length ? sensors.map(sample => <div className="io-line" key={sample.sensor_id}><span>{sample.sensor_id}</span><b>{sample.ok ? sample.quality : 'failed'}</b></div>) : <p className="muted">No sensor plugins have reported yet.</p>}</div>
+        <div className="card wide"><div className="section-head"><div><span className="eyebrow">CAMERAS</span><h3>{cameras.length} devices</h3></div><Camera/></div>{cameras.length ? cameras.map(camera => <article key={camera.id}><StatusPill ok={camera.capturing}>{camera.id}</StatusPill>{camera.capturing ? <img className="camera-stream" src={cameraUrls[camera.id] || cameraStreamUrl(camera.id)} alt={camera.id}/> : <a className="link-button" href={cameraSnapshotUrl(camera.id)} target="_blank" rel="noreferrer">Snapshot</a>}</article>) : <p className="muted">No cameras configured.</p>}</div>
+      </section>}
 
-      {page === 'Settings' && <section className="content-grid"><div className="card wide"><span className="eyebrow">RUNTIME</span><h2>Generic reference ARM64</h2><p className="muted">The agent refreshes hardware continuously, samples plugins independently from browser traffic, and exports CAN/RS485 health without decoding industrial protocols. Modbus/J1939 semantics stay in Nodra.</p><div className="settings-line"><span>REST API</span><code>:9188</code></div><div className="settings-line"><span>Inventory generation</span><code>{status.inventory_generation}</code></div><div className="settings-line"><span>Last refresh</span><code>{age(status.last_inventory_refresh_unix_ms)}</code></div><div className="settings-line"><span>Sensor failures</span><code>{status.sensor_sample_failures}</code></div><div className="settings-line"><span>Event subscribers</span><code>{status.event_subscribers}</code></div></div>
-        <div className="card"><span className="eyebrow">AUTHENTICATION</span><h3>Bearer token</h3><p className="muted">Only needed if this agent has <code>auth.mode = "bearer"</code> configured. Stored in this browser only (localStorage), never sent anywhere but this agent.</p><form className="auth-banner-form" onSubmit={(event) => { event.preventDefault(); saveToken(tokenInput); }}><input type="password" placeholder="Bearer token" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} aria-label="Bearer token" /><button type="submit">Save</button></form>{getToken() && <button className="link-button" onClick={() => saveToken('')}>Clear stored token</button>}</div></section>}
+      {page === 'Diagnostics' && <section className="diagnostic-layout"><div className="terminal card"><div className="terminal-head"><div className="lights"><i/><i/><i/></div><span>zyvor-device-agent doctor</span></div><pre>{doctor.checks.map(check => `${check.ok ? '✓' : '✕'} ${check.name.padEnd(22)} ${check.detail}`).join('\n') || 'No diagnostic checks returned.'}</pre></div><div className="card event-card"><div className="section-head"><div><span className="eyebrow">FINDINGS</span><h3>{findings.length || 'None'}</h3></div><Activity/></div>{findings.length ? findings.map((finding, index) => <div className="event-row" key={index}><div><b>{String(finding.observation)}</b><span>{String(finding.confidence)}</span><p className="muted">{Array.isArray(finding.likelyCauses) ? (finding.likelyCauses as string[]).join(', ') : ''}</p></div></div>) : <p className="muted">No rules matched. Edge AI inference remains not-configured.</p>}</div></section>}
+
+      {page === 'Support' && <section className="content-grid"><div className="card wide"><span className="eyebrow">SUPPORT BUNDLE</span><h2>Redacted evidence for remote diagnosis</h2><p className="muted">Preview the manifest before export. Secrets, IPs, MACs and hostnames are redacted by default.</p><button type="button" onClick={() => previewSupportBundle().then((manifest) => setBundlePreview(JSON.stringify(manifest, null, 2))).catch((error) => setBundlePreview(String(error)))}>Preview manifest</button><pre className="mono">{bundlePreview || 'Click preview to inspect the signed manifest.'}</pre></div>
+        <div className="card"><span className="eyebrow">AUTHENTICATION</span><h3>Bearer token</h3><form className="auth-banner-form" onSubmit={(event) => { event.preventDefault(); saveToken(tokenInput); }}><input type="password" placeholder="Bearer token" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} aria-label="Bearer token" /><button type="submit">Save</button></form>{getToken() && <button className="link-button" onClick={() => saveToken('')}>Clear stored token</button>}</div></section>}
     </main>
   </div>;
 }

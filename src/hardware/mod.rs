@@ -329,3 +329,29 @@ pub async fn doctor(cfg: &Config) -> DoctorReport {
         checks,
     }
 }
+
+pub fn collect_inventory_blocking(cfg: &Config) -> Inventory {
+    let cfg = cfg.clone();
+    std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("hardware probe runtime");
+        runtime.block_on(collect_inventory(&cfg))
+    })
+    .join()
+    .expect("hardware probe thread")
+}
+
+pub fn doctor_blocking(cfg: &Config) -> DoctorReport {
+    let cfg = cfg.clone();
+    std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("doctor runtime");
+        runtime.block_on(doctor(&cfg))
+    })
+    .join()
+    .expect("doctor thread")
+}

@@ -89,14 +89,15 @@ land ahead of that re-scope so clients can wire against stable paths:
 
 - **OTA executor** — signed bundle verification, A/B inactive-slot write,
   reboot + health confirmation, commit/rollback, rollout initiated by Fleet.
-- **Edge AI bridge (remaining half)** — one accelerator family, a local
-  inference event contract into Nodra, and Fleet health/application
-  lifecycle for it. V4L2 device discovery + live snapshot/stream shipped
-  in v0.1.5 (see above and `docs/CAMERA.md`). **Scaffold landed:**
-  `docs/EDGE_AI.md`, `--features edge-ai`, `[edge_ai]` config, and
-  `GET /api/v1/inference/events` returning 501 `not-configured` until a
-  real backend exists. RTSP discovery and actual NPU/GPU inference remain
-  unscoped.
-- **Daemon bus privsep helper** — design + knobs in `docs/PRIVSEP.md`,
-  `[privsep]` config, `--features privsep` status surface; helper binary
-  and RPC not implemented. Default root daemon unchanged.
+  Device Agent can emit a signed `request-ota` remediation document only.
+- **Edge AI bridge (remaining half)** — provider contract stubs land in
+  `src/inference_provider.rs`; HTTP remains 501 until a real backend exists.
+- **Daemon bus privsep helper** — implemented behind `--features privsep`
+  and `[privsep].enabled`; stock root unit unchanged.
+
+## v0.2.0 — Passport and flight recorder
+
+Shipped: trust defaults, stream tickets, TPM policy, passport, recorder,
+support bundles, commissioning installer, six-screen dashboard, signed
+remediation, profile/plugin SDK surfaces, rules-based diagnostics.
+Physical Minew certification remains an operator-signed QUALIFICATION row.

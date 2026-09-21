@@ -21,6 +21,8 @@ pub struct Config {
     pub camera: CameraConfig,
     pub edge_ai: EdgeAiConfig,
     pub privsep: PrivsepConfig,
+    pub recorder: RecorderConfig,
+    pub remediation: RemediationConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +61,11 @@ pub struct ServerConfig {
     pub cors: CorsConfig,
     pub rate_limit: RateLimitConfig,
     pub tls: TlsConfig,
+    /// Explicit opt-in to serve `auth.mode = "none"` on a non-loopback bind.
+    /// Default false: startup refuses that combination.
+    pub allow_unauthenticated_remote: bool,
+    /// Durable agent state: recorder segments, fleet sequence, audit log.
+    pub state_dir: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,6 +139,9 @@ pub struct AuthConfig {
     pub exempt_paths: Vec<String>,
     pub bearer: BearerAuthConfig,
     pub mtls: MtlsAuthConfig,
+    /// Lifetime of a camera/SSE stream ticket. The long-lived bearer never
+    /// goes on a query string.
+    pub stream_ticket_ttl_seconds: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,6 +208,9 @@ pub struct EnrollmentConfig {
     pub ca_bundle_file: String,
     /// Common Name to request in the CSR. Empty defaults to `device.serial`.
     pub common_name: String,
+    /// When true, `serve` asks the enrollment server whether this device
+    /// certificate is revoked and refuses to start if it is.
+    pub revocation_check: bool,
 }
 
 impl Default for EnrollmentConfig {
@@ -208,6 +221,7 @@ impl Default for EnrollmentConfig {
             token_file: "/etc/zyvor/device-agent/identity/enrollment-token".into(),
             ca_bundle_file: String::new(),
             common_name: String::new(),
+            revocation_check: false,
         }
     }
 }
@@ -218,9 +232,12 @@ impl Default for EnrollmentConfig {
 #[serde(default)]
 pub struct IdentityConfig {
     /// "software" (default) or "tpm". `tpm` requires the `tpm2` build
-    /// feature; falls back to `software` at runtime (with a warning) if the
-    /// TPM can't be opened - most dev/test boxes have no TPM.
+    /// feature. Whether a TPM failure is fatal is `policy`, not this field.
     pub backend: String,
+    /// "software" forces a file key. "preferred" (default) keeps today's
+    /// TPM-then-software fallback. "required" fails `enroll` and `serve`
+    /// unless a TPM key can be opened. Production profiles use `required`.
+    pub policy: String,
     /// TCTI connection string, e.g. "device:/dev/tpmrm0" or
     /// "swtpm:host=127.0.0.1,port=2321". Empty uses tss-esapi's own
     /// environment-variable-based default resolution.
@@ -231,6 +248,7 @@ impl Default for IdentityConfig {
     fn default() -> Self {
         Self {
             backend: "software".into(),
+            policy: "preferred".into(),
             tpm_tcti: String::new(),
         }
     }
@@ -353,13 +371,20 @@ impl Default for EdgeAiConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PrivsepConfig {
-    /// Opt-in. When false (default), the daemon opens buses directly as today.
+    /// Opt-in. When false (default), the daemon opens buses directly.
+    /// When true *and* the binary is built with `--features privsep`, the
+    /// API process talks to `bus-helper` instead of opening device nodes.
     pub enabled: bool,
-    /// Absolute path of the future bus-helper binary. Not executed in this
-    /// scaffold even when `enabled` and `--features privsep` are set.
+    /// Helper binary. If it is missing, `serve` re-executes this binary's
+    /// `bus-helper` subcommand.
     pub helper_path: String,
-    /// Unix socket the API daemon would use to talk to the helper.
+    /// Unix socket the API daemon uses to talk to the helper.
     pub socket_path: String,
+    /// Peer uids allowed to call the helper. Empty, together with
+    /// `allow_gids`, means "same uid as the helper process".
+    pub allow_uids: Vec<u32>,
+    /// Peer gids allowed to call the helper.
+    pub allow_gids: Vec<u32>,
 }
 
 impl Default for PrivsepConfig {
@@ -368,6 +393,65 @@ impl Default for PrivsepConfig {
             enabled: false,
             helper_path: "/usr/lib/zyvor-device-agent/bus-helper".into(),
             socket_path: "/run/zyvor-device-agent/bus.sock".into(),
+            allow_uids: Vec::new(),
+            allow_gids: Vec::new(),
+        }
+    }
+}
+
+/// Bounded local operational journal. Not a Nodra application-data WAL.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RecorderConfig {
+    pub enabled: bool,
+    /// Empty uses `{server.state_dir}/recorder`.
+    pub directory: String,
+    /// Rotate the active segment after this many bytes.
+    pub segment_bytes: u64,
+    /// Delete the oldest segments once the directory exceeds this.
+    pub max_bytes: u64,
+    /// Store selected CAN frames. Off by default (privacy).
+    pub can_frames: bool,
+    /// When `can_frames` is on, replace payload bytes with a length.
+    pub redact_can_payload: bool,
+}
+
+impl Default for RecorderConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            directory: String::new(),
+            segment_bytes: 1_048_576,
+            max_bytes: 32 * 1_048_576,
+            can_frames: false,
+            redact_can_payload: true,
+        }
+    }
+}
+
+/// Signed, allowlisted remediation. No shell. Off until an operator enables it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RemediationConfig {
+    pub enabled: bool,
+    /// PEM SubjectPublicKeyInfo trusted for Fleet command signatures.
+    pub fleet_public_key_pem: String,
+    /// systemd unit names `restart-service` may touch.
+    pub service_allowlist: Vec<String>,
+    /// CAN interfaces `reopen-can` may touch.
+    pub can_allowlist: Vec<String>,
+    /// Reboot and CAN reopen need a second signature when true.
+    pub two_person: bool,
+}
+
+impl Default for RemediationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            fleet_public_key_pem: String::new(),
+            service_allowlist: Vec::new(),
+            can_allowlist: Vec::new(),
+            two_person: true,
         }
     }
 }
@@ -445,12 +529,14 @@ pub struct PluginConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            listen: "0.0.0.0:9188".into(),
+            listen: "127.0.0.1:9188".into(),
             dashboard_dir: "/usr/share/zyvor-device-agent/dashboard".into(),
             unix_socket: UnixSocketConfig::default(),
             cors: CorsConfig::default(),
             rate_limit: RateLimitConfig::default(),
             tls: TlsConfig::default(),
+            allow_unauthenticated_remote: false,
+            state_dir: "/var/lib/zyvor-device-agent".into(),
         }
     }
 }
@@ -484,6 +570,7 @@ impl Default for AuthConfig {
             exempt_paths: vec!["/api/v1/health".into(), "/api/v1/ready".into()],
             bearer: BearerAuthConfig::default(),
             mtls: MtlsAuthConfig::default(),
+            stream_ticket_ttl_seconds: 60,
         }
     }
 }
@@ -591,6 +678,30 @@ impl Config {
     }
 }
 
+/// Refuse `auth.mode = "none"` on a non-loopback TCP bind unless the operator
+/// set `server.allow_unauthenticated_remote`.
+pub fn ensure_authenticated_bind(cfg: &Config) -> anyhow::Result<()> {
+    if cfg.auth.mode != "none" || cfg.server.allow_unauthenticated_remote {
+        return Ok(());
+    }
+    if listen_is_loopback(&cfg.server.listen)? {
+        return Ok(());
+    }
+    anyhow::bail!(
+        "refusing to serve auth.mode = \"none\" on non-loopback address {}. \
+         Set auth.mode to \"bearer\" or \"mtls\", bind 127.0.0.1, or set \
+         server.allow_unauthenticated_remote = true to keep the unsafe behavior",
+        cfg.server.listen
+    );
+}
+
+pub fn listen_is_loopback(listen: &str) -> anyhow::Result<bool> {
+    let addr: std::net::SocketAddr = listen
+        .parse()
+        .with_context(|| format!("invalid server.listen {listen:?}"))?;
+    Ok(addr.ip().is_loopback())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -603,6 +714,11 @@ mod tests {
         assert!(!cfg.privsep.enabled);
         assert!(!cfg.privsep.helper_path.is_empty());
         assert!(!cfg.privsep.socket_path.is_empty());
+        assert!(!cfg.server.allow_unauthenticated_remote);
+        assert_eq!(cfg.server.listen, "127.0.0.1:9188");
+        assert_eq!(cfg.identity.policy, "preferred");
+        assert!(cfg.recorder.enabled);
+        assert!(!cfg.remediation.enabled);
     }
 
     #[test]
@@ -625,5 +741,21 @@ socket_path = "/tmp/bus.sock"
         assert!(cfg.privsep.enabled);
         assert_eq!(cfg.privsep.helper_path, "/opt/bus-helper");
         assert_eq!(cfg.privsep.socket_path, "/tmp/bus.sock");
+    }
+
+    #[test]
+    fn unauthenticated_non_loopback_is_refused() {
+        let mut cfg = Config::default();
+        cfg.server.listen = "0.0.0.0:9188".into();
+        let error = ensure_authenticated_bind(&cfg).unwrap_err();
+        assert!(error.to_string().contains("refusing"));
+        cfg.server.allow_unauthenticated_remote = true;
+        ensure_authenticated_bind(&cfg).unwrap();
+        cfg.server.allow_unauthenticated_remote = false;
+        cfg.auth.mode = "bearer".into();
+        ensure_authenticated_bind(&cfg).unwrap();
+        cfg.auth.mode = "none".into();
+        cfg.server.listen = "127.0.0.1:9188".into();
+        ensure_authenticated_bind(&cfg).unwrap();
     }
 }

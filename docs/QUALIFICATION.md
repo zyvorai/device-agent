@@ -40,7 +40,7 @@ emulators. They **do not** prove GPIO/I2C/CAN on real silicon.
 | Profile freeze on Minewing board | **open** (surrogate ≠ silicon) |
 | I2C plugin path on board | **open** |
 | Industrial buses on board | **open** |
-| Auth + TLS / UDS on agent | **done** in software + packages v0.1.6 |
+| Auth + TLS / UDS on agent | **done** in software + packages v0.2.0 |
 | Nodra MQTTS config | **done** in software matrix |
 | OTA health probe contract | **documented** — see PRODUCTION.md |
 | Arm64 install artifacts | **ship** — release + CI packages |
@@ -58,6 +58,8 @@ cross-packed) so architecture metadata and `$auto` depends stay correct.
 
 ## Maturity note
 
-**v0.1.6** is **production-hardening** for the Linux agent (packages + auth/TLS
-guidance + emulator/lab-surrogate evidence). It is **not** Minewing-silicon GA.
-See [PRODUCTION.md](PRODUCTION.md), [HIL.md](HIL.md), and [BACKLOG.md](BACKLOG.md).
+**v0.2.0** adds the passport / flight recorder / support-bundle journey for
+the Linux agent (packages + auth/TLS + signed inventory). Physical Minewing
+HIL remains **unsigned** — do not claim Minewing-silicon GA.
+See [PRODUCTION.md](PRODUCTION.md), [HIL.md](HIL.md), [UPGRADE-0.2.0.md](UPGRADE-0.2.0.md),
+and [BACKLOG.md](BACKLOG.md).

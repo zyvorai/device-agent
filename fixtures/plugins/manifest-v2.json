@@ -1,0 +1,8 @@
+{
+  "protocol": "v2",
+  "name": "example",
+  "version": "1.0.0",
+  "command": "/usr/bin/example",
+  "capabilities": ["none"],
+  "runtime": "native"
+}

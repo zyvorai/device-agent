@@ -171,6 +171,18 @@ fn capture_loop(
     unsafe { close(fd) };
 }
 
+/// One receive-only read for the bus helper. Never transmits.
+pub fn rx_once(interface: &str) -> Result<Option<CanFrame>, String> {
+    let fd = open_socket(interface, false)?;
+    let mut raw = [0_u8; mem::size_of::<CanFdFrame>()];
+    let read = unsafe { recv(fd, raw.as_mut_ptr().cast(), raw.len(), 0) };
+    unsafe { close(fd) };
+    if read <= 0 {
+        return Ok(None);
+    }
+    Ok(decode(interface, &raw, read as usize))
+}
+
 fn open_socket(interface: &str, include_error_frames: bool) -> Result<c_int, String> {
     let name = CString::new(interface).map_err(|_| "invalid interface name".to_string())?;
     let index = unsafe { if_nametoindex(name.as_ptr()) };

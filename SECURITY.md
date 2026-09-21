@@ -2,6 +2,17 @@
 
 Do not open public issues for suspected security vulnerabilities. Report security issues privately to the Zyvor security contact published at https://zyvor.dev.
 
+## v0.2 security boundaries
+
+- Non-loopback `auth.mode = "none"` is refused unless
+  `server.allow_unauthenticated_remote = true`.
+- Stream tickets replace query-string bearer tokens; tickets are stripped from
+  the URI before access logs.
+- `identity.policy = "required"` fails closed without a TPM.
+- Optional `bus-helper` owns device nodes; the API process talks over UDS.
+- Remediation is a signed allowlist. There is no remote shell.
+- Support bundles redact secrets, IPs, MACs and hostnames by default.
+
 ## v0.1 security boundaries
 
 - The daemon is intended to run on a trusted Linux edge node.

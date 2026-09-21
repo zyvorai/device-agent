@@ -185,6 +185,27 @@ if wan_log and pathlib.Path(wan_log).is_file():
 else:
     add("wan_loss", "blocked", "set DA_HIL_WAN_LOSS_LOG to attach evidence")
 
+# rs485 declaration evidence
+try:
+    code, industrial = get("/api/v1/industrial")
+    (out / "industrial.json").write_text(json.dumps(industrial, indent=2) + "\n")
+    serial = industrial.get("serial") or []
+    rs485 = [p for p in serial if p.get("rs485")]
+    if env == "physical":
+        add("rs485", "pass" if rs485 else "fail", f"rs485_ports={len(rs485)}")
+    else:
+        add("rs485", "blocked", f"surrogate rs485_ports={len(rs485)}")
+except Exception as e:
+    add("rs485", "blocked" if env != "physical" else "fail", str(e))
+
+# power-cycle evidence (operator attaches a journal from the previous boot)
+power_log = os.environ.get("DA_HIL_POWER_CYCLE_LOG", "")
+if power_log and pathlib.Path(power_log).is_file():
+    pathlib.Path(out / "power-cycle.log").write_bytes(pathlib.Path(power_log).read_bytes())
+    add("power_cycle", "pass", f"attached {power_log}")
+else:
+    add("power_cycle", "blocked", "set DA_HIL_POWER_CYCLE_LOG to attach evidence")
+
 counts = {}
 for r in rows:
     counts[r["status"]] = counts.get(r["status"], 0) + 1
@@ -229,6 +250,8 @@ if sign:
         ("auth", "Auth ≠ none when non-loopback"),
         ("ota_health_http", "OTA health probes (systemd + /health)"),
         ("wan_loss", "WAN-loss / reconnect with Nodra WAL"),
+        ("rs485", "RS485 declared and visible"),
+        ("power_cycle", "Power-cycle boot evidence"),
     ]
     by = {r["id"]: r for r in rows}
     block = [

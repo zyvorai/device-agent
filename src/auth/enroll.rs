@@ -33,6 +33,8 @@ use crate::{
 struct EnrollRequest {
     csr_pem: String,
     common_name: String,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    renew: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -120,6 +122,7 @@ pub async fn run(cfg: &Config, force: bool) -> anyhow::Result<()> {
         .json(&EnrollRequest {
             csr_pem,
             common_name: common_name.clone(),
+            renew: false,
         })
         .send()
         .await
@@ -162,7 +165,135 @@ pub async fn run(cfg: &Config, force: bool) -> anyhow::Result<()> {
         backend = identity.backend_name(),
         "enrollment complete"
     );
+    audit(cfg, "enrolled");
     Ok(())
+}
+
+/// Reissue a certificate for an already-enrolled device. The enrollment
+/// server must accept `renew: true`. The local token file is not deleted.
+pub async fn renew(cfg: &Config) -> anyhow::Result<()> {
+    if !cfg.enrollment.enabled {
+        bail!("enrollment.enabled = false; nothing to do");
+    }
+    if cfg.enrollment.server_url.is_empty() {
+        bail!("enrollment.server_url is not configured");
+    }
+    let token = fs::read_to_string(&cfg.enrollment.token_file)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if token.is_empty() {
+        bail!("renewal requires a token in {}", cfg.enrollment.token_file);
+    }
+    let common_name = if cfg.enrollment.common_name.is_empty() {
+        cfg.device.serial.clone()
+    } else {
+        cfg.enrollment.common_name.clone()
+    };
+    let identity = DeviceIdentity::generate(cfg)?;
+    let mut params = CertificateParams::new(Vec::new()).context("building CSR parameters")?;
+    let mut dn = DistinguishedName::new();
+    dn.push(DnType::CommonName, common_name.as_str());
+    params.distinguished_name = dn;
+    let csr = params
+        .serialize_request(&identity.rcgen_signing_key())
+        .context("serializing CSR")?;
+    let csr_pem = csr.pem().context("PEM-encoding CSR")?;
+    let client = reqwest::Client::builder()
+        .build()
+        .context("building HTTPS client")?;
+    let response = client
+        .post(&cfg.enrollment.server_url)
+        .bearer_auth(&token)
+        .json(&EnrollRequest {
+            csr_pem,
+            common_name,
+            renew: true,
+        })
+        .send()
+        .await
+        .context("submitting renewal")?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        bail!("renewal server returned {status}: {body}");
+    }
+    let enrolled: EnrollResponse = response.json().await.context("parsing renewal response")?;
+    write_identity_file(
+        &cfg.auth.mtls.cert_file,
+        enrolled.certificate_pem.as_bytes(),
+    )?;
+    identity.persist(&cfg.auth.mtls.key_file)?;
+    audit(cfg, "renewed");
+    Ok(())
+}
+
+pub async fn ensure_not_revoked(cfg: &Config) -> anyhow::Result<()> {
+    if !cfg.enrollment.revocation_check {
+        return Ok(());
+    }
+    if cfg.enrollment.server_url.is_empty() {
+        bail!("enrollment.revocation_check is set but enrollment.server_url is empty");
+    }
+    let url = revocation_url(&cfg.enrollment.server_url);
+    let common_name = if cfg.enrollment.common_name.is_empty() {
+        cfg.device.serial.clone()
+    } else {
+        cfg.enrollment.common_name.clone()
+    };
+    let url = format!("{url}?common_name={common_name}");
+    let client = reqwest::Client::builder()
+        .build()
+        .context("building revocation client")?;
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .context("checking certificate revocation")?;
+    if !response.status().is_success() {
+        bail!("revocation check returned {}", response.status());
+    }
+    let body: RevocationStatus = response.json().await.context("parsing revocation status")?;
+    audit(
+        cfg,
+        if body.revoked {
+            "revoked"
+        } else {
+            "not-revoked"
+        },
+    );
+    if body.revoked {
+        bail!("device certificate is revoked");
+    }
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct RevocationStatus {
+    revoked: bool,
+}
+
+fn revocation_url(server_url: &str) -> String {
+    if let Some(stripped) = server_url.strip_suffix("/enroll") {
+        format!("{stripped}/revocation")
+    } else {
+        format!("{server_url}/revocation")
+    }
+}
+
+fn audit(cfg: &Config, action: &str) {
+    let path = std::path::Path::new(&cfg.server.state_dir).join("enrollment-audit.log");
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let line = format!(
+        "{{\"at_unix_ms\":{},\"action\":\"{action}\"}}\n",
+        crate::state::now_unix_ms()
+    );
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+        use std::io::Write;
+        let _ = file.write_all(line.as_bytes());
+    }
 }
 
 #[cfg(test)]

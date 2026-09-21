@@ -30,13 +30,18 @@ listener). Only *where the private key lives and signs* changes:
 `zyvor-device-agent identity` reports which backend produced the current
 key (`backend: software` or `backend: tpm`).
 
-## Runtime fallback
+## Runtime fallback and policy
 
-`identity.backend = "tpm"` is a *request*, not a guarantee: if the TPM can't
-be opened (no TPM present, wrong TCTI, permission denied), `enroll` and
-`serve` both log a warning and fall back to a software key rather than
-failing outright - most dev/test boxes have no TPM, and a fleet with mixed
-hardware shouldn't need a different config per device just for this.
+`identity.policy` decides whether a TPM failure is fatal:
+
+| Policy | Behavior |
+|---|---|
+| `software` | Always a file key |
+| `preferred` (default) | Try TPM when `backend = "tpm"`, else fall back |
+| `required` | Fail `enroll` and `serve` if the TPM cannot open |
+
+Production Minew snippets use `policy = "required"`. CI and laptops keep
+`preferred`.
 
 ## Configuration
 

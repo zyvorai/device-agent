@@ -99,7 +99,7 @@ jobs:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
       - run: python3 scripts/check-static.py
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: packages-*
           path: dist

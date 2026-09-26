@@ -54,7 +54,7 @@ pub fn run_wasi_plugin(bytes: &[u8]) -> anyhow::Result<i32> {
     }
     #[cfg(feature = "wasm")]
     {
-        return wasm_exec(bytes);
+        wasm_exec(bytes)
     }
     #[cfg(not(feature = "wasm"))]
     {

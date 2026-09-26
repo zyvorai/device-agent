@@ -268,7 +268,7 @@ fn write_line(stream: Option<&mut impl Write>, value: &Value) -> std::io::Result
 #[cfg(all(unix, target_os = "linux"))]
 fn peer_ids(stream: &std::os::unix::net::UnixStream) -> std::io::Result<(u32, u32)> {
     let cred = nix::sys::socket::getsockopt(stream, nix::sys::socket::sockopt::PeerCredentials)
-        .map_err(|error| std::io::Error::other(error))?;
+        .map_err(std::io::Error::other)?;
     Ok((cred.uid() as u32, cred.gid() as u32))
 }
 

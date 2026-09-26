@@ -51,7 +51,7 @@ clap = { version = "4.5", features = ["derive", "env"] }
 jpeg-encoder = { version = "0.6.1", optional = true }
 libc = "0.2"
 netlink-sys = { version = "0.9.0", features = ["tokio_socket"], optional = true }
-nix = { version = "0.29", features = ["process", "socket", "user"] }
+nix = { version = "0.31", features = ["process", "socket", "user"] }
 p256 = { version = "0.13.2", features = ["ecdsa", "pem", "pkcs8"] }
 qrcode = "0.14.1"
 tar = "0.4.44"

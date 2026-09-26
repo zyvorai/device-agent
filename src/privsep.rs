@@ -421,28 +421,30 @@ mod tests {
         let dir =
             std::env::temp_dir().join(format!("zyvor-privsep-{}-{}", std::process::id(), unique()));
         std::fs::create_dir_all(&dir).unwrap();
-        let socket = dir.join("bus.sock");
+
+        let socket_reject = dir.join("reject.sock");
         let mut cfg = Config::default();
         cfg.privsep.enabled = true;
-        cfg.privsep.socket_path = socket.display().to_string();
+        cfg.privsep.socket_path = socket_reject.display().to_string();
         cfg.privsep.allow_uids = vec![1];
         let cfg_reject = cfg.clone();
         let server = std::thread::spawn(move || {
             serve_helper_unix(&cfg_reject, Some(1)).unwrap();
         });
-        wait_for_socket(&socket);
-        let rejected = call(&socket, r#"{"op":"inventory"}"#);
+        wait_for_socket(&socket_reject);
+        let rejected = call(&socket_reject, r#"{"op":"inventory"}"#);
         assert!(rejected.contains("peer uid not allowed"), "{rejected}");
         server.join().unwrap();
-        let _ = std::fs::remove_file(&socket);
 
+        let socket_opcode = dir.join("opcode.sock");
+        cfg.privsep.socket_path = socket_opcode.display().to_string();
         cfg.privsep.allow_uids = vec![current_uid()];
         let cfg_opcode = cfg.clone();
         let server = std::thread::spawn(move || {
             serve_helper_unix(&cfg_opcode, Some(1)).unwrap();
         });
-        wait_for_socket(&socket);
-        let unknown = call(&socket, r#"{"op":"shell"}"#);
+        wait_for_socket(&socket_opcode);
+        let unknown = call(&socket_opcode, r#"{"op":"shell"}"#);
         assert!(unknown.contains("unknown opcode"), "{unknown}");
         server.join().unwrap();
         let _ = std::fs::remove_dir_all(&dir);
@@ -459,6 +461,8 @@ mod tests {
         let deadline = std::time::Instant::now() + Duration::from_secs(2);
         while std::time::Instant::now() < deadline {
             if path.exists() {
+                // Brief settle so the listener is accepting before the first connect.
+                std::thread::sleep(Duration::from_millis(20));
                 return;
             }
             std::thread::sleep(Duration::from_millis(10));
@@ -470,9 +474,10 @@ mod tests {
     fn call(path: &Path, line: &str) -> String {
         use std::os::unix::net::UnixStream;
         let mut stream = UnixStream::connect(path).unwrap();
-        stream.write_all(line.as_bytes()).unwrap();
-        stream.write_all(b"\n").unwrap();
-        stream.flush().unwrap();
+        // Server may reject-and-close before reading; ignore EPIPE on the request write.
+        let _ = stream.write_all(line.as_bytes());
+        let _ = stream.write_all(b"\n");
+        let _ = stream.flush();
         let mut reader = BufReader::new(stream);
         let mut response = String::new();
         reader.read_line(&mut response).unwrap();

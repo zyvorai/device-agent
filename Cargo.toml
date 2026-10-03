@@ -78,7 +78,7 @@ x509-parser = "0.18.1"
 zstd = "0.14.0"
 
 # Optional: untrusted plugin sandbox. Absent from a plain `cargo build`.
-wasmtime = { version = "36.0.8", optional = true, default-features = false, features = ["cranelift", "runtime"] }
+wasmtime = { version = "49.0.1", optional = true, default-features = false, features = ["cranelift", "runtime"] }
 
 # Linux-only: seccompiler's own libc bindings (SECCOMP_RET_*, prctl PR_SET_NO_NEW_PRIVS,
 # SYS_seccomp) simply don't exist in the libc crate on other platforms - not just unused,
